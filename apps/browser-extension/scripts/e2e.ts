@@ -153,6 +153,18 @@ try {
     () => context?.pages().includes(agentPage) ?? false,
     (present) => present === false,
   );
+  await bridge.revoke();
+  await waitFor(
+    () => bridge?.status(),
+    (status) => status?.connected === false,
+  );
+  const revokedPage = await context.newPage();
+  await revokedPage.goto(`chrome-extension://${extensionId}/popup.html`);
+  const revokedSettings = await revokedPage.evaluate(async () => {
+    const stored = await chrome.storage.local.get("ericbot.bridge-settings");
+    return stored["ericbot.bridge-settings"] as { token?: string | null } | undefined;
+  });
+  if (revokedSettings?.token) throw new Error("Browser bridge token survived revocation");
   console.log("Browser extension end-to-end test passed.");
 } finally {
   await bridge?.close().catch(() => undefined);

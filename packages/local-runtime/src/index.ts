@@ -18,7 +18,12 @@ export {
   type DeliverPeerBotMessage,
   type PeerBotMessageRequest,
 } from "./message-bot-tool.js";
-export { LocalRuntime, type LocalRuntimeOptions, type SendMessageResult } from "./runtime.js";
+export {
+  type LocalRunEnd,
+  LocalRuntime,
+  type LocalRuntimeOptions,
+  type SendMessageResult,
+} from "./runtime.js";
 export { LocalRuntimeService, type LocalRuntimeServiceOptions } from "./service.js";
 export {
   DEFAULT_LOCAL_USER_SETTINGS,

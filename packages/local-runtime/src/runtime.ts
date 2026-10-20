@@ -22,6 +22,13 @@ export interface LocalRuntimeOptions {
     userMessageId: string;
   }) => void | Promise<void>;
   onEvent?: (event: LocalAgentEvent, runId: string) => void | Promise<void>;
+  onRunEnd?: (run: LocalRunEnd) => void | Promise<void>;
+}
+
+export interface LocalRunEnd {
+  runId: string;
+  status: "completed" | "failed" | "stopped";
+  error: string | null;
 }
 
 export interface SendMessageResult {
@@ -73,6 +80,9 @@ export class LocalRuntime {
   private readonly resolveModel: LocalRuntimeOptions["resolveModel"];
   private readonly onRunStart: LocalRuntimeOptions["onRunStart"];
   private readonly onEvent: LocalRuntimeOptions["onEvent"];
+  private readonly onRunEnd: LocalRuntimeOptions["onRunEnd"];
+  private readonly abortedRuns = new Set<string>();
+  private readonly activeRuns = new Set<string>();
 
   constructor(options: LocalRuntimeOptions) {
     this.store = options.store;
@@ -81,6 +91,7 @@ export class LocalRuntime {
     this.resolveModel = options.resolveModel;
     this.onRunStart = options.onRunStart;
     this.onEvent = options.onEvent;
+    this.onRunEnd = options.onRunEnd;
   }
 
   createBot(input: CreateBotInput): Bot {
@@ -109,11 +120,12 @@ export class LocalRuntime {
     });
 
     const runId = randomUUID();
-    const model = await this.resolveModel(bot);
     const toolDefinitions = this.tools.definitionsFor(bot);
     let responseText = "";
     const events: LocalAgentEvent[] = [];
     const toolCalls: SendMessageResult["toolCalls"] = [];
+    let runError: Error | null = null;
+    let assistantMessage: LocalMessage | null = null;
 
     await this.onRunStart?.({
       runId,
@@ -121,59 +133,102 @@ export class LocalRuntime {
       threadId: thread.id,
       userMessageId: userMessage.id,
     });
-    for await (const event of this.engine.run(
-      {
-        botId: bot.id,
-        threadId: thread.id,
-        runId,
-        sourceMessageId: userMessage.id,
-        prompt: content,
-        instructions: bot.instructions,
-        history,
-        tools: toolDefinitions,
-        model,
-        executeTool: (name, args, executionId) =>
-          this.tools.execute({
-            botId: bot.id,
-            runId,
-            name,
-            args,
-            executionId,
-            signal: options.signal,
-            peerChain: options.peerChain,
-          }),
-      },
-      options,
-    )) {
-      events.push(event);
-      await this.onEvent?.(event, runId);
-      if (event.type === "text") responseText += event.text;
-      if (event.type === "tool") {
-        toolCalls.push({
-          executionId: event.executionId,
-          name: event.name,
-          arguments: event.args,
-        });
+    this.activeRuns.add(runId);
+    try {
+      let model: LocalAgentModel | null = null;
+      try {
+        model = await this.resolveModel(bot);
+      } catch (error) {
+        runError = error instanceof Error ? error : new Error(String(error));
       }
-      if (event.type === "done") break;
-    }
+      if (!runError && model) {
+        try {
+          for await (const event of this.engine.run(
+            {
+              botId: bot.id,
+              threadId: thread.id,
+              runId,
+              sourceMessageId: userMessage.id,
+              prompt: content,
+              instructions: bot.instructions,
+              history,
+              tools: toolDefinitions,
+              model,
+              executeTool: (name, args, executionId) =>
+                this.tools.execute({
+                  botId: bot.id,
+                  runId,
+                  name,
+                  args,
+                  executionId,
+                  signal: options.signal,
+                  peerChain: options.peerChain,
+                }),
+            },
+            options,
+          )) {
+            events.push(event);
+            await this.onEvent?.(event, runId);
+            if (event.type === "text") responseText += event.text;
+            if (event.type === "tool") {
+              toolCalls.push({
+                executionId: event.executionId,
+                name: event.name,
+                arguments: event.args,
+              });
+            }
+            if (event.type === "done") break;
+          }
+        } catch (error) {
+          runError = error instanceof Error ? error : new Error(String(error));
+        }
+      }
 
-    const assistantMessage =
-      responseText.length === 0 && toolCalls.length === 0
-        ? null
-        : this.store.appendMessage({
+      const stopped = this.abortedRuns.has(runId);
+      const errorBlock =
+        stopped || runError
+          ? {
+              kind: "error" as const,
+              message: stopped ? "Run stopped." : (runError?.message ?? "Run failed."),
+            }
+          : null;
+      const blocks = [
+        ...(responseText.length > 0 ? [{ kind: "text" as const, text: responseText }] : []),
+        ...toolCalls.map((toolCall) => ({
+          kind: "tool_call" as const,
+          executionId: toolCall.executionId,
+          name: toolCall.name,
+          arguments: toJsonValue(toolCall.arguments),
+        })),
+        ...(errorBlock ? [errorBlock] : []),
+      ];
+      if (blocks.length > 0) {
+        try {
+          assistantMessage = this.store.appendMessage({
             threadId: thread.id,
             role: "bot",
-            blocks: [
-              ...(responseText.length > 0 ? [{ kind: "text" as const, text: responseText }] : []),
-              ...toolCalls.map((toolCall) => ({
-                kind: "tool_call" as const,
-                executionId: toolCall.executionId,
-                name: toolCall.name,
-                arguments: toJsonValue(toolCall.arguments),
-              })),
-            ],
+            blocks,
           });
+        } catch (error) {
+          runError ??= error instanceof Error ? error : new Error(String(error));
+        }
+      }
+    } finally {
+      const stopped = this.abortedRuns.delete(runId);
+      this.activeRuns.delete(runId);
+      const error = stopped ? "Run stopped." : (runError?.message ?? null);
+      try {
+        await this.onRunEnd?.({
+          runId,
+          status: stopped ? "stopped" : runError ? "failed" : "completed",
+          error,
+        });
+      } catch {
+        // Lifecycle cleanup must not turn a completed model run into a failure.
+      }
+    }
+
+    if (runError) throw runError;
 
     return {
       thread,
@@ -187,6 +242,7 @@ export class LocalRuntime {
   }
 
   abort(runId: string): Promise<void> {
+    if (this.activeRuns.has(runId)) this.abortedRuns.add(runId);
     return this.engine.abort(runId);
   }
 }

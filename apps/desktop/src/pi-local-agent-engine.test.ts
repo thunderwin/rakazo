@@ -4,7 +4,11 @@ import type { AgentRunRequest, AgentRuntimeEvent } from "@rakazo/adapter-kit";
 import { PiAgentRuntime } from "@rakazo/adapters/pi-runtime";
 import type { LocalAgentRunRequest } from "@rakazo/local-runtime";
 import { describe, expect, it, vi } from "vitest";
-import { PiLocalAgentEngine, toPiRequest } from "./pi-local-agent-engine.js";
+import {
+  localAgentErrorMessage,
+  PiLocalAgentEngine,
+  toPiRequest,
+} from "./pi-local-agent-engine.js";
 
 const request: LocalAgentRunRequest = {
   botId: "bot-1",
@@ -34,6 +38,24 @@ const request: LocalAgentRunRequest = {
 };
 
 describe("Pi local agent engine", () => {
+  it("maps gateway failures to actionable local messages", () => {
+    expect(localAgentErrorMessage(new Error("HTTP 402 insufficient_quota"))).toBe(
+      "Your model quota is exhausted. Check your plan or balance.",
+    );
+    expect(localAgentErrorMessage(new Error("401 Unauthorized"))).toBe(
+      "Your session is no longer valid. Sign out and sign in again.",
+    );
+    expect(localAgentErrorMessage(new Error("429 rate limit"))).toBe(
+      "The model service is busy. Try again shortly.",
+    );
+    expect(localAgentErrorMessage(new Error("fetch failed"))).toBe(
+      "Could not reach the model service. Check your connection and try again.",
+    );
+    expect(localAgentErrorMessage(new Error("provider exploded"))).toBe(
+      "The model request failed. Try again.",
+    );
+  });
+
   it("maps the local request to the existing Pi runtime contract", () => {
     expect(toPiRequest(request)).toMatchObject({
       botId: "bot-1",
@@ -100,6 +122,22 @@ describe("Pi local agent engine", () => {
     await engine.abort("run-1");
 
     expect(abort).toHaveBeenCalledWith("run-1");
+  });
+
+  it("maps stream errors before they reach local persistence", async () => {
+    const engine = new PiLocalAgentEngine({
+      async *run(): AsyncIterable<AgentRuntimeEvent> {
+        yield { type: "text", text: "partial" };
+        throw new Error("429 too many requests");
+      },
+      abort: async () => undefined,
+    });
+
+    await expect(async () => {
+      for await (const _event of engine.run(request)) {
+        // Drain the stream.
+      }
+    }).rejects.toThrow("The model service is busy.");
   });
 
   it("runs a real Pi tool loop against an offline OpenAI-compatible server", async () => {

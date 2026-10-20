@@ -37,11 +37,16 @@
   const botSettingsThinking = document.getElementById("bot-settings-thinking");
   const botSettingsInstructions = document.getElementById("bot-settings-instructions");
   const browserStatus = document.getElementById("browser-status");
+  const browserHelp = document.getElementById("browser-help");
   const browserConnect = document.getElementById("browser-connect");
+  const browserDisconnect = document.getElementById("browser-disconnect");
   const browserPairing = document.getElementById("browser-pairing");
+  const diagnosticsCopy = document.getElementById("diagnostics-copy");
+  const diagnosticsStatus = document.getElementById("diagnostics-status");
 
   let bots = [];
   let activeBotId = null;
+  let botSelectionGeneration = 0;
   let activeRunId = null;
   let busy = false;
   let stopRequested = false;
@@ -54,6 +59,7 @@
     sendWithEnter: true,
     defaultModelId: null,
   };
+  let browserPollTimer = null;
 
   function setStatus(message, isError = false) {
     statusElement.textContent = message ?? "";
@@ -101,6 +107,7 @@
     botSettingsThinking.value = bot?.thinkingLevel ?? "";
     botSettingsInstructions.value = bot?.instructions ?? "";
     settingsView.hidden = false;
+    startBrowserStatusPolling();
     void refreshBrowserStatus();
     settingsDefaultModel.focus();
   }
@@ -120,10 +127,30 @@
           : status.error || "Browser bridge is unavailable.";
       browserConnect.textContent = status.connected ? "Pair another Chrome" : "Connect Chrome";
       browserConnect.disabled = !status.available;
+      browserDisconnect.disabled = !status.connected;
+      browserHelp.hidden = status.connected;
     } catch (error) {
       browserStatus.textContent = errorMessage(error, "Could not read browser status");
       browserConnect.disabled = true;
+      browserDisconnect.disabled = true;
     }
+  }
+
+  function startBrowserStatusPolling() {
+    stopBrowserStatusPolling();
+    browserPollTimer = window.setInterval(() => {
+      if (!settingsView.hidden) void refreshBrowserStatus();
+    }, 1_000);
+  }
+
+  function stopBrowserStatusPolling() {
+    if (browserPollTimer !== null) window.clearInterval(browserPollTimer);
+    browserPollTimer = null;
+  }
+
+  function closeSettings() {
+    settingsView.hidden = true;
+    stopBrowserStatusPolling();
   }
 
   async function startBrowserPairing() {
@@ -138,6 +165,35 @@
       browserStatus.textContent = errorMessage(error, "Could not start browser pairing");
     } finally {
       browserConnect.disabled = false;
+    }
+  }
+
+  async function disconnectBrowser() {
+    if (!api.browser) return;
+    browserDisconnect.disabled = true;
+    browserPairing.hidden = true;
+    try {
+      await api.browser.revoke();
+      await refreshBrowserStatus();
+    } catch (error) {
+      browserStatus.textContent = errorMessage(error, "Could not disconnect Chrome");
+    }
+  }
+
+  async function copyDiagnostics() {
+    if (!api.diagnostics) {
+      diagnosticsStatus.textContent = "Diagnostics are unavailable in this build.";
+      return;
+    }
+    diagnosticsCopy.disabled = true;
+    diagnosticsStatus.textContent = "";
+    try {
+      await api.diagnostics.copy();
+      diagnosticsStatus.textContent = "Diagnostics copied. They contain no messages or tokens.";
+    } catch (error) {
+      diagnosticsStatus.textContent = errorMessage(error, "Could not copy diagnostics");
+    } finally {
+      diagnosticsCopy.disabled = false;
     }
   }
 
@@ -161,6 +217,7 @@
         await refreshBots();
       }
       settingsView.hidden = true;
+      stopBrowserStatusPolling();
     } catch (error) {
       settingsError.textContent =
         error instanceof Error ? error.message : "Could not save settings";
@@ -171,7 +228,11 @@
     return (message.blocks ?? [])
       .map((block) => {
         if (!block || typeof block !== "object" || Array.isArray(block)) return "";
-        return block.kind === "text" && typeof block.text === "string" ? block.text : "";
+        if (block.kind === "text" && typeof block.text === "string") return block.text;
+        if (block.kind === "error" && typeof block.message === "string") {
+          return block.message === "Run stopped." ? block.message : `Run failed: ${block.message}`;
+        }
+        return "";
       })
       .filter(Boolean)
       .join("\n");
@@ -256,6 +317,7 @@
 
   async function selectBot(botId) {
     if (busy && botId !== activeBotId) return;
+    const generation = ++botSelectionGeneration;
     activeBotId = botId;
     const bot = bots.find((item) => item.id === botId);
     titleElement.textContent = bot?.name ?? "Local chat";
@@ -263,9 +325,12 @@
     renderBots();
     setStatus("Loading…");
     try {
-      renderMessages(await api.messages.list(botId));
+      const messages = await api.messages.list(botId);
+      if (generation !== botSelectionGeneration) return;
+      renderMessages(messages);
       setStatus("");
     } catch (error) {
+      if (generation !== botSelectionGeneration) return;
       setStatus(error instanceof Error ? error.message : "Could not load messages", true);
     }
   }
@@ -306,6 +371,7 @@
     logoutButton.hidden = true;
     settingsOpen.hidden = true;
     settingsView.hidden = true;
+    stopBrowserStatusPolling();
     loginError.textContent = "";
     loginEmail.focus();
   }
@@ -353,6 +419,7 @@
     settingsView.hidden = true;
     bots = [];
     activeBotId = null;
+    botSelectionGeneration += 1;
     botsElement.replaceChildren();
     messagesElement.replaceChildren();
     titleElement.textContent = "Local chat";
@@ -454,9 +521,11 @@
   });
   settingsOpen.addEventListener("click", openBotSettings);
   settingsCancel.addEventListener("click", () => {
-    settingsView.hidden = true;
+    closeSettings();
   });
   browserConnect.addEventListener("click", () => void startBrowserPairing());
+  browserDisconnect.addEventListener("click", () => void disconnectBrowser());
+  diagnosticsCopy.addEventListener("click", () => void copyDiagnostics());
   settingsForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void saveSettings();

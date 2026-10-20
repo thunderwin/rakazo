@@ -69,6 +69,14 @@ pair.addEventListener("click", async () => {
     pair.disabled = false;
   }
 });
+for (const input of [port, code]) {
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      pair.click();
+    }
+  });
+}
 
 disconnect.addEventListener("click", async () => {
   message.textContent = "";

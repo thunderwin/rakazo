@@ -66,6 +66,9 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       startPairing: () => ipcRenderer.invoke("desktop.local.browser.startPairing"),
       revoke: () => ipcRenderer.invoke("desktop.local.browser.revoke"),
     },
+    diagnostics: {
+      copy: () => ipcRenderer.invoke("desktop.local.diagnostics.copy"),
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),

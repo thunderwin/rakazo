@@ -26,6 +26,7 @@ export interface DesktopLocalRuntimeOptions {
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: LocalRuntimeOptions["onRunStart"];
   onEvent?: LocalRuntimeOptions["onEvent"];
+  onRunEnd?: LocalRuntimeOptions["onRunEnd"];
 }
 
 /** The desktop process owns one SQLite database under its userData directory. */
@@ -54,6 +55,7 @@ export async function createDesktopLocalRuntime(
     resolveModel: options.resolveModel,
     onRunStart: options.onRunStart,
     onEvent: options.onEvent,
+    onRunEnd: options.onRunEnd,
   });
   return service;
 }

@@ -68,8 +68,33 @@ describe("desktop local auth", () => {
       vault,
       fetchImpl: vi.fn(async () => new Response("no", { status: 401 })),
     });
-    await expect(auth.signIn("user@example.com", "password12")).rejects.toThrow("Sign-in failed");
+    await expect(auth.signIn("user@example.com", "password12")).rejects.toThrow(
+      "Email or password is incorrect",
+    );
     expect(vault.session).toBeNull();
+  });
+
+  it("turns network and rate-limit failures into actionable messages", async () => {
+    const vault = memoryVault();
+    const offline = new LocalAuth({
+      serverUrl: "https://app.example.com",
+      vault,
+      fetchImpl: vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    });
+    await expect(offline.signIn("user@example.com", "password12")).rejects.toThrow(
+      "Could not reach the account server",
+    );
+
+    const limited = new LocalAuth({
+      serverUrl: "https://app.example.com",
+      vault,
+      fetchImpl: vi.fn(async () => new Response("slow down", { status: 429 })),
+    });
+    await expect(limited.signIn("user@example.com", "password12")).rejects.toThrow(
+      "Too many sign-in attempts",
+    );
   });
 
   it("requires a user id from the sign-in response", async () => {

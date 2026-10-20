@@ -198,6 +198,13 @@ function installSocket(webSocket: WebSocket) {
       webSocket.send(JSON.stringify({ type: "pong" }));
       return;
     }
+    if (isRecord(value) && value.type === "revoked") {
+      settings = { ...settings, token: null };
+      settingsLoaded = true;
+      void saveSettings();
+      webSocket.close(1000, "Disconnected by ericBot");
+      return;
+    }
     if (!isBrowserBridgeRequest(value)) return;
     const request = value;
     commandQueue = commandQueue.then(

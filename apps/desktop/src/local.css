@@ -319,10 +319,29 @@ button:disabled {
   padding: 12px;
 }
 
+.browser-summary {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .browser-settings p {
   margin: 0;
   color: var(--muted-foreground);
   font-size: 12px;
+}
+
+.browser-settings #browser-help {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.browser-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
 }
 
 .browser-settings .browser-pairing {
@@ -332,6 +351,18 @@ button:disabled {
 
 .browser-settings:has(.browser-pairing:not([hidden])) {
   flex-wrap: wrap;
+}
+
+.diagnostics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diagnostics p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
 }
 
 .login-card {

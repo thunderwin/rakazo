@@ -38,14 +38,55 @@ function toPiRequest(request: LocalAgentRunRequest): AgentRunRequest {
 async function* toLocalEvents(
   events: AsyncIterable<AgentRuntimeEvent>,
 ): AsyncIterable<LocalAgentEvent> {
-  for await (const event of events) {
-    if (event.type === "usage") {
-      const { type: _type, ...usage } = event;
-      yield { type: "usage", usage };
-      continue;
+  try {
+    for await (const event of events) {
+      if (event.type === "usage") {
+        const { type: _type, ...usage } = event;
+        yield { type: "usage", usage };
+        continue;
+      }
+      yield event;
     }
-    yield event;
+  } catch (error) {
+    throw new Error(localAgentErrorMessage(error));
   }
+}
+
+export function localAgentErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("insufficient_quota") ||
+    normalized.includes("insufficient quota") ||
+    normalized.includes("quota exhausted") ||
+    /\b402\b/.test(normalized)
+  ) {
+    return "Your model quota is exhausted. Check your plan or balance.";
+  }
+  if (
+    normalized.includes("unauthorized") ||
+    normalized.includes("session expired") ||
+    normalized.includes("invalid token") ||
+    /\b401\b/.test(normalized)
+  ) {
+    return "Your session is no longer valid. Sign out and sign in again.";
+  }
+  if (
+    normalized.includes("rate limit") ||
+    normalized.includes("too many requests") ||
+    /\b429\b/.test(normalized)
+  ) {
+    return "The model service is busy. Try again shortly.";
+  }
+  if (
+    normalized.includes("fetch failed") ||
+    normalized.includes("econnrefused") ||
+    normalized.includes("enotfound") ||
+    normalized.includes("network error")
+  ) {
+    return "Could not reach the model service. Check your connection and try again.";
+  }
+  return "The model request failed. Try again.";
 }
 
 /** Pi remains an implementation detail of the desktop composition root. */

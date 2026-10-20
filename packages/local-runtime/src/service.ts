@@ -19,6 +19,7 @@ export interface LocalRuntimeServiceOptions {
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: ConstructorParameters<typeof LocalRuntime>[0]["onRunStart"];
   onEvent?: ConstructorParameters<typeof LocalRuntime>[0]["onEvent"];
+  onRunEnd?: ConstructorParameters<typeof LocalRuntime>[0]["onRunEnd"];
 }
 
 /** Owns the local DB and runtime for one desktop process. */
@@ -35,6 +36,7 @@ export class LocalRuntimeService {
       resolveModel: options.resolveModel,
       onRunStart: options.onRunStart,
       onEvent: options.onEvent,
+      onRunEnd: options.onRunEnd,
     });
   }
 

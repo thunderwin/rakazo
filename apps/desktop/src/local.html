@@ -104,9 +104,25 @@
 
             <h2>Browser</h2>
             <div class="browser-settings">
-              <p id="browser-status">Checking browser bridge…</p>
-              <button id="browser-connect" type="button">Connect Chrome</button>
+              <div class="browser-summary">
+                <p id="browser-status">Checking browser bridge…</p>
+                <p id="browser-help">
+                  Install ericBot Browser Bridge in the Chrome profile you want the agent to use.
+                  It shares that profile's sign-ins; page text can be sent to the model, but cookies
+                  are never exported.
+                </p>
+              </div>
+              <div class="browser-actions">
+                <button id="browser-connect" type="button">Connect Chrome</button>
+                <button id="browser-disconnect" type="button" disabled>Disconnect</button>
+              </div>
               <p id="browser-pairing" class="browser-pairing" hidden></p>
+            </div>
+
+            <h2>Troubleshooting</h2>
+            <div class="diagnostics">
+              <button id="diagnostics-copy" type="button">Copy diagnostics</button>
+              <p id="diagnostics-status"></p>
             </div>
 
             <h2>Current bot</h2>

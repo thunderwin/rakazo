@@ -76,13 +76,18 @@ export interface BrowserBridgeKeepalive {
   type: "ping" | "pong";
 }
 
+export interface BrowserBridgeRevoked {
+  type: "revoked";
+}
+
 export type BrowserBridgeHello =
   | BrowserBridgePairHello
   | BrowserBridgeTokenHello
   | BrowserBridgeReady
   | BrowserBridgePaired
   | BrowserBridgeFailure
-  | BrowserBridgeKeepalive;
+  | BrowserBridgeKeepalive
+  | BrowserBridgeRevoked;
 
 export interface BrowserBridgeSessionParams {
   session_id: string;

@@ -214,7 +214,10 @@ export class DesktopBrowserBridge implements BrowserHost {
     this.token = randomBytes(32).toString("base64url");
     this.pairing = null;
     await this.saveToken(this.token);
-    if (this.socket !== null) this.socket.close(4003, "Authorization revoked");
+    if (this.socket !== null) {
+      this.socket.send(JSON.stringify({ type: "revoked" }));
+      this.socket.close(4003, "Authorization revoked");
+    }
   }
 
   async listTabs(sessionId: string, signal?: AbortSignal): Promise<BrowserTabSummary[]> {

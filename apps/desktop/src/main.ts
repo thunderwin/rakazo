@@ -8,6 +8,7 @@ import type { LocalRuntimeService } from "@rakazo/local-runtime";
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   type IpcMainInvokeEvent,
   ipcMain,
@@ -31,6 +32,7 @@ import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cl
 import { prepareHostComputer } from "./host-computer.js";
 import { LocalAuth } from "./local-auth.js";
 import { createSafeStorageVault } from "./local-auth-vault.js";
+import { createLocalDiagnostics } from "./local-diagnostics.js";
 import { createDesktopLocalRuntime, defaultLocalModel } from "./local-runtime.js";
 import { requestLocalSettings } from "./local-settings.js";
 import {
@@ -949,16 +951,18 @@ async function closeLocalRuntime(): Promise<void> {
   service?.close();
 }
 
+function cleanupLocalRun(runId: string) {
+  activeLocalRuns.delete(runId);
+  approvedBrowserRuns.delete(runId);
+  void desktopBrowserBridge?.closeSession(runId).catch(() => undefined);
+}
+
 async function abortActiveLocalRuns(service = localRuntimeService): Promise<void> {
   const runs = [...activeLocalRuns];
-  activeLocalRuns.clear();
   if (service) {
     await Promise.allSettled(runs.map((runId) => service.abort(runId)));
   }
-  await Promise.allSettled(
-    runs.map((runId) => desktopBrowserBridge?.closeSession(runId) ?? Promise.resolve()),
-  );
-  for (const runId of runs) approvedBrowserRuns.delete(runId);
+  for (const runId of runs) cleanupLocalRun(runId);
 }
 
 async function startLocalRuntime(accountId: string): Promise<void> {
@@ -1012,14 +1016,12 @@ async function startLocalRuntime(accountId: string): Promise<void> {
       }
     },
     onEvent: (event, runId) => {
-      if (event.type === "done") {
-        activeLocalRuns.delete(runId);
-        approvedBrowserRuns.delete(runId);
-        void desktopBrowserBridge?.closeSession(runId).catch(() => undefined);
-      }
       if (localWindow !== null && !localWindow.isDestroyed()) {
         localWindow.webContents.send("desktop.local.run.event", { runId, event });
       }
+    },
+    onRunEnd: ({ runId }) => {
+      cleanupLocalRun(runId);
     },
     resolveModel: async (bot) => {
       if (!context.gatewayUrl) throw new Error("The local model gateway is not configured.");
@@ -1251,6 +1253,35 @@ function installLocalIpc() {
     if (!desktopBrowserBridge) throw new Error("Browser bridge is not initialized");
     await desktopBrowserBridge.revoke();
     return desktopBrowserBridge.status();
+  });
+  ipcMain.handle("desktop.local.diagnostics.copy", async (event) => {
+    requireLocalWindow(event);
+    const auth = localAuth ? await localAuth.status() : null;
+    clipboard.writeText(
+      JSON.stringify(
+        createLocalDiagnostics({
+          now: new Date(),
+          version: app.getVersion(),
+          packaged: app.isPackaged,
+          platform: process.platform,
+          arch: process.arch,
+          account: auth
+            ? {
+                serverUrl: auth.serverUrl,
+                signedIn: auth.signedIn,
+              }
+            : null,
+          runtime: {
+            ready: localRuntimeService !== undefined,
+            activeRuns: activeLocalRuns.size,
+          },
+          browser: desktopBrowserBridge?.status() ?? null,
+          update: desktopUpdater.state(),
+        }),
+        null,
+        2,
+      ),
+    );
   });
 }
 

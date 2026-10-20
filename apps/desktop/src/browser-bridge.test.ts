@@ -199,4 +199,18 @@ describe("desktop browser bridge", () => {
     );
     expect(second.status().connected).toBe(true);
   });
+
+  it("revokes the extension and replaces the persisted token", async () => {
+    const bridge = await createBridge();
+    const socket = await pair(bridge);
+    const closed = new Promise<number>((resolve) => {
+      socket.once("close", (code) => resolve(code));
+    });
+
+    await bridge.revoke();
+
+    await expect(closed).resolves.toBe(4003);
+    expect(bridge.status().connected).toBe(false);
+    await expect(bridge.observe("run-1")).rejects.toThrow("Browser extension is not connected");
+  });
 });

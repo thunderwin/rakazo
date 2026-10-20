@@ -237,6 +237,7 @@ describe("desktop local UI", () => {
       code: "123456",
       expires_at: "2026-10-20T00:05:00.000Z",
     }));
+    const copyDiagnostics = vi.fn(async () => undefined);
     const api = {
       auth: {
         status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
@@ -265,6 +266,7 @@ describe("desktop local UI", () => {
         startPairing,
         revoke: vi.fn(),
       },
+      diagnostics: { copy: copyDiagnostics },
     };
     Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
 
@@ -285,6 +287,13 @@ describe("desktop local UI", () => {
     await vi.waitFor(() =>
       expect(dom.window.document.getElementById("browser-pairing")?.textContent).toContain(
         "port 47891 and code 123456",
+      ),
+    );
+    (dom.window.document.getElementById("diagnostics-copy") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(copyDiagnostics).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("diagnostics-status")?.textContent).toContain(
+        "Diagnostics copied",
       ),
     );
     dom.window.close();
@@ -323,6 +332,108 @@ describe("desktop local UI", () => {
     await vi.waitFor(() =>
       expect(dom.window.document.getElementById("status")?.textContent).toBe("provider failed"),
     );
+    dom.window.close();
+  });
+
+  it("shows persisted partial output and the run error after reopening a thread", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        signUp: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: { list: vi.fn(async () => [bot]), create: vi.fn(async () => bot) },
+      messages: {
+        list: vi.fn(async () => [
+          message,
+          {
+            ...message,
+            id: "message-2",
+            role: "bot",
+            blocks: [
+              { kind: "text", text: "Partial answer" },
+              { kind: "error", message: "quota exhausted" },
+            ],
+          },
+        ]),
+        send: vi.fn(),
+      },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.querySelectorAll(".message")).toHaveLength(2),
+    );
+    expect(dom.window.document.querySelectorAll(".message")[1]?.textContent).toContain(
+      "Partial answer",
+    );
+    expect(dom.window.document.querySelectorAll(".message")[1]?.textContent).toContain(
+      "Run failed: quota exhausted",
+    );
+    dom.window.close();
+  });
+
+  it("does not let a slow thread load replace the bot the user selected last", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const secondBot = { ...bot, id: "bot-2", name: "Researcher" };
+    let releaseSlow: ((messages: unknown[]) => void) | undefined;
+    let firstLoads = 0;
+    const listMessages = vi.fn(async (botId: string) => {
+      if (botId === bot.id) {
+        firstLoads += 1;
+        if (firstLoads === 1) return [message];
+        return new Promise<unknown[]>((resolve) => {
+          releaseSlow = resolve;
+        });
+      }
+      return [
+        {
+          ...message,
+          id: "message-2",
+          threadId: "thread-2",
+          blocks: [{ kind: "text", text: "Research history" }],
+        },
+      ];
+    });
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        signUp: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: {
+        list: vi.fn(async () => [bot, secondBot]),
+        create: vi.fn(async () => bot),
+      },
+      messages: { list: listMessages, send: vi.fn() },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() => expect(dom.window.document.querySelectorAll(".bot")).toHaveLength(2));
+    (dom.window.document.querySelectorAll(".bot")[0] as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(firstLoads).toBe(2));
+    (dom.window.document.querySelectorAll(".bot")[1] as HTMLButtonElement).click();
+    await vi.waitFor(() =>
+      expect(dom.window.document.querySelector(".message")?.textContent).toContain(
+        "Research history",
+      ),
+    );
+
+    releaseSlow?.([{ ...message, blocks: [{ kind: "text", text: "Stale history" }] }]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(dom.window.document.querySelector(".message")?.textContent).toContain(
+      "Research history",
+    );
+    expect(dom.window.document.getElementById("bot-title")?.textContent).toBe("Researcher");
     dom.window.close();
   });
 

@@ -1,11 +1,12 @@
 import { openLocalDatabase } from "@rakazo/local-db";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   LocalAgentEngine,
   LocalAgentEvent,
   LocalAgentRunContext,
   LocalAgentRunRequest,
 } from "./agent.js";
+import type { LocalRunEnd } from "./runtime.js";
 import { LocalRuntime } from "./runtime.js";
 import { SqliteConversationStore } from "./store.js";
 import { type LocalTool, LocalToolRegistry } from "./tools.js";
@@ -58,24 +59,32 @@ const probeTool: LocalTool = {
   },
 };
 
-function setup(engine: LocalAgentEngine, approve = true) {
+function setup(
+  engine: LocalAgentEngine,
+  approve = true,
+  resolveModel: () => typeof model | Promise<typeof model> = () => model,
+) {
   const db = openLocalDatabase(":memory:");
   const events: LocalAgentEvent[] = [];
   const starts: Array<{ runId: string; botId: string; threadId: string; userMessageId: string }> =
     [];
+  const ends: LocalRunEnd[] = [];
   const runtime = new LocalRuntime({
     store: new SqliteConversationStore(db),
     engine,
     tools: new LocalToolRegistry([probeTool], () => approve),
-    resolveModel: () => model,
+    resolveModel,
     onRunStart: (run) => {
       starts.push(run);
     },
     onEvent: (event) => {
       events.push(event);
     },
+    onRunEnd: (run) => {
+      ends.push(run);
+    },
   });
-  return { db, runtime, events, starts };
+  return { db, runtime, events, starts, ends };
 }
 
 describe("local runtime", () => {
@@ -94,7 +103,7 @@ describe("local runtime", () => {
       yield { type: "text", text: " world" };
       yield { type: "done" };
     });
-    const { db, runtime, events, starts } = setup(engine);
+    const { db, runtime, events, starts, ends } = setup(engine);
     const bot = runtime.createBot({
       name: "Researcher",
       instructions: "Verify sources.",
@@ -129,6 +138,7 @@ describe("local runtime", () => {
       "bot",
     ]);
     expect(result.assistantMessage?.blocks).toEqual([{ kind: "text", text: "Hello world" }]);
+    expect(ends).toEqual([{ runId: result.runId, status: "completed", error: null }]);
 
     await runtime.sendMessage(bot.id, "Continue.");
     expect(engine.requests[1]?.history).toEqual([
@@ -143,18 +153,75 @@ describe("local runtime", () => {
     db.close();
   });
 
-  it("keeps the user message when the engine fails", async () => {
+  it("keeps partial output and reports a failed run when the engine fails", async () => {
     const engine = new FakeEngine(async function* () {
       yield { type: "text", text: "partial" };
       throw new Error("engine failed");
     });
-    const { db, runtime } = setup(engine);
+    const { db, runtime, ends } = setup(engine);
     const bot = runtime.createBot({ name: "Researcher" });
 
     await expect(runtime.sendMessage(bot.id, "Try this")).rejects.toThrow("engine failed");
     const thread = db.threads.getForBot(bot.id);
     expect(thread).not.toBeNull();
-    expect(db.messages.list(thread!.id).map((message) => message.role)).toEqual(["user"]);
+    const messages = db.messages.list(thread!.id);
+    expect(messages.map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(messages[1]?.blocks).toEqual([
+      { kind: "text", text: "partial" },
+      { kind: "error", message: "engine failed" },
+    ]);
+    expect(ends).toEqual([expect.objectContaining({ status: "failed", error: "engine failed" })]);
+    db.close();
+  });
+
+  it("persists a failed run when model resolution fails", async () => {
+    const { db, runtime, ends } = setup(new FakeEngine(), true, () => {
+      throw new Error("The model gateway is not configured.");
+    });
+    const bot = runtime.createBot({ name: "Researcher" });
+
+    await expect(runtime.sendMessage(bot.id, "Try this")).rejects.toThrow(
+      "The model gateway is not configured",
+    );
+    const thread = db.threads.getForBot(bot.id)!;
+    expect(db.messages.list(thread.id).map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(db.messages.list(thread.id)[1]?.blocks).toEqual([
+      { kind: "error", message: "The model gateway is not configured." },
+    ]);
+    expect(ends).toEqual([expect.objectContaining({ status: "failed" })]);
+    db.close();
+  });
+
+  it("persists a stopped marker and reports stopped after cancellation", async () => {
+    let release: (() => void) | undefined;
+    const engine: LocalAgentEngine = {
+      async *run(): AsyncIterable<LocalAgentEvent> {
+        yield { type: "text", text: "partial" };
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        throw new Error("aborted");
+      },
+      async abort() {
+        release?.();
+      },
+    };
+    const { db, runtime, events, starts, ends } = setup(engine);
+    const bot = runtime.createBot({ name: "Researcher" });
+    const pending = runtime.sendMessage(bot.id, "Stop this");
+
+    await vi.waitFor(() => expect(starts).toHaveLength(1));
+    await vi.waitFor(() => expect(events).toContainEqual({ type: "text", text: "partial" }));
+    await runtime.abort(starts[0]!.runId);
+    await expect(pending).rejects.toThrow("aborted");
+
+    const thread = db.threads.getForBot(bot.id)!;
+    const messages = db.messages.list(thread.id);
+    expect(messages[1]?.blocks).toEqual([
+      { kind: "text", text: "partial" },
+      { kind: "error", message: "Run stopped." },
+    ]);
+    expect(ends).toEqual([expect.objectContaining({ status: "stopped", error: "Run stopped." })]);
     db.close();
   });
 

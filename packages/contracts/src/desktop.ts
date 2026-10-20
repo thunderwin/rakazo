@@ -164,6 +164,9 @@ export interface RakazoDesktopLocal {
     startPairing: () => Promise<DesktopBrowserPairingOffer>;
     revoke: () => Promise<DesktopBrowserBridgeStatus>;
   };
+  diagnostics: {
+    copy: () => Promise<void>;
+  };
 }
 
 export interface RakazoDesktop {

@@ -44,6 +44,7 @@ describe("desktop preload bridge", () => {
       "auth",
       "bots",
       "browser",
+      "diagnostics",
       "messages",
       "runs",
       "settings",
@@ -81,6 +82,7 @@ describe("desktop preload bridge", () => {
     await bridge.local?.browser.status();
     await bridge.local?.browser.startPairing();
     await bridge.local?.browser.revoke();
+    await bridge.local?.diagnostics.copy();
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -107,6 +109,7 @@ describe("desktop preload bridge", () => {
       "desktop.local.browser.status",
       "desktop.local.browser.startPairing",
       "desktop.local.browser.revoke",
+      "desktop.local.diagnostics.copy",
     ]);
   });
 
