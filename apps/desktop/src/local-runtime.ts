@@ -1,4 +1,3 @@
-import path from "node:path";
 import { OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
 import type { Bot } from "@rakazo/local-db";
 import {
@@ -11,10 +10,12 @@ import {
   LocalRuntimeService,
   LocalToolRegistry,
 } from "@rakazo/local-runtime";
+import { prepareLocalAccountData } from "./local-account-data.js";
 import { PiLocalAgentEngine } from "./pi-local-agent-engine.js";
 
 export interface DesktopLocalRuntimeOptions {
   userDataDir: string;
+  accountId: string;
   engine?: LocalAgentEngine;
   approveTool: ApproveLocalTool;
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
@@ -23,17 +24,19 @@ export interface DesktopLocalRuntimeOptions {
 }
 
 /** The desktop process owns one SQLite database under its userData directory. */
-export function createDesktopLocalRuntime(
+export async function createDesktopLocalRuntime(
   options: DesktopLocalRuntimeOptions,
-): LocalRuntimeService {
-  const localDir = path.join(options.userDataDir, "local");
-  const workspaceDir = path.join(localDir, "workspace");
+): Promise<LocalRuntimeService> {
+  const account = await prepareLocalAccountData(options.userDataDir, options.accountId);
   const tools = new LocalToolRegistry(
-    [createShellTool({ workspaceDir }), ...createFileTools({ workspaceDir })],
+    [
+      createShellTool({ workspaceDir: account.workspaceDir }),
+      ...createFileTools({ workspaceDir: account.workspaceDir }),
+    ],
     options.approveTool,
   );
   return new LocalRuntimeService({
-    databasePath: path.join(localDir, "rakazo.sqlite"),
+    databasePath: account.databasePath,
     engine: options.engine ?? new PiLocalAgentEngine(),
     tools,
     resolveModel: options.resolveModel,

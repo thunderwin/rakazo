@@ -1,17 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { LocalAuth, type TokenVault } from "./local-auth.js";
+import { LocalAuth, type LocalSession, type SessionVault } from "./local-auth.js";
 
-function memoryVault(initial: string | null = null): TokenVault & { token: string | null } {
+function memoryVault(initial: LocalSession | null = null): SessionVault & {
+  session: LocalSession | null;
+} {
   return {
-    token: initial,
+    session: initial,
     async load() {
-      return this.token;
+      return this.session;
     },
-    async save(token) {
-      this.token = token;
+    async save(session) {
+      this.session = session;
     },
     async clear() {
-      this.token = null;
+      this.session = null;
     },
   };
 }
@@ -19,7 +21,9 @@ function memoryVault(initial: string | null = null): TokenVault & { token: strin
 describe("desktop local auth", () => {
   it("signs in with email/password and persists the session token", async () => {
     const vault = memoryVault();
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ token: "session-token" })));
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify({ token: "session-token", user: { id: "user-1" } })),
+    );
     const auth = new LocalAuth({
       serverUrl: "https://app.example.com",
       vault,
@@ -39,7 +43,9 @@ describe("desktop local auth", () => {
     await expect(auth.status()).resolves.toEqual({
       signedIn: true,
       serverUrl: "https://app.example.com",
+      userId: "user-1",
     });
+    expect(vault.session).toEqual({ token: "session-token", userId: "user-1" });
   });
 
   it("does not save a token when sign-in fails", async () => {
@@ -50,11 +56,25 @@ describe("desktop local auth", () => {
       fetchImpl: vi.fn(async () => new Response("no", { status: 401 })),
     });
     await expect(auth.signIn("user@example.com", "password12")).rejects.toThrow("Sign-in failed");
-    expect(vault.token).toBeNull();
+    expect(vault.session).toBeNull();
+  });
+
+  it("requires a user id from the sign-in response", async () => {
+    const vault = memoryVault();
+    const auth = new LocalAuth({
+      serverUrl: "https://app.example.com",
+      vault,
+      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ token: "session-token" }))),
+    });
+
+    await expect(auth.signIn("user@example.com", "password12")).rejects.toThrow(
+      "Sign-in did not return a user id",
+    );
+    expect(vault.session).toBeNull();
   });
 
   it("clears the local token on sign-out", async () => {
-    const vault = memoryVault("session-token");
+    const vault = memoryVault({ token: "session-token", userId: "user-1" });
     const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
     const auth = new LocalAuth({
       serverUrl: "https://app.example.com",
@@ -62,7 +82,7 @@ describe("desktop local auth", () => {
       fetchImpl,
     });
     await auth.signOut();
-    expect(vault.token).toBeNull();
+    expect(vault.session).toBeNull();
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://app.example.com/api/auth/sign-out",
       expect.objectContaining({

@@ -1,18 +1,24 @@
-export interface TokenVault {
-  load: () => Promise<string | null>;
-  save: (token: string) => Promise<void>;
+export interface LocalSession {
+  token: string;
+  userId: string;
+}
+
+export interface SessionVault {
+  load: () => Promise<LocalSession | null>;
+  save: (session: LocalSession) => Promise<void>;
   clear: () => Promise<void>;
 }
 
 export interface LocalAuthOptions {
   serverUrl: string;
-  vault: TokenVault;
+  vault: SessionVault;
   fetchImpl?: typeof fetch;
 }
 
 export interface LocalAuthStatus {
   signedIn: boolean;
   serverUrl: string;
+  userId: string | null;
 }
 
 function normalizeServerUrl(value: string): string {
@@ -33,7 +39,7 @@ function normalizeServerUrl(value: string): string {
 
 export class LocalAuth {
   private readonly serverUrl: string;
-  private readonly vault: TokenVault;
+  private readonly vault: SessionVault;
   private readonly fetchImpl: typeof fetch;
 
   constructor(options: LocalAuthOptions) {
@@ -43,19 +49,21 @@ export class LocalAuth {
   }
 
   async status(): Promise<LocalAuthStatus> {
+    const session = await this.vault.load();
     return {
-      signedIn: (await this.vault.load()) !== null,
+      signedIn: session !== null,
       serverUrl: this.serverUrl,
+      userId: session?.userId ?? null,
     };
   }
 
   async getToken(): Promise<string> {
-    const token = await this.vault.load();
-    if (!token) throw new Error("Sign in to connect the model gateway.");
-    return token;
+    const session = await this.vault.load();
+    if (!session) throw new Error("Sign in to connect the model gateway.");
+    return session.token;
   }
 
-  async signIn(email: string, password: string): Promise<void> {
+  async signIn(email: string, password: string): Promise<LocalSession> {
     const normalizedEmail = email.trim();
     if (!normalizedEmail || password.length < 8) {
       throw new Error("Enter a valid email and password");
@@ -71,15 +79,23 @@ export class LocalAuth {
     if (!response.ok) {
       throw new Error("Sign-in failed. Check your email and password.");
     }
-    const body = (await response.json()) as { token?: unknown };
+    const body = (await response.json()) as {
+      token?: unknown;
+      user?: { id?: unknown };
+    };
     if (typeof body.token !== "string" || !body.token) {
       throw new Error("Sign-in did not return a session token");
     }
-    await this.vault.save(body.token);
+    if (typeof body.user?.id !== "string" || !body.user.id) {
+      throw new Error("Sign-in did not return a user id");
+    }
+    const session = { token: body.token, userId: body.user.id };
+    await this.vault.save(session);
+    return session;
   }
 
   async signOut(): Promise<void> {
-    const token = await this.vault.load();
+    const token = (await this.vault.load())?.token;
     await this.vault.clear();
     if (!token) return;
     await this.fetchImpl(`${this.serverUrl}/api/auth/sign-out`, {

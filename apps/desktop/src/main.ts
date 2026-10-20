@@ -124,6 +124,15 @@ let localStack: LocalStackController;
 let hostComputer: Awaited<ReturnType<typeof prepareHostComputer>> | undefined;
 let requestingComputerAccess = false;
 let localRuntimeService: LocalRuntimeService | undefined;
+let localRuntimeAccountId: string | null = null;
+let localRuntimeGeneration = 0;
+let localModeContext:
+  | {
+      userDataDir: string;
+      gatewayUrl?: string;
+      developmentToken?: string;
+    }
+  | undefined;
 let localAuth: LocalAuth | undefined;
 let localWindow: BrowserWindow | null = null;
 let localIpcInstalled = false;
@@ -919,6 +928,75 @@ function requireLocalRuntime(): LocalRuntimeService {
   return localRuntimeService;
 }
 
+function closeLocalRuntime(): void {
+  localRuntimeGeneration += 1;
+  const service = localRuntimeService;
+  localRuntimeService = undefined;
+  localRuntimeAccountId = null;
+  service?.close();
+}
+
+async function startLocalRuntime(accountId: string): Promise<void> {
+  if (!localModeContext) throw new Error("Local mode is not ready");
+  if (localRuntimeService && localRuntimeAccountId === accountId) return;
+  const generation = ++localRuntimeGeneration;
+  localRuntimeService?.close();
+  localRuntimeService = undefined;
+  localRuntimeAccountId = null;
+  const context = localModeContext;
+  const service = await createDesktopLocalRuntime({
+    userDataDir: context.userDataDir,
+    accountId,
+    approveTool: async ({ name, args }) => {
+      const detail =
+        name === "shell" && typeof args.command === "string"
+          ? args.command.slice(0, 4_000)
+          : JSON.stringify(args).slice(0, 4_000);
+      const options = {
+        type: "warning" as const,
+        title: "Allow local tool?",
+        message: `The agent wants to use ${name}.`,
+        detail,
+        buttons: ["Allow once", "Cancel"],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      };
+      const result =
+        localWindow === null || localWindow.isDestroyed()
+          ? await dialog.showMessageBox(options)
+          : await dialog.showMessageBox(localWindow, options);
+      return result.response === 0;
+    },
+    onRunStart: (run) => {
+      if (localWindow !== null && !localWindow.isDestroyed()) {
+        localWindow.webContents.send("desktop.local.run.started", run);
+      }
+    },
+    onEvent: (event, runId) => {
+      if (localWindow !== null && !localWindow.isDestroyed()) {
+        localWindow.webContents.send("desktop.local.run.event", { runId, event });
+      }
+    },
+    resolveModel: async (bot) => {
+      if (!context.gatewayUrl) throw new Error("The local model gateway is not configured.");
+      const token = localAuth ? await localAuth.getToken() : context.developmentToken;
+      if (!token) throw new Error("Sign in to connect the model gateway.");
+      return defaultLocalModel({
+        baseUrl: `${context.gatewayUrl.replace(/\/+$/, "")}/v1/model/openai`,
+        apiKey: token,
+        bot,
+      });
+    },
+  });
+  if (generation !== localRuntimeGeneration || localWindow === null || localWindow.isDestroyed()) {
+    service.close();
+    throw new Error("Local runtime start was cancelled");
+  }
+  localRuntimeService = service;
+  localRuntimeAccountId = accountId;
+}
+
 function requireLocalAuth(): LocalAuth {
   if (!localAuth) throw new Error("Server URL is not configured");
   return localAuth;
@@ -963,17 +1041,26 @@ function installLocalIpc() {
 
   ipcMain.handle("desktop.local.auth.status", async (event) => {
     requireLocalWindow(event);
-    return localAuth ? localAuth.status() : { signedIn: false, serverUrl: null };
+    return localAuth ? localAuth.status() : { signedIn: false, serverUrl: null, userId: null };
   });
   ipcMain.handle("desktop.local.auth.login", async (event, email: unknown, password: unknown) => {
     requireLocalWindow(event);
-    await requireLocalAuth().signIn(
+    const session = await requireLocalAuth().signIn(
       localString(email, "Email", 320),
       localString(password, "Password", 1000),
     );
+    try {
+      await startLocalRuntime(session.userId);
+    } catch (error) {
+      await requireLocalAuth()
+        .signOut()
+        .catch(() => undefined);
+      throw error;
+    }
   });
   ipcMain.handle("desktop.local.auth.logout", async (event) => {
     requireLocalWindow(event);
+    closeLocalRuntime();
     await requireLocalAuth().signOut();
   });
   ipcMain.handle("desktop.local.bots.list", (event) => {
@@ -1022,51 +1109,7 @@ async function openLocalMode(userDataDir: string) {
   localAuth = auth;
   const gatewayUrl = serverUrl ?? process.env.RAKAZO_MODEL_GATEWAY_URL?.trim();
   const developmentToken = process.env.RAKAZO_DEV_MODEL_GATEWAY_TOKEN?.trim();
-  const service = createDesktopLocalRuntime({
-    userDataDir,
-    approveTool: async ({ name, args }) => {
-      const detail =
-        name === "shell" && typeof args.command === "string"
-          ? args.command.slice(0, 4_000)
-          : JSON.stringify(args).slice(0, 4_000);
-      const options = {
-        type: "warning" as const,
-        title: "Allow local tool?",
-        message: `The agent wants to use ${name}.`,
-        detail,
-        buttons: ["Allow once", "Cancel"],
-        defaultId: 1,
-        cancelId: 1,
-        noLink: true,
-      };
-      const result =
-        localWindow === null || localWindow.isDestroyed()
-          ? await dialog.showMessageBox(options)
-          : await dialog.showMessageBox(localWindow, options);
-      return result.response === 0;
-    },
-    onRunStart: (run) => {
-      if (localWindow !== null && !localWindow.isDestroyed()) {
-        localWindow.webContents.send("desktop.local.run.started", run);
-      }
-    },
-    onEvent: (event, runId) => {
-      if (localWindow !== null && !localWindow.isDestroyed()) {
-        localWindow.webContents.send("desktop.local.run.event", { runId, event });
-      }
-    },
-    resolveModel: async (bot) => {
-      if (!gatewayUrl) throw new Error("The local model gateway is not configured.");
-      const token = auth ? await auth.getToken() : developmentToken;
-      if (!token) throw new Error("Sign in to connect the model gateway.");
-      return defaultLocalModel({
-        baseUrl: `${gatewayUrl.replace(/\/+$/, "")}/v1/model/openai`,
-        apiKey: token,
-        bot,
-      });
-    },
-  });
-  localRuntimeService = service;
+  localModeContext = { userDataDir, gatewayUrl, developmentToken };
   installLocalIpc();
 
   const icon = developmentIcon();
@@ -1083,12 +1126,17 @@ async function openLocalMode(userDataDir: string) {
   localWindow = win;
   win.once("closed", () => {
     if (localWindow === win) localWindow = null;
-    if (localRuntimeService === service) {
-      localRuntimeService = undefined;
-      service.close();
-    }
+    closeLocalRuntime();
+    localModeContext = undefined;
     localAuth = undefined;
   });
+
+  if (auth) {
+    const status = await auth.status();
+    if (status.signedIn && status.userId) await startLocalRuntime(status.userId);
+  } else {
+    await startLocalRuntime("development");
+  }
   await win.loadFile(path.join(import.meta.dirname, "local.html"));
 }
 
@@ -1603,8 +1651,8 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
   quitting = true;
   clearTimeout(warmWindowTimer);
-  localRuntimeService?.close();
-  localRuntimeService = undefined;
+  closeLocalRuntime();
+  localModeContext = undefined;
   localAuth = undefined;
   // Containers keep running; only an in-flight pull/up is cut short.
   hostComputer?.activate(false);

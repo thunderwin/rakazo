@@ -95,7 +95,11 @@ export interface DesktopLocalRunEvent {
 
 export interface RakazoDesktopLocal {
   auth: {
-    status: () => Promise<{ signedIn: boolean; serverUrl: string | null }>;
+    status: () => Promise<{
+      signedIn: boolean;
+      serverUrl: string | null;
+      userId: string | null;
+    }>;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
   };
