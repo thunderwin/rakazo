@@ -154,7 +154,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - SQLite 实现当前保存 bot、thread、message 和 settings。
 - 本地数据按 Rakazo userId 隔离：
   `userData/local/accounts/<sha256(userId)>/rakazo.sqlite`，workspace 位于同一账号目录。
-- 登录前不打开本地库；登录、退出或切换账号时关闭并重开对应账号的 runtime。
+- 登录前不打开本地库；登录、退出或切换账号时先取消该账号的活动 run，再关闭并重开
+  对应账号的 runtime。
 - 旧预览版的共享 `local/rakazo.sqlite` 只迁移给升级后第一个登录账号。
 - 本地 `shell` 工具已接入 Pi 工具循环，并在 Electron 中逐次请求用户批准；命令的
   工作目录限定在本地 workspace。

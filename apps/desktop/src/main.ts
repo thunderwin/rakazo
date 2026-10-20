@@ -126,6 +126,7 @@ let requestingComputerAccess = false;
 let localRuntimeService: LocalRuntimeService | undefined;
 let localRuntimeAccountId: string | null = null;
 let localRuntimeGeneration = 0;
+const activeLocalRuns = new Set<string>();
 let localModeContext:
   | {
       userDataDir: string;
@@ -928,21 +929,24 @@ function requireLocalRuntime(): LocalRuntimeService {
   return localRuntimeService;
 }
 
-function closeLocalRuntime(): void {
+async function closeLocalRuntime(): Promise<void> {
   localRuntimeGeneration += 1;
   const service = localRuntimeService;
+  const runs = [...activeLocalRuns];
   localRuntimeService = undefined;
   localRuntimeAccountId = null;
+  activeLocalRuns.clear();
+  if (service) {
+    await Promise.allSettled(runs.map((runId) => service.abort(runId)));
+  }
   service?.close();
 }
 
 async function startLocalRuntime(accountId: string): Promise<void> {
   if (!localModeContext) throw new Error("Local mode is not ready");
   if (localRuntimeService && localRuntimeAccountId === accountId) return;
+  await closeLocalRuntime();
   const generation = ++localRuntimeGeneration;
-  localRuntimeService?.close();
-  localRuntimeService = undefined;
-  localRuntimeAccountId = null;
   const context = localModeContext;
   const service = await createDesktopLocalRuntime({
     userDataDir: context.userDataDir,
@@ -969,11 +973,13 @@ async function startLocalRuntime(accountId: string): Promise<void> {
       return result.response === 0;
     },
     onRunStart: (run) => {
+      activeLocalRuns.add(run.runId);
       if (localWindow !== null && !localWindow.isDestroyed()) {
         localWindow.webContents.send("desktop.local.run.started", run);
       }
     },
     onEvent: (event, runId) => {
+      if (event.type === "done") activeLocalRuns.delete(runId);
       if (localWindow !== null && !localWindow.isDestroyed()) {
         localWindow.webContents.send("desktop.local.run.event", { runId, event });
       }
@@ -1060,7 +1066,7 @@ function installLocalIpc() {
   });
   ipcMain.handle("desktop.local.auth.logout", async (event) => {
     requireLocalWindow(event);
-    closeLocalRuntime();
+    await closeLocalRuntime();
     await requireLocalAuth().signOut();
   });
   ipcMain.handle("desktop.local.bots.list", (event) => {
@@ -1126,7 +1132,7 @@ async function openLocalMode(userDataDir: string) {
   localWindow = win;
   win.once("closed", () => {
     if (localWindow === win) localWindow = null;
-    closeLocalRuntime();
+    void closeLocalRuntime();
     localModeContext = undefined;
     localAuth = undefined;
   });
@@ -1651,7 +1657,7 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
   quitting = true;
   clearTimeout(warmWindowTimer);
-  closeLocalRuntime();
+  void closeLocalRuntime();
   localModeContext = undefined;
   localAuth = undefined;
   // Containers keep running; only an in-flight pull/up is cut short.

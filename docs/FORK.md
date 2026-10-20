@@ -136,7 +136,8 @@ docs/                        架构、V1 范围、fork 说明
 
 - `better-sqlite3`（SQLite，WAL）是唯一事实来源；本地 runtime 是唯一写入口。
 - 本地库和 workspace 按 Rakazo userId 放在
-  `local/accounts/<sha256(userId)>/`；登录前不打开任何账号数据库。
+  `local/accounts/<sha256(userId)>/`；登录前不打开任何账号数据库，退出或切换账号时
+  先取消活动 run。
 - 存储 bot、thread、message、memory、routine、settings 和工具记录。
 - 升级时执行迁移；失败保留备份。
 - 提供导出/导入；V1 不做云端同步。
