@@ -113,7 +113,8 @@ docs/                        架构、V1 范围、fork 说明
 要求：
 
 - 客户端内置公开的 `serverUrl`，不内置任何长期密钥。
-- session token 存在 OS keychain/DPAPI；设备级撤销是后续工作。
+- session token 和 Rakazo userId 一起存在 OS keychain/DPAPI；设备级撤销是后续工作。
+- 旧版只保存 token 的 session 会在升级后要求重新登录一次，以免打开错误的共享本地库。
 - 模型供应商 key 只在服务器。
 - 额度、限流和风控以 New API 为准。
 - 模型网关会看到 prompt/回复；隐私政策必须说明。
@@ -134,6 +135,8 @@ docs/                        架构、V1 范围、fork 说明
 ### 6.2 本地数据库
 
 - `better-sqlite3`（SQLite，WAL）是唯一事实来源；本地 runtime 是唯一写入口。
+- 本地库和 workspace 按 Rakazo userId 放在
+  `local/accounts/<sha256(userId)>/`；登录前不打开任何账号数据库。
 - 存储 bot、thread、message、memory、routine、settings 和工具记录。
 - 升级时执行迁移；失败保留备份。
 - 提供导出/导入；V1 不做云端同步。

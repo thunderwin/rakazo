@@ -152,6 +152,10 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 模型连接固定为 OpenAI-compatible，base URL 由组合根指向服务器网关；bot 只选择
   model id，不能更改服务器地址或直接接触 New API。
 - SQLite 实现当前保存 bot、thread、message 和 settings。
+- 本地数据按 Rakazo userId 隔离：
+  `userData/local/accounts/<sha256(userId)>/rakazo.sqlite`，workspace 位于同一账号目录。
+- 登录前不打开本地库；登录、退出或切换账号时关闭并重开对应账号的 runtime。
+- 旧预览版的共享 `local/rakazo.sqlite` 只迁移给升级后第一个登录账号。
 - 本地 `shell` 工具已接入 Pi 工具循环，并在 Electron 中逐次请求用户批准；命令的
   工作目录限定在本地 workspace。
 - `list_files`、`read_file`、`write_file` 已接入本地 workspace；只读工具不弹审批，
@@ -185,6 +189,9 @@ UI/API。
 当前 schema 已有 bots、threads、messages、settings 和 routines 表；repository
 覆盖 bots、threads、messages、settings。memory、tool runs 和 routines 的
 repository/本地调度尚未实现。
+
+账号间隔离目前是目录和数据库文件隔离，不是磁盘加密。同一 OS 用户仍可直接读取这些
+SQLite 文件；数据库和备份加密仍是待办项。
 
 ### 4.4 模型网关
 
@@ -235,7 +242,7 @@ Local Runtime
 ```text
 用户在客户端登录
   -> 服务器返回 session
-  -> 客户端把 session token 存入 OS keychain
+  -> 客户端把 session token + Rakazo userId 存入 OS keychain
   -> 模型网关映射到用户的 New API token
   -> New API 按该用户额度结算
 
@@ -246,6 +253,7 @@ V1 继续使用 Better Auth session token；设备注册和短期设备 token �
 
 - 客户端不可信；额度和权限判断由 New API 和 Rakazo 服务端校验。
 - V1 通过 session 撤销访问；设备级撤销尚未实现。
+- 本地数据库按已保存的 Rakazo userId 选择；旧版仅 token session 需要重新登录一次。
 - 不在客户端做唯一扣费判断。
 - 多设备在 V1 不共享本地数据；每台设备是独立本地库。
 
