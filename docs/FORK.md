@@ -61,7 +61,7 @@ packages/local-runtime/      Agent、store、tool 端口和本地编排（基础
 packages/local-db/           SQLite schema、迁移和 repository（v1 基础已建立）
 apps/desktop/src/pi-local-agent-engine.ts
                              Pi engine adapter 和 Electron 组合根
-apps/browser-extension/      浏览器扩展和 Native Messaging（计划）
+apps/browser-extension/      Chrome/Edge MV3 扩展和本地浏览器工具
 scripts/                     模板 seed、品牌生成、迁移脚本
 docs/                        架构、V1 范围、fork 说明
 ```
@@ -134,7 +134,8 @@ docs/                        架构、V1 范围、fork 说明
 - `@rakazo/local-runtime` 定义 Agent、store、tool 三个端口，不依赖 Prisma。
 - `PiLocalAgentEngine` 复用现有的 `PiAgentRuntime`，没有复制服务器 executor。
 - `shell`、`list_files`、`read_file`、`write_file` 已接入 Pi tool loop；写操作和
-  shell 逐次授权，只读文件工具直接执行。应用和浏览器工具待迁移。
+  shell 逐次授权，只读文件工具直接执行。浏览器工具已通过 loopback bridge 接入；
+  应用启动和桌面操作待迁移。
 - 预览 UI 已接收实时 run 事件并可停止当前执行；完整 Web UI 尚未接入。
 - 所有高风险工具都要有授权、可见状态和停止入口。
 
@@ -152,9 +153,13 @@ docs/                        架构、V1 范围、fork 说明
 ### 6.3 浏览器状态
 
 - 优先使用用户现有浏览器 + 扩展，不复制 Cookie 文件。
-- 扩展通过 Native Messaging 或本地 WebSocket 与 runtime 通信。
-- 按站点授权，提供暂停和撤销。
+- 扩展通过 loopback WebSocket 与 Electron runtime 通信，不开放公网监听的 CDP。
+- 用户用一次性配对码连接；扩展只保存本地桥接令牌。
+- 默认使用 Agent Window；已有标签页借用和归还，任务结束自动清理。
+- 按站点权限工作，提供断开和撤销。
 - 网页内容按不可信数据处理。
+
+实现和限制见 `docs/BROWSER.md`。
 
 ## 7. Bot 模板和 prompt
 
@@ -195,6 +200,17 @@ local-first 改造完成后，客户端开发应尽量不依赖服务器业务�
 ```bash
 RAKAZO_LOCAL_UI=1 pnpm --filter @rakazo/desktop dev
 ```
+
+构建并测试浏览器扩展：
+
+```bash
+pnpm --filter @rakazo/browser-extension build
+pnpm --filter @rakazo/browser-extension check
+pnpm --filter @rakazo/browser-extension test
+pnpm --filter @rakazo/browser-extension test:e2e
+```
+
+扩展的 `dist/` 可在 `chrome://extensions` 中通过“加载已解压的扩展程序”进行本地验证。
 
 接真实服务器登录：
 
@@ -304,7 +320,7 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 - New API 负责用户额度、渠道和扣费；Rakazo 不信任客户端上报的额度，管理员
   access token 只存在服务器。
 - 本地数据库和备份加密。
-- 浏览器扩展按站点授权，不静默读取所有页面。
+- 浏览器扩展只响应用户发起的本地任务，不后台遍历页面；页面正文进入模型前仍受任务意图约束。
 - 本地 `shell` 已改为逐次审批；仍需补齐任务停止入口和更细的工具策略。
 - 遥测只回传元数据，默认不回传对话正文和文件内容。
 

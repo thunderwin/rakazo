@@ -2,9 +2,10 @@
 
 > Fork V1 状态（核实日期 2026-10-20）：桌面 local-first 运行时不使用本文描述的
 > 服务器 sandbox supervisor。Electron 已在本机运行 Pi loop、带逐次授权的
-> `shell`，以及 workspace 内受限制的文件读写；应用、屏幕和浏览器工具仍待迁移。下面保留上游 computer
-> runtime 的行为说明，作为后续工具能力迁移参考，不代表当前 fork 客户端已经具备
-> 这些功能。
+> `shell`、workspace 内受限制的文件读写，以及连接用户现有 Chrome/Edge Profile 的
+> 浏览器扩展；应用启动和屏幕控制仍待迁移。浏览器边界见 `docs/BROWSER.md`，桌面控制
+> 设计见 `docs/COMPUTER_USE.md`。下面保留上游 computer runtime 的行为说明，作为
+> 后续服务器 sandbox 能力参考，不代表当前 fork 客户端仍使用该架构。
 
 Rakazo keeps the agent runtime and the computer runtime separate:
 

@@ -170,7 +170,7 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   循环。
 - run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
 
-仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、浏览器桥接、memory、
+仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、桌面操作、memory、
 routines、工具运行记录和完整的本地 Web UI/API。
 
 ### 4.3 本地数据库
@@ -229,12 +229,21 @@ Local Runtime
 
 ### 4.5 浏览器桥接
 
-用户现有浏览器的登录态不能靠复制 Cookie 文件。推荐：
+用户现有浏览器的登录态不能靠复制 Cookie 文件。当前实现（核实日期 2026-10-20）：
 
 - 浏览器扩展运行在用户现有 Chrome/Edge 中。
-- 本地 Runtime 通过 Native Messaging 或本地 WebSocket 与扩展通信。
+- 本地 Runtime 通过 `ws://127.0.0.1` 与扩展通信；桌面端只监听 loopback。
+- 首次连接使用一次性六位配对码，扩展只保存本地桥接令牌，不接触模型 session 或 New API token。
+- 默认在独立 Agent Window 打开页面；已有标签页必须显式借用，run 完成后归还。
+- Pi 当前可调用 `browser_list_tabs`、`browser_open`、`browser_observe`、`browser_navigate`、
+  `browser_click`、`browser_type`、`browser_scroll`、`browser_borrow_tab`、
+  `browser_return_tab` 和 `browser_close`。
+- 观察返回短期 `eN` 引用；页面变化后必须重新观察。
 - 按站点授权，提供暂停、撤销和活动指示。
 - 网页内容按不可信数据处理。
+
+协议、权限和限制见 `docs/BROWSER.md`。当前仅支持顶层 frame；任意 JavaScript evaluate、
+文件上传下载和远程 CDP 不在 V1。
 
 ### 4.6 本地工具
 
@@ -247,6 +256,8 @@ Local Runtime
 
 当前的 cwd 限制只约束命令的起始目录，不是文件系统沙箱；shell 的隔离边界仍是
 用户对每次执行的明确批准。
+
+桌面 computer use 仍是设计阶段，边界见 `docs/COMPUTER_USE.md`。
 
 ## 5. 认证、会话和计费
 
@@ -336,7 +347,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 4. 现有 Web UI 连接本地 API/IPC 尚未完成，当前仍是 `local.html` 预览。
 5. 服务器 API 只保留 auth、New API 映射、model gateway、telemetry。
 6. 把 bot 模板和 prompt 打包到客户端，seed 到本地 SQLite。
-7. 浏览器扩展 + Native Messaging。
+7. 浏览器扩展和 loopback bridge 已接入；商店发布和复杂站点兼容仍待完成。
 8. 本地备份、导出、迁移和崩溃恢复。
 9. 最后做打包、签名、自动更新和小范围测试。
 
@@ -362,7 +373,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - 模型网关能看到 prompt/回复；隐私政策必须披露。
 - V1 的 session token 存 OS keychain；设备级撤销是后续工作。
 - 本地数据库加密；备份加密。
-- 浏览器扩展按站点授权，不静默读取所有页面。
+- 浏览器扩展只响应用户发起的本地任务，不后台遍历页面；模型读取仍受当前任务目标约束。
 - 网页、工具输出和其他 bot 的内容都按不可信数据处理。
 - shell、文件写入、应用启动和屏幕控制需要审批或白名单。
 - 服务器不信任客户端上报的额度或权限。
@@ -388,4 +399,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/computer-runtime.md`：当前上游的 sandbox/terminal 行为。
 - `docs/self-host.md`：当前上游部署方式。
 - `docs/desktop-release.md`：桌面端签名和发布。
+- `docs/BROWSER.md`：浏览器扩展、配对、工具和权限边界。
+- `docs/COMPUTER_USE.md`：桌面 computer use 设计草案。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。
