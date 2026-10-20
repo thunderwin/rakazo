@@ -228,6 +228,68 @@ describe("desktop local UI", () => {
     dom.window.close();
   });
 
+  it("shows browser pairing details from the local bridge", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const startPairing = vi.fn(async () => ({
+      port: 47891,
+      code: "123456",
+      expires_at: "2026-10-20T00:05:00.000Z",
+    }));
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        signUp: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: { list: vi.fn(async () => [bot]), create: vi.fn(async () => bot) },
+      messages: { list: vi.fn(async () => []), send: vi.fn() },
+      settings: {
+        get: vi.fn(async () => ({
+          theme: "system",
+          sendWithEnter: true,
+          defaultModelId: null,
+        })),
+        update: vi.fn(),
+      },
+      browser: {
+        status: vi.fn(async () => ({
+          available: true,
+          connected: false,
+          port: 47891,
+          error: null,
+          clientVersion: null,
+        })),
+        startPairing,
+        revoke: vi.fn(),
+      },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("settings-open")?.hasAttribute("hidden")).toBe(
+        false,
+      ),
+    );
+    (dom.window.document.getElementById("settings-open") as HTMLButtonElement).click();
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("browser-status")?.textContent).toContain(
+        "local port 47891",
+      ),
+    );
+    (dom.window.document.getElementById("browser-connect") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(startPairing).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("browser-pairing")?.textContent).toContain(
+        "port 47891 and code 123456",
+      ),
+    );
+    dom.window.close();
+  });
+
   it("keeps a send error visible after refreshing the thread", async () => {
     const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
     const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");

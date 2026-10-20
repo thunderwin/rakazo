@@ -3,6 +3,7 @@ import type { LocalAgentTool } from "./agent.js";
 
 export interface LocalToolExecutionRequest {
   botId?: string;
+  runId?: string;
   name: string;
   args: Record<string, unknown>;
   executionId: string;
@@ -16,6 +17,7 @@ export interface LocalTool {
 }
 
 export interface LocalToolApprovalRequest {
+  runId?: string;
   name: string;
   args: Record<string, unknown>;
   executionId: string;

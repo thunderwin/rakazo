@@ -3,8 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Bot } from "@rakazo/local-db";
-import type { LocalAgentEngine, LocalAgentEvent } from "@rakazo/local-runtime";
-import { afterEach, describe, expect, it } from "vitest";
+import type { BrowserHost, LocalAgentEngine, LocalAgentEvent } from "@rakazo/local-runtime";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { localAccountKey } from "./local-account-data.js";
 import { createDesktopLocalRuntime, defaultLocalModel } from "./local-runtime.js";
 
@@ -128,5 +128,59 @@ describe("desktop local runtime", () => {
     });
     expect(firstAgain.listBots().map((bot) => bot.id)).toEqual([firstBot.id]);
     firstAgain.close();
+  });
+
+  it("composes browser tools into the local Pi tool loop", async () => {
+    const userDataDir = await mkdtemp(path.join(tmpdir(), "rakazo-desktop-browser-"));
+    directories.push(userDataDir);
+    const browserHost = {
+      listTabs: vi.fn(async () => []),
+      getTab: vi.fn(),
+      open: vi.fn(),
+      navigate: vi.fn(),
+      borrowTab: vi.fn(),
+      returnTab: vi.fn(),
+      observe: vi.fn(async () => ({
+        observation_id: "obs-1",
+        tab_id: 7,
+        title: "Inbox",
+        url: "https://mail.example.com/",
+        text: "Inbox",
+        elements: [],
+        truncated: false,
+      })),
+      click: vi.fn(),
+      type: vi.fn(),
+      scroll: vi.fn(),
+      closeSession: vi.fn(async () => undefined),
+    } satisfies BrowserHost;
+    const browserEngine: LocalAgentEngine = {
+      async *run(request): AsyncIterable<LocalAgentEvent> {
+        expect(request.tools.map((tool) => tool.name)).toContain("browser_observe");
+        const result = await request.executeTool("browser_observe", {}, "exec-1");
+        yield { type: "text", text: (result as { text: string }).text };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = await createDesktopLocalRuntime({
+      userDataDir,
+      accountId: "browser-user",
+      engine: browserEngine,
+      browserHost,
+      approveTool: () => true,
+      resolveModel,
+    });
+
+    const bot = service.createBot({ name: "Browser bot" });
+    await expect(service.sendMessage(bot.id, "Read the inbox")).resolves.toEqual(
+      expect.objectContaining({ text: "Inbox" }),
+    );
+    expect(browserHost.observe).toHaveBeenCalledWith(
+      expect.any(String),
+      { maxElements: undefined, maxTextChars: undefined },
+      undefined,
+    );
+    service.close();
   });
 });

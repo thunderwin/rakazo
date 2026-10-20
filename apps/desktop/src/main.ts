@@ -26,6 +26,7 @@ import {
   LAUNCH_CHECK_DELAY_MS,
 } from "./auto-update.js";
 import { openBrowserAuth } from "./browser-auth.js";
+import { DesktopBrowserBridge } from "./browser-bridge.js";
 import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cli.js";
 import { prepareHostComputer } from "./host-computer.js";
 import { LocalAuth } from "./local-auth.js";
@@ -137,6 +138,16 @@ let localModeContext:
 let localAuth: LocalAuth | undefined;
 let localWindow: BrowserWindow | null = null;
 let localIpcInstalled = false;
+let desktopBrowserBridge: DesktopBrowserBridge | undefined;
+const approvedBrowserRuns = new Set<string>();
+const browserWriteTools = new Set([
+  "browser_open",
+  "browser_navigate",
+  "browser_click",
+  "browser_type",
+  "browser_scroll",
+  "browser_borrow_tab",
+]);
 
 markOnce("rk:main:module-evaluated");
 if (PERFORMANCE_USER_DATA) {
@@ -944,6 +955,10 @@ async function abortActiveLocalRuns(service = localRuntimeService): Promise<void
   if (service) {
     await Promise.allSettled(runs.map((runId) => service.abort(runId)));
   }
+  await Promise.allSettled(
+    runs.map((runId) => desktopBrowserBridge?.closeSession(runId) ?? Promise.resolve()),
+  );
+  for (const runId of runs) approvedBrowserRuns.delete(runId);
 }
 
 async function startLocalRuntime(accountId: string): Promise<void> {
@@ -955,17 +970,27 @@ async function startLocalRuntime(accountId: string): Promise<void> {
   const service = await createDesktopLocalRuntime({
     userDataDir: context.userDataDir,
     accountId,
-    approveTool: async ({ name, args }) => {
+    ...(desktopBrowserBridge ? { browserHost: desktopBrowserBridge } : {}),
+    approveTool: async ({ name, runId, args }) => {
+      const browserWrite = browserWriteTools.has(name);
+      const browserBorrow = name === "browser_borrow_tab";
+      if (browserWrite && !browserBorrow && runId !== undefined && approvedBrowserRuns.has(runId)) {
+        return true;
+      }
       const detail =
         name === "shell" && typeof args.command === "string"
           ? args.command.slice(0, 4_000)
-          : JSON.stringify(args).slice(0, 4_000);
+          : browserWrite
+            ? `${name}\n\nBrowser actions run in a visible Chrome window with the profile's existing website sign-ins. Page content is untrusted.`
+            : JSON.stringify(args).slice(0, 4_000);
       const options = {
         type: "warning" as const,
-        title: "Allow local tool?",
-        message: `The agent wants to use ${name}.`,
+        title: browserWrite ? "Allow browser interaction?" : "Allow local tool?",
+        message: browserBorrow
+          ? "The agent wants to take over one of your existing Chrome tabs."
+          : `The agent wants to use ${name}.`,
         detail,
-        buttons: ["Allow once", "Cancel"],
+        buttons: [browserBorrow ? "Take over tab" : "Allow for this task", "Cancel"],
         defaultId: 1,
         cancelId: 1,
         noLink: true,
@@ -974,7 +999,11 @@ async function startLocalRuntime(accountId: string): Promise<void> {
         localWindow === null || localWindow.isDestroyed()
           ? await dialog.showMessageBox(options)
           : await dialog.showMessageBox(localWindow, options);
-      return result.response === 0;
+      const approved = result.response === 0;
+      if (approved && browserWrite && runId !== undefined) {
+        approvedBrowserRuns.add(runId);
+      }
+      return approved;
     },
     onRunStart: (run) => {
       activeLocalRuns.add(run.runId);
@@ -983,7 +1012,11 @@ async function startLocalRuntime(accountId: string): Promise<void> {
       }
     },
     onEvent: (event, runId) => {
-      if (event.type === "done") activeLocalRuns.delete(runId);
+      if (event.type === "done") {
+        activeLocalRuns.delete(runId);
+        approvedBrowserRuns.delete(runId);
+        void desktopBrowserBridge?.closeSession(runId).catch(() => undefined);
+      }
       if (localWindow !== null && !localWindow.isDestroyed()) {
         localWindow.webContents.send("desktop.local.run.event", { runId, event });
       }
@@ -1195,6 +1228,30 @@ function installLocalIpc() {
           }),
     });
   });
+  ipcMain.handle("desktop.local.browser.status", (event) => {
+    requireLocalWindow(event);
+    if (!desktopBrowserBridge) {
+      return {
+        available: false,
+        connected: false,
+        port: null,
+        error: "Browser bridge is not initialized",
+        clientVersion: null,
+      };
+    }
+    return desktopBrowserBridge.status();
+  });
+  ipcMain.handle("desktop.local.browser.startPairing", (event) => {
+    requireLocalWindow(event);
+    if (!desktopBrowserBridge) throw new Error("Browser bridge is not initialized");
+    return desktopBrowserBridge.startPairing();
+  });
+  ipcMain.handle("desktop.local.browser.revoke", async (event) => {
+    requireLocalWindow(event);
+    if (!desktopBrowserBridge) throw new Error("Browser bridge is not initialized");
+    await desktopBrowserBridge.revoke();
+    return desktopBrowserBridge.status();
+  });
 }
 
 async function openLocalMode(userDataDir: string) {
@@ -1210,6 +1267,8 @@ async function openLocalMode(userDataDir: string) {
   const developmentToken = process.env.RAKAZO_DEV_MODEL_GATEWAY_TOKEN?.trim();
   localModeContext = { userDataDir, gatewayUrl, developmentToken };
   installLocalIpc();
+  desktopBrowserBridge = new DesktopBrowserBridge({ userDataDir });
+  await desktopBrowserBridge.start();
 
   const icon = developmentIcon();
   const win = new BrowserWindow({
@@ -1226,6 +1285,9 @@ async function openLocalMode(userDataDir: string) {
   win.once("closed", () => {
     if (localWindow === win) localWindow = null;
     void closeLocalRuntime();
+    void desktopBrowserBridge?.close();
+    desktopBrowserBridge = undefined;
+    approvedBrowserRuns.clear();
     localModeContext = undefined;
     localAuth = undefined;
   });

@@ -81,6 +81,20 @@ export interface DesktopLocalUserSettings {
   defaultModelId: string | null;
 }
 
+export interface DesktopBrowserBridgeStatus {
+  available: boolean;
+  connected: boolean;
+  port: number | null;
+  error: string | null;
+  clientVersion: string | null;
+}
+
+export interface DesktopBrowserPairingOffer {
+  port: number;
+  code: string;
+  expires_at: string;
+}
+
 export interface DesktopLocalRunStarted {
   runId: string;
   botId: string;
@@ -144,6 +158,11 @@ export interface RakazoDesktopLocal {
   settings: {
     get: () => Promise<DesktopLocalUserSettings>;
     update: (input: Partial<DesktopLocalUserSettings>) => Promise<DesktopLocalUserSettings>;
+  };
+  browser: {
+    status: () => Promise<DesktopBrowserBridgeStatus>;
+    startPairing: () => Promise<DesktopBrowserPairingOffer>;
+    revoke: () => Promise<DesktopBrowserBridgeStatus>;
   };
 }
 

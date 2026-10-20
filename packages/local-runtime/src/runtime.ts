@@ -135,6 +135,7 @@ export class LocalRuntime {
         executeTool: (name, args, executionId) =>
           this.tools.execute({
             botId: bot.id,
+            runId,
             name,
             args,
             executionId,

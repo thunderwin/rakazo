@@ -43,6 +43,7 @@ describe("desktop preload bridge", () => {
     expect(Object.keys(bridge.local!).sort()).toEqual([
       "auth",
       "bots",
+      "browser",
       "messages",
       "runs",
       "settings",
@@ -77,6 +78,9 @@ describe("desktop preload bridge", () => {
     await bridge.local?.runs.cancel("run-1");
     await bridge.local?.settings.get();
     await bridge.local?.settings.update({ theme: "light" });
+    await bridge.local?.browser.status();
+    await bridge.local?.browser.startPairing();
+    await bridge.local?.browser.revoke();
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -100,6 +104,9 @@ describe("desktop preload bridge", () => {
       "desktop.local.runs.cancel",
       "desktop.local.settings.get",
       "desktop.local.settings.update",
+      "desktop.local.browser.status",
+      "desktop.local.browser.startPairing",
+      "desktop.local.browser.revoke",
     ]);
   });
 

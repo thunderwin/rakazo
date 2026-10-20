@@ -8,6 +8,10 @@ export type {
   LocalAgentRunRequest,
   LocalAgentTool,
 } from "./agent.js";
+export {
+  type BrowserHost,
+  createBrowserTools,
+} from "./browser-tools.js";
 export { createFileTools } from "./file-tools.js";
 export {
   createMessageBotTool,

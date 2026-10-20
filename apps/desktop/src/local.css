@@ -309,6 +309,31 @@ button:disabled {
   gap: 8px;
 }
 
+.browser-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.browser-settings p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.browser-settings .browser-pairing {
+  flex-basis: 100%;
+  color: var(--foreground);
+}
+
+.browser-settings:has(.browser-pairing:not([hidden])) {
+  flex-wrap: wrap;
+}
+
 .login-card {
   display: flex;
   width: min(420px, 100%);

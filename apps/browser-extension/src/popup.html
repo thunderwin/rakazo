@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ericBot Browser Bridge</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icons/icon.png" alt="" width="32" height="32" />
+        <div>
+          <h1>ericBot Browser Bridge</h1>
+          <p id="status">Checking connection…</p>
+        </div>
+      </header>
+
+      <section id="pairing">
+        <label>
+          Port
+          <input id="port" type="number" min="1024" max="65535" value="47891" />
+        </label>
+        <label>
+          Pairing code
+          <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+        </label>
+        <button id="pair" type="button">Connect to ericBot</button>
+        <p id="pairing-help">
+          Open ericBot Settings, choose Connect Chrome, then enter the code shown there.
+        </p>
+      </section>
+
+      <section class="actions">
+        <button id="disconnect" type="button" class="secondary">Disconnect</button>
+      </section>
+      <p id="message" role="alert"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

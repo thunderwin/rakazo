@@ -1,0 +1,110 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  background: #f7f7f5;
+  color: #171716;
+  font:
+    13px / 1.45 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+header img {
+  border-radius: 8px;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+#status,
+#pairing-help {
+  color: #666660;
+  font-size: 12px;
+}
+
+button {
+  border: 1px solid #1f1f1e;
+  border-radius: 8px;
+  background: #1f1f1e;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 10px;
+}
+
+button.secondary,
+.actions button {
+  border-color: #d8d8d3;
+  background: #fff;
+  color: #171716;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+#pairing {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+}
+
+#pairing-help,
+#pairing button {
+  grid-column: 1 / -1;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #666660;
+  font-size: 11px;
+}
+
+input {
+  width: 100%;
+  border: 1px solid #d8d8d3;
+  border-radius: 7px;
+  background: #fff;
+  color: #171716;
+  font: inherit;
+  padding: 7px 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#message {
+  min-height: 1em;
+  color: #a32920;
+  font-size: 12px;
+}

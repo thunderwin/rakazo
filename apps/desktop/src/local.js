@@ -36,6 +36,9 @@
   const botSettingsModel = document.getElementById("bot-settings-model");
   const botSettingsThinking = document.getElementById("bot-settings-thinking");
   const botSettingsInstructions = document.getElementById("bot-settings-instructions");
+  const browserStatus = document.getElementById("browser-status");
+  const browserConnect = document.getElementById("browser-connect");
+  const browserPairing = document.getElementById("browser-pairing");
 
   let bots = [];
   let activeBotId = null;
@@ -98,7 +101,44 @@
     botSettingsThinking.value = bot?.thinkingLevel ?? "";
     botSettingsInstructions.value = bot?.instructions ?? "";
     settingsView.hidden = false;
+    void refreshBrowserStatus();
     settingsDefaultModel.focus();
+  }
+
+  async function refreshBrowserStatus() {
+    if (!api.browser) {
+      browserStatus.textContent = "Browser bridge is unavailable in this build.";
+      browserConnect.disabled = true;
+      return;
+    }
+    try {
+      const status = await api.browser.status();
+      browserStatus.textContent = status.connected
+        ? `Chrome connected${status.clientVersion ? ` · ${status.clientVersion}` : ""}`
+        : status.available
+          ? `Chrome not connected · local port ${status.port}`
+          : status.error || "Browser bridge is unavailable.";
+      browserConnect.textContent = status.connected ? "Pair another Chrome" : "Connect Chrome";
+      browserConnect.disabled = !status.available;
+    } catch (error) {
+      browserStatus.textContent = errorMessage(error, "Could not read browser status");
+      browserConnect.disabled = true;
+    }
+  }
+
+  async function startBrowserPairing() {
+    if (!api.browser) return;
+    browserConnect.disabled = true;
+    browserPairing.hidden = true;
+    try {
+      const offer = await api.browser.startPairing();
+      browserPairing.textContent = `In the ericBot Browser Bridge extension, enter port ${offer.port} and code ${offer.code}.`;
+      browserPairing.hidden = false;
+    } catch (error) {
+      browserStatus.textContent = errorMessage(error, "Could not start browser pairing");
+    } finally {
+      browserConnect.disabled = false;
+    }
   }
 
   async function saveSettings() {
@@ -203,6 +243,14 @@
     if (event.name === "list_files") return "Listing local files…";
     if (event.name === "read_file") return "Reading a local file…";
     if (event.name === "write_file") return "Writing a local file…";
+    if (event.name === "browser_open" || event.name === "browser_navigate") {
+      return "Opening a browser page…";
+    }
+    if (event.name === "browser_observe") return "Reading the browser page…";
+    if (event.name === "browser_click") return "Clicking in the browser…";
+    if (event.name === "browser_type") return "Typing in the browser…";
+    if (event.name === "browser_scroll") return "Scrolling the browser page…";
+    if (event.name === "browser_borrow_tab") return "Taking over an existing tab…";
     return `Using ${event.name}…`;
   }
 
@@ -408,6 +456,7 @@
   settingsCancel.addEventListener("click", () => {
     settingsView.hidden = true;
   });
+  browserConnect.addEventListener("click", () => void startBrowserPairing());
   settingsForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void saveSettings();

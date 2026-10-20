@@ -2,6 +2,8 @@ import { OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
 import type { Bot } from "@rakazo/local-db";
 import {
   type ApproveLocalTool,
+  type BrowserHost,
+  createBrowserTools,
   createFileTools,
   createMessageBotTool,
   createShellTool,
@@ -19,6 +21,7 @@ export interface DesktopLocalRuntimeOptions {
   userDataDir: string;
   accountId: string;
   engine?: LocalAgentEngine;
+  browserHost?: BrowserHost;
   approveTool: ApproveLocalTool;
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: LocalRuntimeOptions["onRunStart"];
@@ -34,6 +37,7 @@ export async function createDesktopLocalRuntime(
   const tools = new LocalToolRegistry(
     [
       createShellTool({ workspaceDir: account.workspaceDir }),
+      ...(options.browserHost ? createBrowserTools(options.browserHost) : []),
       createSubagentTool(),
       createMessageBotTool(async (request) => {
         if (!service) throw new Error("Local runtime is not ready");
