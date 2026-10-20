@@ -92,6 +92,12 @@ importers:
       '@rakazo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@rakazo/local-runtime':
+        specifier: workspace:*
+        version: link:../../packages/local-runtime
+      better-sqlite3:
+        specifier: 13.0.3
+        version: 13.0.3
       electron-updater:
         specifier: 6.8.9
         version: 6.8.9

@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@rakazo/contracts": "workspace:*",
+    "@rakazo/local-runtime": "workspace:*",
+    "better-sqlite3": "13.0.3",
     "electron-updater": "6.8.9",
     "koffi": "3.3.3"
   },
@@ -42,6 +44,9 @@
     "files": [
       "dist/**/*",
       "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
     ],
     "extraResources": [
       {
