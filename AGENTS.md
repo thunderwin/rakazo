@@ -41,6 +41,8 @@ Product intent:
   encryption key, or sandbox supervisor token.
 - V1 is single-device. Do not add multi-device sync, teams, shared computers,
   or mobile clients without a new documented decision.
+- V1 ships as the desktop client only. Do not build or connect a separate web
+  product unless a new decision expands the scope.
 - Branding lives in `brand/` and `packages/ui-tokens`; generated icons and CSS
   are derived from those sources. Do not hand-edit generated assets.
 - Per-bot prompts and configurations live in `config/bot-templates/` and are

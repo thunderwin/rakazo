@@ -115,6 +115,7 @@ docs/                        架构、V1 范围、fork 说明
 - 客户端内置公开的 `serverUrl`，不内置任何长期密钥。
 - session token 和 Rakazo userId 一起存在 OS keychain/DPAPI；设备级撤销是后续工作。
 - 旧版只保存 token 的 session 会在升级后要求重新登录一次，以免打开错误的共享本地库。
+- 客户端登录窗口支持注册和登录；V1 不建设独立 Web 产品。
 - 模型供应商 key 只在服务器。
 - 额度、限流和风控以 New API 为准。
 - 模型网关会看到 prompt/回复；隐私政策必须说明。
