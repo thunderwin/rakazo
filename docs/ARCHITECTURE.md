@@ -169,6 +169,10 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   `peer_messages`，目标 bot 在自己的 DM thread 中执行，调用链最大 6 个 bot 并阻止
   循环。
 - run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
+- 模型、工具或浏览器操作失败时仍保存已经生成的文本和工具调用，并附带错误块；
+  `onRunEnd` 统一清理活动 run、审批缓存和浏览器 Agent Window。Stop 同样进入该清理路径。
+- 本地设置页可以复制诊断信息，包含版本、平台、登录状态、活动 run、浏览器桥和
+  更新状态；不包含消息正文、session token、New API token 或浏览器 Cookie。
 
 仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、桌面操作、memory、
 routines、工具运行记录和完整的本地 Web UI/API。

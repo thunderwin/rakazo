@@ -4,6 +4,20 @@ The `release-desktop` workflow builds, signs, notarizes, attests, and publishes
 the Electron app from a `vMAJOR.MINOR.PATCH` tag on `main`. Publishing the
 Docker images triggers from the same tag.
 
+This fork ships the bundle as `ericBot.app` and pins every updater feed to
+`provider: github`, `owner: thunderwin`, `repo: rakazo`. Those values are checked
+in CI so a branded build cannot silently download updates from upstream.
+
+For an unsigned macOS Alpha smoke package on a machine without Xcode 26, use:
+
+```sh
+pnpm --filter @rakazo/desktop pack:mac:preview
+```
+
+That command generates a temporary legacy `.icns` from the current macOS PNG and
+creates `apps/desktop/out/mac-*/ericBot.app`. It is for local QA only; signed
+releases continue to use the Icon Composer source and the CI signing workflow.
+
 ## Repository secrets
 
 macOS (required):

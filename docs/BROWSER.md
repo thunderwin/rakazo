@@ -51,10 +51,11 @@ Pi local Agent loop
 ## 4. 生命周期
 
 - 每个本地 Agent run 使用 run id 作为浏览器 session id。
-- run 正常完成时，桌面组合根自动关闭该 session，归还借用标签页。
-- Stop 或切换账号时先取消 run，再关闭浏览器 session。
+- run 完成、失败或 Stop 时，桌面组合根都会关闭该 session 并归还借用标签页。
+- 切换账号时先取消活动 run，再关闭浏览器 session。
 - 关闭 Agent Window 会结束该 session。
 - 页面打开或任务结束时，普通用户标签页不会被自动关闭。
+- 设置页在打开期间轮询连接状态；主动 Disconnect 会撤销扩展令牌并停止自动重连。
 
 ## 5. 权限和数据边界
 

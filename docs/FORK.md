@@ -85,6 +85,7 @@ docs/                        架构、V1 范围、fork 说明
 - `apps/web/public/` 的 favicon 和 PWA 图标
 - `apps/www/` 的官网品牌和文案
 - 安装包名称、更新源、发布说明
+- 桌面更新 feed 必须指向 `thunderwin/rakazo`，不能沿用上游 `elie222/rakazo`
 
 ### 4.2 服务端
 
@@ -156,7 +157,7 @@ docs/                        架构、V1 范围、fork 说明
 - 扩展通过 loopback WebSocket 与 Electron runtime 通信，不开放公网监听的 CDP。
 - 用户用一次性配对码连接；扩展只保存本地桥接令牌。
 - 默认使用 Agent Window；已有标签页借用和归还，任务结束自动清理。
-- 按站点权限工作，提供断开和撤销。
+- 设置页显示实时连接状态，提供主动断开和撤销。
 - 网页内容按不可信数据处理。
 
 实现和限制见 `docs/BROWSER.md`。
@@ -311,7 +312,7 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 - [ ] 本地数据库迁移和备份可用
 - [ ] 配置包签名和回滚可用
 - [ ] 品牌文案和默认服务器仍正确
-- [ ] 安装包更新源和 appId 仍指向自己
+- [x] 安装包更新源指向 `thunderwin/rakazo`，appId 为 `com.ericbot.desktop`
 
 ## 10. 安全红线
 
