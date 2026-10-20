@@ -1,4 +1,4 @@
-import { HttpModelGateway, type ModelGatewayEvent } from "@rakazo/local-runtime";
+import { type ModelGatewayEvent, OpenAIModelGateway } from "@rakazo/local-runtime";
 import { describe, expect, it } from "vitest";
 import { createLocalGateway } from "./local-gateway.js";
 
@@ -22,6 +22,6 @@ describe("desktop local gateway", () => {
         RAKAZO_MODEL_GATEWAY_URL: "https://api.example.com",
         RAKAZO_DEV_MODEL_GATEWAY_TOKEN: "dev-token",
       }),
-    ).toBeInstanceOf(HttpModelGateway);
+    ).toBeInstanceOf(OpenAIModelGateway);
   });
 });

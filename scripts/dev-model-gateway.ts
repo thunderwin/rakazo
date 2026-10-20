@@ -12,8 +12,8 @@ function readBody(request: IncomingMessage): Promise<string> {
   });
 }
 
-function sendEvent(response: ServerResponse, event: string, data: unknown) {
-  response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+function sendData(response: ServerResponse, data: unknown) {
+  response.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
 const server = createServer(async (request, response) => {
@@ -22,7 +22,7 @@ const server = createServer(async (request, response) => {
     response.end(JSON.stringify({ ok: true }));
     return;
   }
-  if (request.method !== "POST" || request.url !== "/v1/model/chat") {
+  if (request.method !== "POST" || request.url !== "/v1/model/openai/chat/completions") {
     response.writeHead(404).end();
     return;
   }
@@ -45,16 +45,38 @@ const server = createServer(async (request, response) => {
       ? (body.messages as Array<{ role?: string; content?: string }>)
       : [];
   const lastUser = [...messages].reverse().find((message) => message.role === "user");
-  const text = `Dev gateway received: ${lastUser?.content ?? "(no user message)"}`;
+  const text = lastUser?.content ?? "(no user message)";
 
   response.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  sendEvent(response, "text", { text: "Dev gateway received: " });
-  sendEvent(response, "text", { text: lastUser?.content ?? "(no user message)" });
-  sendEvent(response, "done", {});
+  const id = "chatcmpl-dev";
+  const base = {
+    id,
+    object: "chat.completion.chunk",
+    created: Math.floor(Date.now() / 1000),
+    model: "dev-model",
+  };
+  sendData(response, {
+    ...base,
+    choices: [{ index: 0, delta: { role: "assistant", content: "Dev gateway received: " } }],
+  });
+  sendData(response, {
+    ...base,
+    choices: [{ index: 0, delta: { content: text } }],
+  });
+  sendData(response, {
+    ...base,
+    choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+  });
+  sendData(response, {
+    ...base,
+    choices: [],
+    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+  });
+  response.write("data: [DONE]\n\n");
   response.end();
   console.log(`served ${text.split("\n")[0]}`);
 });

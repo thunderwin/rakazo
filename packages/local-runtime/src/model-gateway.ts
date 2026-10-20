@@ -14,8 +14,19 @@ export interface ModelGatewayRequest {
   signal?: AbortSignal;
 }
 
+export interface OpenAIToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export type ModelGatewayEvent =
   | { type: "text"; text: string }
+  | { type: "tool_call"; toolCall: OpenAIToolCall }
+  | { type: "usage"; usage: unknown }
   | { type: "done" }
   | { type: "error"; message: string };
 

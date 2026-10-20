@@ -10,7 +10,8 @@ operator's metered model gateway without embedding provider keys.
 Current scope:
 
 - text-only local chat
-- HTTP model gateway client with SSE
+- OpenAI-compatible New API gateway client with SSE
+- tool_calls parsing (execution is a later milestone)
 - local runtime service for one desktop process
 - bot template loading and idempotent seeding
 

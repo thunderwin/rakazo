@@ -1,82 +1,128 @@
-import type { ModelGateway, ModelGatewayEvent, ModelGatewayRequest } from "./model-gateway.js";
+import type {
+  ModelGateway,
+  ModelGatewayEvent,
+  ModelGatewayRequest,
+  OpenAIToolCall,
+} from "./model-gateway.js";
 
-export interface HttpModelGatewayOptions {
+export interface OpenAIModelGatewayOptions {
+  /** OpenAI-compatible base URL, e.g. https://server.example.com/v1/model/openai. */
   baseUrl: string;
   getToken: () => string | Promise<string>;
-  /** Defaults to /v1/model/chat. */
+  /** Defaults to /chat/completions. */
   path?: string;
   fetch?: typeof fetch;
 }
 
-interface SseEvent {
-  event: string;
-  data: string;
+interface OpenAIToolCallDelta {
+  index?: unknown;
+  id?: unknown;
+  type?: unknown;
+  function?: { name?: unknown; arguments?: unknown };
 }
 
-function parseSseBlock(block: string): SseEvent | null {
-  let event = "message";
-  const data: string[] = [];
-  for (const line of block.split("\n")) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    else if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
-  }
-  if (data.length === 0) return null;
-  return { event, data: data.join("\n") };
-}
-
-function takeSseEvents(buffer: string): { events: SseEvent[]; rest: string } {
-  const normalized = buffer.replace(/\r\n/g, "\n");
-  const parts = normalized.split("\n\n");
-  const rest = parts.pop() ?? "";
-  return {
-    events: parts.map(parseSseBlock).filter((event): event is SseEvent => event !== null),
-    rest,
-  };
-}
-
-function eventFromSse(event: SseEvent): ModelGatewayEvent | null {
-  if (event.event === "done") return { type: "done" };
-  if (event.event === "error") {
-    let message = "Model gateway error";
-    try {
-      const parsed = JSON.parse(event.data) as { message?: unknown };
-      if (typeof parsed.message === "string" && parsed.message.trim()) message = parsed.message;
-    } catch {
-      if (event.data.trim()) message = event.data.trim();
-    }
-    return { type: "error", message };
-  }
-  if (event.event !== "text" && event.event !== "message") return null;
-  try {
-    const parsed = JSON.parse(event.data) as unknown;
-    if (typeof parsed === "string") return { type: "text", text: parsed };
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "text" in parsed &&
-      typeof parsed.text === "string"
-    ) {
-      return { type: "text", text: parsed.text };
-    }
-  } catch {
-    // A plain text SSE frame is valid too.
-  }
-  return { type: "text", text: event.data };
+interface OpenAIChunk {
+  choices?: Array<{
+    delta?: {
+      content?: unknown;
+      tool_calls?: OpenAIToolCallDelta[];
+    };
+    finish_reason?: unknown;
+  }>;
+  usage?: unknown;
+  error?: { message?: unknown };
 }
 
 function gatewayUrl(baseUrl: string, path: string): string {
   return new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).toString();
 }
 
-export class HttpModelGateway implements ModelGateway {
+function requestBody(request: ModelGatewayRequest) {
+  return {
+    model: request.model?.id?.trim() || "default",
+    messages: [
+      ...(request.instructions ? [{ role: "system" as const, content: request.instructions }] : []),
+      ...request.messages,
+    ],
+    stream: true,
+    stream_options: { include_usage: true },
+    ...(request.thinkingLevel && request.thinkingLevel !== "off"
+      ? { reasoning_effort: request.thinkingLevel }
+      : {}),
+  };
+}
+
+function mergeToolCall(
+  calls: Map<number, OpenAIToolCall>,
+  index: number,
+  delta: OpenAIToolCallDelta,
+) {
+  const current = calls.get(index) ?? {
+    id: "",
+    type: "function" as const,
+    function: { name: "", arguments: "" },
+  };
+  if (typeof delta.id === "string") current.id = delta.id;
+  if (delta.type === "function") current.type = "function";
+  if (typeof delta.function?.name === "string") current.function.name = delta.function.name;
+  if (typeof delta.function?.arguments === "string") {
+    current.function.arguments += delta.function.arguments;
+  }
+  calls.set(index, current);
+}
+
+function eventFromChunk(
+  chunk: OpenAIChunk,
+  calls: Map<number, OpenAIToolCall>,
+): ModelGatewayEvent[] {
+  if (chunk.error) {
+    return [
+      {
+        type: "error",
+        message:
+          typeof chunk.error.message === "string" ? chunk.error.message : "Model gateway error",
+      },
+    ];
+  }
+  const events: ModelGatewayEvent[] = [];
+  for (const choice of chunk.choices ?? []) {
+    const content = choice.delta?.content;
+    if (typeof content === "string" && content.length > 0) {
+      events.push({ type: "text", text: content });
+    }
+    const deltas = choice.delta?.tool_calls ?? [];
+    for (const [position, delta] of deltas.entries()) {
+      const index = typeof delta.index === "number" ? delta.index : position;
+      mergeToolCall(calls, index, delta);
+    }
+  }
+  if (chunk.usage !== undefined && chunk.usage !== null) {
+    events.push({ type: "usage", usage: chunk.usage });
+  }
+  return events;
+}
+
+function flushToolCalls(calls: Map<number, OpenAIToolCall>): ModelGatewayEvent[] {
+  return [...calls.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, toolCall]) => ({ type: "tool_call", toolCall }));
+}
+
+async function readBoundedText(response: Response): Promise<string> {
+  if (!response.body) return "";
+  const text = await response.text();
+  return text.slice(0, 500);
+}
+
+export class OpenAIModelGateway implements ModelGateway {
   private readonly baseUrl: string;
   private readonly path: string;
   private readonly getToken: () => string | Promise<string>;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(options: HttpModelGatewayOptions) {
+  constructor(options: OpenAIModelGatewayOptions) {
     this.baseUrl = options.baseUrl;
-    this.path = options.path ?? "/v1/model/chat";
+    this.path = options.path ?? "/chat/completions";
     this.getToken = options.getToken;
     this.fetchImpl = options.fetch ?? fetch;
   }
@@ -90,58 +136,82 @@ export class HttpModelGateway implements ModelGateway {
         "content-type": "application/json",
         accept: "text/event-stream",
       },
-      body: JSON.stringify({
-        protocolVersion: 1,
-        botId: request.botId,
-        instructions: request.instructions,
-        ...(request.model ? { model: request.model } : {}),
-        ...(request.thinkingLevel ? { thinkingLevel: request.thinkingLevel } : {}),
-        messages: request.messages,
-      }),
+      body: JSON.stringify(requestBody(request)),
       signal: request.signal,
     });
-
     if (!response.ok) {
-      const detail = (await response.text()).slice(0, 500);
+      const detail = await readBoundedText(response);
       throw new Error(
         `Model gateway request failed (${response.status})${detail ? `: ${detail}` : ""}`,
       );
     }
-    if (!response.body) throw new Error("Model gateway returned no response body");
-
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/event-stream")) {
-      const detail = (await response.text()).slice(0, 500);
-      throw new Error(
-        `Model gateway returned an unexpected response${detail ? `: ${detail}` : ""}`,
-      );
+      const parsed = (await response.json()) as {
+        choices?: Array<{ message?: { content?: unknown; tool_calls?: unknown } }>;
+        usage?: unknown;
+      };
+      const message = parsed.choices?.[0]?.message;
+      if (typeof message?.content === "string" && message.content) {
+        yield { type: "text", text: message.content };
+      }
+      if (Array.isArray(message?.tool_calls)) {
+        for (const toolCall of message.tool_calls) {
+          if (toolCall && typeof toolCall === "object") {
+            yield { type: "tool_call", toolCall: toolCall as OpenAIToolCall };
+          }
+        }
+      }
+      if (parsed.usage !== undefined) yield { type: "usage", usage: parsed.usage };
+      yield { type: "done" };
+      return;
     }
+    if (!response.body) throw new Error("Model gateway returned no response body");
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    const calls = new Map<number, OpenAIToolCall>();
     let buffer = "";
+    let finished = false;
+
+    const processData = (data: string): ModelGatewayEvent[] => {
+      if (data === "[DONE]") return [];
+      try {
+        return eventFromChunk(JSON.parse(data) as OpenAIChunk, calls);
+      } catch {
+        return [{ type: "error", message: "Model gateway returned invalid streaming data" }];
+      }
+    };
+
     try {
-      while (true) {
+      while (!finished) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const parsed = takeSseEvents(buffer);
-        buffer = parsed.rest;
-        for (const event of parsed.events) {
-          const mapped = eventFromSse(event);
-          if (mapped === null) continue;
-          yield mapped;
-          if (mapped.type === "done" || mapped.type === "error") return;
+        let newline = buffer.indexOf("\n");
+        while (newline >= 0) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          newline = buffer.indexOf("\n");
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data === "[DONE]") {
+            for (const event of flushToolCalls(calls)) yield event;
+            yield { type: "done" };
+            finished = true;
+            break;
+          }
+          for (const event of processData(data)) {
+            yield event;
+            if (event.type === "error") {
+              finished = true;
+            }
+          }
         }
       }
-
-      buffer += decoder.decode();
-      const tail = takeSseEvents(`${buffer}\n\n`);
-      for (const event of tail.events) {
-        const mapped = eventFromSse(event);
-        if (mapped === null) continue;
-        yield mapped;
-        if (mapped.type === "done" || mapped.type === "error") return;
+      if (!finished) {
+        for (const event of flushToolCalls(calls)) yield event;
+        yield { type: "done" };
       }
     } finally {
       reader.releaseLock();

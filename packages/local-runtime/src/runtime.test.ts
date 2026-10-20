@@ -80,6 +80,32 @@ describe("local runtime", () => {
     db.close();
   });
 
+  it("preserves tool calls without executing them", async () => {
+    const db = openLocalDatabase(":memory:");
+    const gateway: ModelGateway = {
+      async *stream() {
+        yield {
+          type: "tool_call",
+          toolCall: {
+            id: "call-1",
+            type: "function",
+            function: { name: "shell", arguments: '{"command":"pwd"}' },
+          },
+        };
+        yield { type: "done" };
+      },
+    };
+    const runtime = new LocalRuntime({ db, gateway });
+    const bot = runtime.createBot({ name: "Chief" });
+    const result = await runtime.sendMessage(bot.id, "Where am I?");
+
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.assistantMessage?.blocks).toEqual([
+      { kind: "tool_call", id: "call-1", name: "shell", arguments: '{"command":"pwd"}' },
+    ]);
+    db.close();
+  });
+
   it("rejects unknown bots and empty messages", async () => {
     const db = openLocalDatabase(":memory:");
     const runtime = new LocalRuntime({ db, gateway: new FakeGateway([]) });

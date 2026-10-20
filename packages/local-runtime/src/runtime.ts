@@ -6,7 +6,12 @@ import type {
   LocalMessage,
   Thread,
 } from "@rakazo/local-db";
-import type { GatewayMessage, ModelGateway, ModelGatewayRequest } from "./model-gateway.js";
+import type {
+  GatewayMessage,
+  ModelGateway,
+  ModelGatewayRequest,
+  OpenAIToolCall,
+} from "./model-gateway.js";
 
 export interface LocalRuntimeOptions {
   db: LocalDatabase;
@@ -18,6 +23,7 @@ export interface SendMessageResult {
   userMessage: LocalMessage;
   assistantMessage: LocalMessage | null;
   text: string;
+  toolCalls: OpenAIToolCall[];
 }
 
 function isRecord(value: JsonValue): value is { [key: string]: JsonValue } {
@@ -87,21 +93,31 @@ export class LocalRuntime {
     };
 
     let responseText = "";
+    const toolCalls: OpenAIToolCall[] = [];
     for await (const event of this.gateway.stream(request)) {
       if (event.type === "text") responseText += event.text;
+      if (event.type === "tool_call") toolCalls.push(event.toolCall);
       if (event.type === "error") throw new Error(event.message);
       if (event.type === "done") break;
     }
 
     const assistantMessage =
-      responseText.length === 0
+      responseText.length === 0 && toolCalls.length === 0
         ? null
         : this.db.messages.append({
             threadId: thread.id,
             role: "bot",
-            blocks: [{ kind: "text", text: responseText }],
+            blocks: [
+              ...(responseText.length > 0 ? [{ kind: "text" as const, text: responseText }] : []),
+              ...toolCalls.map((toolCall) => ({
+                kind: "tool_call" as const,
+                id: toolCall.id,
+                name: toolCall.function.name,
+                arguments: toolCall.function.arguments,
+              })),
+            ],
           });
 
-    return { thread, userMessage, assistantMessage, text: responseText };
+    return { thread, userMessage, assistantMessage, text: responseText, toolCalls };
   }
 }

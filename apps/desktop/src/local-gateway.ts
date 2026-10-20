@@ -1,4 +1,4 @@
-import { HttpModelGateway, type ModelGateway } from "@rakazo/local-runtime";
+import { type ModelGateway, OpenAIModelGateway } from "@rakazo/local-runtime";
 
 const unavailable: ModelGateway = {
   async *stream() {
@@ -16,12 +16,18 @@ export function createLocalGateway(
   const baseUrl = env.RAKAZO_MODEL_GATEWAY_URL?.trim();
   const token = env.RAKAZO_DEV_MODEL_GATEWAY_TOKEN?.trim();
   if (!baseUrl || !token) return unavailable;
-  return new HttpModelGateway({ baseUrl, getToken: () => token });
+  return new OpenAIModelGateway({
+    baseUrl: `${baseUrl.replace(/\/+$/, "")}/v1/model/openai`,
+    getToken: () => token,
+  });
 }
 
 export function createAuthenticatedGateway(
   serverUrl: string,
   getToken: () => Promise<string>,
 ): ModelGateway {
-  return new HttpModelGateway({ baseUrl: serverUrl, getToken });
+  return new OpenAIModelGateway({
+    baseUrl: `${serverUrl.replace(/\/+$/, "")}/v1/model/openai`,
+    getToken,
+  });
 }
