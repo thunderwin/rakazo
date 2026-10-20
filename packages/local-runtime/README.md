@@ -23,6 +23,7 @@ Current implementation:
   approval only for writes
 - live run events and cancellation in the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
+- account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
 App launch, browser bridging, memory, routines, and tool-run persistence are

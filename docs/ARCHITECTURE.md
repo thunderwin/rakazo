@@ -152,6 +152,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 模型连接固定为 OpenAI-compatible，base URL 由组合根指向服务器网关；bot 只选择
   model id，不能更改服务器地址或直接接触 New API。
 - SQLite 实现当前保存 bot、thread、message 和 settings。
+- 客户端设置（主题、默认模型、Enter 发送）和 bot 设置（名称、描述、instructions、
+  模型、thinking level）保存在账号本地 SQLite；服务器不保存这些用户编辑数据。
 - 本地数据按 Rakazo userId 隔离：
   `userData/local/accounts/<sha256(userId)>/rakazo.sqlite`，workspace 位于同一账号目录。
 - 登录前不打开本地库；登录、退出或切换账号时先取消该账号的活动 run，再关闭并重开
@@ -378,3 +380,4 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/computer-runtime.md`：当前上游的 sandbox/terminal 行为。
 - `docs/self-host.md`：当前上游部署方式。
 - `docs/desktop-release.md`：桌面端签名和发布。
+- `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

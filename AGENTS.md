@@ -26,6 +26,10 @@ web UI, desktop shell, and sandbox providers. This fork is moving to a
 single-device local-first product; it does not replace upstream behavior without
 a documented reason.
 
+The public product name is **ericBot**. Keep internal `@rakazo/*` package names,
+API contracts, IPC names, and storage keys unchanged unless a migration is
+explicitly planned.
+
 Product intent:
 
 - Users install a branded desktop client, sign up or sign in against the
