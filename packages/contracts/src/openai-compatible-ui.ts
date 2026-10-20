@@ -12,8 +12,16 @@ export function openAiCompatibleProbeSuccessMessage(modelCount: number): string 
     : "Server found. Enter a model name.";
 }
 
+export interface NormalizeOpenAiCompatibleBaseUrlOptions {
+  /** Trusted callers may already own a complete endpoint prefix and must not receive `/v1`. */
+  appendVersionPath?: boolean;
+}
+
 /** The canonical endpoint the server stores: trailing slashes dropped, `/v1` added when no `/vN`. */
-export function normalizeOpenAiCompatibleBaseUrl(raw: string): string {
+export function normalizeOpenAiCompatibleBaseUrl(
+  raw: string,
+  options: NormalizeOpenAiCompatibleBaseUrlOptions = {},
+): string {
   const trimmed = raw.trim();
   let url: URL;
   try {
@@ -29,7 +37,7 @@ export function normalizeOpenAiCompatibleBaseUrl(raw: string): string {
   }
   let path = url.pathname.replace(/\/+$/, "") || "";
   const VERSIONED_API_ROOT = /\/v\d+$/;
-  if (!VERSIONED_API_ROOT.test(path)) {
+  if (options.appendVersionPath !== false && !VERSIONED_API_ROOT.test(path)) {
     path = path ? `${path}/v1` : "/v1";
   }
   return `${url.origin}${path}`;

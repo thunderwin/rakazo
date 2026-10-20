@@ -817,6 +817,8 @@ export function modelsForRequest(
       acceptsImages: request.model.acceptsImages,
       maxTokens: request.model.maxTokens,
       contextWindow: request.model.contextWindow,
+      allowPublic: request.model.allowPublicEndpoint,
+      baseUrlIsExact: request.model.baseUrlIsExact,
     });
   }
   return catalogModels();

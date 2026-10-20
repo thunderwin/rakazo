@@ -88,7 +88,10 @@ export function openAiCompatibleModel(
   };
 }
 
-function openAiCompatibleProvider(models: Model<"openai-completions">[]): Provider {
+function openAiCompatibleProvider(
+  models: Model<"openai-completions">[],
+  opts?: { allowPublic?: boolean },
+): Provider {
   const api = openAICompletionsApi();
   // Guard the fetch the caller supplied (the runtime's seam for tests) or the
   // dispatcher-matched default; never the bare global.
@@ -96,12 +99,16 @@ function openAiCompatibleProvider(models: Model<"openai-completions">[]): Provid
     stream: (model, context, options) =>
       api.stream(model, context, {
         ...options,
-        fetch: createOpenAiCompatibleFetch(options?.fetch),
+        fetch: createOpenAiCompatibleFetch(options?.fetch, undefined, {
+          allowPublic: opts?.allowPublic,
+        }),
       }),
     streamSimple: (model, context, options) =>
       api.streamSimple(model, context, {
         ...options,
-        fetch: createOpenAiCompatibleFetch(options?.fetch),
+        fetch: createOpenAiCompatibleFetch(options?.fetch, undefined, {
+          allowPublic: opts?.allowPublic,
+        }),
       }),
   };
   return createProvider({
@@ -313,22 +320,29 @@ export function registerOpenAiCompatibleRuntime(
     acceptsImages?: boolean;
     maxTokens?: number;
     contextWindow?: number;
+    allowPublic?: boolean;
+    baseUrlIsExact?: boolean;
   },
 ): MutableModels {
-  const baseUrl = normalizeOpenAiCompatibleBaseUrl(opts.baseUrl);
+  const baseUrl = normalizeOpenAiCompatibleBaseUrl(opts.baseUrl, {
+    appendVersionPath: !opts.baseUrlIsExact,
+  });
   const modelId = opts.modelId.trim();
   const acceptsImages = opts.acceptsImages || openAiCompatibleVisionModelIds().has(modelId);
   models.setProvider(
-    openAiCompatibleProvider([
-      openAiCompatibleModel(
-        modelId,
-        baseUrl,
-        opts.reasoning,
-        acceptsImages,
-        opts.maxTokens,
-        opts.contextWindow,
-      ),
-    ]),
+    openAiCompatibleProvider(
+      [
+        openAiCompatibleModel(
+          modelId,
+          baseUrl,
+          opts.reasoning,
+          acceptsImages,
+          opts.maxTokens,
+          opts.contextWindow,
+        ),
+      ],
+      { allowPublic: opts.allowPublic },
+    ),
   );
   return guardToolCallNames(models, OPENAI_COMPATIBLE_PROVIDER_ID);
 }

@@ -423,6 +423,10 @@ export interface AgentRunModel {
   provider: string;
   id: string;
   apiKey?: string;
+  /** Trusted composition-root opt-in for a known public OpenAI-compatible endpoint. */
+  allowPublicEndpoint?: boolean;
+  /** Trusted composition-root URL is already the exact API prefix; do not append `/v1`. */
+  baseUrlIsExact?: boolean;
   /** Cloudflare account id stored with a gateway BYOK credential. */
   accountId?: string;
   /** Cloudflare AI Gateway id stored with a gateway BYOK credential. */

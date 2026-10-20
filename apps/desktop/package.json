@@ -19,7 +19,10 @@
     "release": "pnpm --filter @rakazo/web build && pnpm build && electron-builder --publish never"
   },
   "dependencies": {
+    "@rakazo/adapter-kit": "workspace:*",
+    "@rakazo/adapters": "workspace:*",
     "@rakazo/contracts": "workspace:*",
+    "@rakazo/local-db": "workspace:*",
     "@rakazo/local-runtime": "workspace:*",
     "better-sqlite3": "13.0.3",
     "electron-updater": "6.8.9",
@@ -27,7 +30,6 @@
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
-    "@rakazo/adapters": "workspace:*",
     "@rakazo/ui-tokens": "workspace:*",
     "@types/jsdom": "30.0.0",
     "electron": "44.9.0",

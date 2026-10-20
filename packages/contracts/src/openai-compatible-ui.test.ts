@@ -40,6 +40,14 @@ describe("normalizeOpenAiCompatibleBaseUrl", () => {
     );
   });
 
+  it("preserves an exact endpoint prefix for trusted callers", () => {
+    expect(
+      normalizeOpenAiCompatibleBaseUrl("https://api.example.com/v1/model/openai/", {
+        appendVersionPath: false,
+      }),
+    ).toBe("https://api.example.com/v1/model/openai");
+  });
+
   it("rejects text that is not an HTTP(S) URL", () => {
     expect(() => normalizeOpenAiCompatibleBaseUrl("127.0.0.1:8000")).toThrow();
   });

@@ -4,7 +4,7 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { DesktopReachability, DesktopSetup } from "@rakazo/contracts";
 import { LOCAL_SETTINGS_PAGE } from "@rakazo/contracts/local-settings";
-import type { LocalRuntimeService, ModelGateway } from "@rakazo/local-runtime";
+import type { LocalRuntimeService } from "@rakazo/local-runtime";
 import {
   app,
   BrowserWindow,
@@ -30,8 +30,7 @@ import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cl
 import { prepareHostComputer } from "./host-computer.js";
 import { LocalAuth } from "./local-auth.js";
 import { createSafeStorageVault } from "./local-auth-vault.js";
-import { createAuthenticatedGateway, createLocalGateway } from "./local-gateway.js";
-import { createDesktopLocalRuntime } from "./local-runtime.js";
+import { createDesktopLocalRuntime, defaultLocalModel } from "./local-runtime.js";
 import { requestLocalSettings } from "./local-settings.js";
 import {
   LocalStackController,
@@ -532,7 +531,7 @@ async function installBundledRenderer(
         "content-type": contentType(file),
         "x-content-type-options": "nosniff",
       });
-      return new Response(body, { headers });
+      return new Response(body === null ? null : new Uint8Array(body), { headers });
     }
     return forward();
   });
@@ -1010,20 +1009,48 @@ function installLocalIpc() {
 
 async function openLocalMode(userDataDir: string) {
   const serverUrl = process.env.RAKAZO_SERVER_URL?.trim();
-  let gateway: ModelGateway;
-  if (serverUrl) {
-    const auth = new LocalAuth({
-      serverUrl,
-      vault: createSafeStorageVault(userDataDir),
-    });
-    localAuth = auth;
-    gateway = createAuthenticatedGateway(serverUrl, () => auth.getToken());
-  } else {
-    gateway = createLocalGateway();
-  }
+  const auth = serverUrl
+    ? new LocalAuth({
+        serverUrl,
+        vault: createSafeStorageVault(userDataDir),
+      })
+    : undefined;
+  localAuth = auth;
+  const gatewayUrl = serverUrl ?? process.env.RAKAZO_MODEL_GATEWAY_URL?.trim();
+  const developmentToken = process.env.RAKAZO_DEV_MODEL_GATEWAY_TOKEN?.trim();
   const service = createDesktopLocalRuntime({
     userDataDir,
-    gateway,
+    approveTool: async ({ name, args }) => {
+      const detail =
+        name === "shell" && typeof args.command === "string"
+          ? args.command.slice(0, 4_000)
+          : JSON.stringify(args).slice(0, 4_000);
+      const options = {
+        type: "warning" as const,
+        title: "Allow local tool?",
+        message: `The agent wants to use ${name}.`,
+        detail,
+        buttons: ["Allow once", "Cancel"],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      };
+      const result =
+        localWindow === null || localWindow.isDestroyed()
+          ? await dialog.showMessageBox(options)
+          : await dialog.showMessageBox(localWindow, options);
+      return result.response === 0;
+    },
+    resolveModel: async (bot) => {
+      if (!gatewayUrl) throw new Error("The local model gateway is not configured.");
+      const token = auth ? await auth.getToken() : developmentToken;
+      if (!token) throw new Error("Sign in to connect the model gateway.");
+      return defaultLocalModel({
+        baseUrl: `${gatewayUrl.replace(/\/+$/, "")}/v1/model/openai`,
+        apiKey: token,
+        bot,
+      });
+    },
   });
   localRuntimeService = service;
   installLocalIpc();
