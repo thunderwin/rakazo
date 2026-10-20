@@ -57,8 +57,11 @@ export interface AppEnv {
   deploymentModelConfigured: boolean;
   /** The deployment default model runs on the host's credentials rather than a key. */
   deploymentModelHostCredentials: boolean;
-  /** Enables the local-first desktop model gateway. */
-  modelGatewayEnabled?: boolean;
+  /** New API control-plane endpoint and admin credentials. */
+  newApiBaseUrl?: string;
+  newApiAdminToken?: string;
+  newApiAdminUserId?: number;
+  newApiDefaultModel?: string;
   e2bApiKey: string | undefined;
   daytonaApiKey: string | undefined;
   daytonaApiUrl: string | undefined;
@@ -169,6 +172,24 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   const sandboxProvider = resolveSandboxProvider(source);
   const cloudAgentProvider = resolveCloudAgentProvider(source);
   const deploymentModel = resolveDeploymentModel(source);
+  const newApiBaseUrl = optional(source.NEW_API_BASE_URL);
+  const newApiAdminToken = optional(source.NEW_API_ADMIN_TOKEN);
+  const newApiAdminUserIdRaw = optional(source.NEW_API_ADMIN_USER_ID);
+  if (
+    Boolean(newApiBaseUrl) !== Boolean(newApiAdminToken) ||
+    Boolean(newApiBaseUrl) !== Boolean(newApiAdminUserIdRaw)
+  ) {
+    throw new Error(
+      "NEW_API_BASE_URL, NEW_API_ADMIN_TOKEN and NEW_API_ADMIN_USER_ID must be configured together",
+    );
+  }
+  const newApiAdminUserId = newApiAdminUserIdRaw ? Number(newApiAdminUserIdRaw) : undefined;
+  if (
+    newApiAdminUserId !== undefined &&
+    (!Number.isInteger(newApiAdminUserId) || newApiAdminUserId <= 0)
+  ) {
+    throw new Error("NEW_API_ADMIN_USER_ID must be a positive integer");
+  }
   const updaterUrl = optional(source.RAKAZO_UPDATER_URL);
   const updaterToken = optional(source.RAKAZO_UPDATER_TOKEN);
   return {
@@ -205,7 +226,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     deploymentModelKey: deploymentModel.key,
     deploymentModelConfigured: deploymentModel.configured,
     deploymentModelHostCredentials: deploymentModel.hostCredentials,
-    modelGatewayEnabled: source.MODEL_GATEWAY_ENABLED === "true",
+    newApiBaseUrl,
+    newApiAdminToken,
+    newApiAdminUserId,
+    newApiDefaultModel: optional(source.NEW_API_DEFAULT_MODEL),
     e2bApiKey: source.E2B_API_KEY,
     daytonaApiKey: source.DAYTONA_API_KEY,
     daytonaApiUrl: source.DAYTONA_API_URL,

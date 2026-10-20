@@ -63,7 +63,6 @@ import {
   reconcileCloudAgents,
   reconcileComputerUpdates,
   removePiUserSessions,
-  resolveDeploymentModel,
   ScriptedAgentRuntime,
   SmtpEmailProvider,
   SpaceMemoryProviderResolver,
@@ -115,8 +114,13 @@ import {
 } from "./messaging-inbound.js";
 import { createMessagingReceipts } from "./messaging-receipts.js";
 import { mountMessagingWebhookRoutes } from "./messaging-webhook.js";
-import { modelGatewayResponse } from "./model-gateway.js";
 import { monitoringRoutes } from "./monitoring.js";
+import {
+  getOrCreateNewApiIdentity,
+  NewApiAdminClient,
+  PrismaNewApiIdentityStore,
+} from "./new-api.js";
+import { handleNewApiGatewayRequest } from "./new-api-gateway-handler.js";
 import { mountApiRequestBodyLimits } from "./request-body-limit.js";
 import { createRouter } from "./router.js";
 import { mountScreenTarget } from "./screen-proxy.js";
@@ -218,6 +222,15 @@ export async function createApp(
   if (secrets.describe().capabilities.degraded)
     logger.warn("Secret storage degraded; encrypted credentials remain available");
   prisma = withSecretPersistence(prisma, secrets);
+  const newApiClient =
+    env.newApiBaseUrl && env.newApiAdminToken && env.newApiAdminUserId
+      ? new NewApiAdminClient({
+          baseUrl: env.newApiBaseUrl,
+          adminToken: env.newApiAdminToken,
+          adminUserId: env.newApiAdminUserId,
+        })
+      : undefined;
+  const newApiIdentityStore = new PrismaNewApiIdentityStore(prisma);
   const events = createThreadEvents(prisma, realtime, {
     runSecretWriter: createRunSecretWriter(secrets),
   });
@@ -666,23 +679,45 @@ export async function createApp(
     return actor && { actor, sessionId: session.session.id };
   };
   const sessionActor = async (request: Request) => (await requestSession(request))?.actor ?? null;
-  app.post("/v1/model/chat", async (c) => {
-    const actor = await sessionActor(c.req.raw);
-    if (!actor) return c.json({ error: "Unauthorized" }, 401);
-    const deployment = resolveDeploymentModel();
-    try {
-      return await modelGatewayResponse(c.req.raw, {
-        enabled: env.modelGatewayEnabled === true,
-        provider: deployment.provider,
-        model: deployment.model,
-        apiKey: env.deploymentModelKey,
-        userId: actor.userId,
-      });
-    } catch (error) {
-      getLogger().error("model gateway request failed", error);
-      return c.json({ error: "Model gateway request failed" }, 502);
-    }
-  });
+  const newApiGatewayOptions = {
+    newApiBaseUrl: env.newApiBaseUrl,
+    defaultModel: env.newApiDefaultModel,
+    authenticate: sessionActor,
+    getIdentity: async (input: {
+      userId: string;
+      spaceId: string;
+      request: Request;
+    }): Promise<{ token: string }> => {
+      if (!newApiClient) throw new Error("New API is not configured");
+      const identity = await getOrCreateNewApiIdentity(
+        {
+          userId: input.userId,
+          context: {
+            operationId: "model-gateway",
+            traceId: input.request.headers.get("x-request-id") ?? "model-gateway",
+            spaceId: input.spaceId,
+            userId: input.userId,
+            signal: input.request.signal,
+          },
+        },
+        {
+          store: newApiIdentityStore,
+          client: newApiClient,
+          secretStore: secrets,
+        },
+      );
+      return { token: identity.token };
+    },
+    onIdentityError: (error: unknown) => {
+      getLogger().error("new api model gateway request failed", error);
+    },
+  };
+  app.post("/v1/model/openai/chat/completions", (c) =>
+    handleNewApiGatewayRequest(c.req.raw, "/v1/chat/completions", newApiGatewayOptions),
+  );
+  app.get("/v1/model/openai/models", (c) =>
+    handleNewApiGatewayRequest(c.req.raw, "/v1/models", newApiGatewayOptions),
+  );
   app.use("/rpc/*", async (c, next) => {
     const session = await requestSession(c.req.raw);
     const actor = session?.actor ?? null;

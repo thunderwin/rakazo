@@ -1,205 +1,166 @@
-interface GatewayMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
+const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
+const MAX_ERROR_BYTES = 8 * 1024;
 
-export interface ModelGatewayOptions {
-  enabled: boolean;
-  provider: string;
-  model: string;
-  apiKey?: string;
-  userId: string;
+export interface NewApiGatewayOptions {
+  newApiBaseUrl: string;
+  defaultModel?: string;
+  getToken: () => Promise<string>;
   fetchImpl?: typeof fetch;
 }
 
-interface GatewayRequest {
-  protocolVersion: 1;
-  botId: string;
-  instructions: string;
-  thinkingLevel?: string;
-  messages: GatewayMessage[];
+export function modelGatewayError(status: number, message: string): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        message,
+        type: "new_api_error",
+        code: "",
+      },
+    }),
+    {
+      status,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
+    },
+  );
 }
 
-const MAX_MESSAGES = 200;
-const MAX_CONTENT_LENGTH = 100_000;
-
-function jsonError(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
+function upstreamUrl(baseUrl: string, pathname: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}${pathname}`;
 }
 
-function parseGatewayRequest(value: unknown): GatewayRequest | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const body = value as Record<string, unknown>;
-  if (body.protocolVersion !== 1 || typeof body.botId !== "string" || !body.botId.trim()) {
-    return null;
+function errorCodeFromBody(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { code?: unknown };
+      code?: unknown;
+    };
+    const code = parsed.error?.code ?? parsed.code;
+    return typeof code === "string" ? code : "";
+  } catch {
+    return "";
   }
-  if (typeof body.instructions !== "string" || body.instructions.length > MAX_CONTENT_LENGTH) {
-    return null;
+}
+
+function mapUpstreamError(status: number, body: string): Response {
+  const code = errorCodeFromBody(body);
+  if (
+    status === 403 &&
+    (code === "insufficient_user_quota" || code === "pre_consume_token_quota_failed")
+  ) {
+    return modelGatewayError(402, "Insufficient credits");
   }
-  if (!Array.isArray(body.messages) || body.messages.length > MAX_MESSAGES) return null;
-  const messages: GatewayMessage[] = [];
-  for (const raw of body.messages) {
-    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
-    const message = raw as Record<string, unknown>;
-    if (
-      (message.role !== "system" && message.role !== "user" && message.role !== "assistant") ||
-      typeof message.content !== "string" ||
-      message.content.length > MAX_CONTENT_LENGTH
-    ) {
-      return null;
+  if (status === 401) return modelGatewayError(401, "Authentication required");
+  if (status === 403) return modelGatewayError(403, "Access denied");
+  if (status === 429) return modelGatewayError(429, "Rate limit exceeded");
+  if (status === 413) return modelGatewayError(413, "Request too large");
+  if (status >= 400 && status < 500) return modelGatewayError(400, "Invalid model request");
+  return modelGatewayError(502, "Model gateway unavailable");
+}
+
+async function readBoundedBody(response: Response, maxBytes: number): Promise<string> {
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let result = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result += decoder.decode(value, { stream: true });
+      if (result.length >= maxBytes) break;
     }
-    messages.push({ role: message.role, content: message.content });
+  } finally {
+    await reader.cancel().catch(() => undefined);
   }
+  return result.slice(0, maxBytes);
+}
+
+async function parseRequestObject(request: Request): Promise<Record<string, unknown>> {
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_REQUEST_BYTES) throw new Error("Request too large");
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength > MAX_REQUEST_BYTES) throw new Error("Request too large");
+  const parsed = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Request body must be a JSON object");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function forceStreamUsage(body: Record<string, unknown>): Record<string, unknown> {
+  if (body.stream !== true) return body;
+  const existing =
+    typeof body.stream_options === "object" &&
+    body.stream_options !== null &&
+    !Array.isArray(body.stream_options)
+      ? (body.stream_options as Record<string, unknown>)
+      : {};
   return {
-    protocolVersion: 1,
-    botId: body.botId.trim(),
-    instructions: body.instructions,
-    ...(typeof body.thinkingLevel === "string"
-      ? { thinkingLevel: body.thinkingLevel.slice(0, 40) }
-      : {}),
-    messages,
+    ...body,
+    stream_options: { ...existing, include_usage: true },
   };
 }
 
-function sse(event: string, data: unknown): Uint8Array {
-  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-}
-
-interface OpenRouterChunk {
-  choices?: Array<{ delta?: { content?: unknown }; finish_reason?: unknown }>;
-  usage?: unknown;
-}
-
-async function streamOpenRouter(
-  response: Response,
-  onUsage?: (usage: unknown) => void,
-): Promise<ReadableStream<Uint8Array>> {
-  if (!response.body) throw new Error("Model provider returned no response body");
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let closed = false;
-
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      let buffer = "";
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        controller.enqueue(sse("done", {}));
-        controller.close();
-        closed = true;
-      };
-      try {
-        while (!done) {
-          const { done: streamDone, value } = await reader.read();
-          if (streamDone) break;
-          buffer += decoder.decode(value, { stream: true });
-          let newline = buffer.indexOf("\n");
-          while (newline >= 0) {
-            const line = buffer.slice(0, newline).trim();
-            buffer = buffer.slice(newline + 1);
-            newline = buffer.indexOf("\n");
-            if (!line.startsWith("data:")) continue;
-            const data = line.slice(5).trim();
-            if (data === "[DONE]") {
-              finish();
-              break;
-            }
-            let chunk: OpenRouterChunk;
-            try {
-              chunk = JSON.parse(data) as OpenRouterChunk;
-            } catch {
-              continue;
-            }
-            const text = chunk.choices?.[0]?.delta?.content;
-            if (typeof text === "string" && text.length > 0) {
-              controller.enqueue(sse("text", { text }));
-            }
-            if ("usage" in chunk) onUsage?.(chunk.usage);
-          }
-        }
-        finish();
-      } catch (error) {
-        if (!closed) {
-          controller.enqueue(
-            sse("error", {
-              message: error instanceof Error ? error.message : "Model gateway stream failed",
-            }),
-          );
-          controller.close();
-          closed = true;
-        }
-      } finally {
-        reader.releaseLock();
-      }
-    },
-    cancel(reason) {
-      closed = true;
-      return reader.cancel(reason);
-    },
-  });
-}
-
-/**
- * Minimal V1 OpenAI-compatible gateway. It intentionally uses only the
- * deployment model and key; user/model selection is server-controlled.
- */
-export async function modelGatewayResponse(
+async function forward(
   request: Request,
-  options: ModelGatewayOptions,
+  pathname: string,
+  options: NewApiGatewayOptions,
+  body?: Record<string, unknown>,
 ): Promise<Response> {
-  if (!options.enabled) return jsonError(503, "Model gateway is disabled");
-  if (options.provider !== "openrouter") {
-    return jsonError(503, "Model gateway currently supports OpenRouter only");
-  }
-  if (!options.model || !options.apiKey) {
-    return jsonError(503, "Deployment model is not configured");
-  }
-
-  let input: GatewayRequest | null;
-  try {
-    input = parseGatewayRequest(await request.json());
-  } catch {
-    return jsonError(400, "Invalid JSON");
-  }
-  if (!input) return jsonError(400, "Invalid gateway request");
-
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const upstream = await fetchImpl("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${options.apiKey}`,
-      "content-type": "application/json",
-      "x-title": "Rakazo Local",
+  const token = await options.getToken();
+  const headers = new Headers();
+  headers.set("authorization", `Bearer ${token}`);
+  headers.set("accept", request.headers.get("accept") ?? "*/*");
+  if (body !== undefined) headers.set("content-type", "application/json");
+  const upstream = await (options.fetchImpl ?? fetch)(
+    upstreamUrl(options.newApiBaseUrl, pathname),
+    {
+      method: request.method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: request.signal,
     },
-    body: JSON.stringify({
-      model: options.model,
-      stream: true,
-      messages: [
-        ...(input.instructions ? [{ role: "system", content: input.instructions }] : []),
-        ...input.messages,
-      ],
-      ...(input.thinkingLevel ? { reasoning: { effort: input.thinkingLevel } } : {}),
-    }),
-    signal: request.signal,
-  }).catch((error: unknown) => {
-    throw new Error(error instanceof Error ? error.message : "Model provider request failed");
-  });
-
+  );
   if (!upstream.ok) {
-    const status = upstream.status === 429 ? 429 : 502;
-    return jsonError(status, "Model provider request failed");
+    return mapUpstreamError(upstream.status, await readBoundedBody(upstream, MAX_ERROR_BYTES));
   }
-
-  return new Response(await streamOpenRouter(upstream), {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      connection: "keep-alive",
-    },
+  const responseHeaders = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) responseHeaders.set("content-type", contentType);
+  responseHeaders.set("cache-control", "no-store");
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: responseHeaders,
   });
+}
+
+export async function openAiCompatibleGatewayResponse(
+  request: Request,
+  options: NewApiGatewayOptions,
+  pathname: "/v1/chat/completions" | "/v1/models",
+): Promise<Response> {
+  if (!options.newApiBaseUrl.trim())
+    return modelGatewayError(503, "Model gateway is not configured");
+  if (request.method === "GET" && pathname === "/v1/models") {
+    return forward(request, pathname, options);
+  }
+  if (request.method !== "POST" || pathname !== "/v1/chat/completions") {
+    return modelGatewayError(405, "Method not allowed");
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = await parseRequestObject(request);
+  } catch (error) {
+    return modelGatewayError(400, error instanceof Error ? error.message : "Invalid model request");
+  }
+  if (
+    options.defaultModel &&
+    (body.model === undefined ||
+      body.model === null ||
+      body.model === "" ||
+      body.model === "default")
+  ) {
+    body = { ...body, model: options.defaultModel };
+  }
+  return forward(request, pathname, options, forceStreamUsage(body));
 }

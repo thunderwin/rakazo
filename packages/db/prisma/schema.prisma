@@ -40,6 +40,7 @@ model User {
   modelCredentials            UserModelCredential[]
   voiceCredentials            UserVoiceCredential[]
   secrets                     Secret[]
+  newApiIdentity              NewApiIdentity?
   mcpServers                  McpServer[]
   botSections                 BotSection[]
   actionApprovalRules         ActionApprovalRule[]
@@ -1160,6 +1161,17 @@ model Secret {
 
   @@index([userId, spaceId])
   @@map("secrets")
+}
+
+model NewApiIdentity {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newApiUserId    Int?     @unique
+  tokenCiphertext String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("new_api_identities")
 }
 
 model McpServer {
