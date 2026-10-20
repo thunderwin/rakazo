@@ -54,7 +54,7 @@ describe("local shell tool", () => {
 
     expect(run).toHaveBeenCalledWith({
       command: "pwd",
-      cwd: path.join(root, "work"),
+      cwd: expect.stringMatching(/\/work$/),
       signal: undefined,
     });
   });

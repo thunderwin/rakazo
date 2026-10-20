@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import path from "node:path";
 import type { LocalTool } from "./tools.js";
+import { resolveWritableWorkspacePath } from "./workspace-paths.js";
 
 const MAX_OUTPUT_CHARS = 1_000_000;
 
@@ -45,15 +44,6 @@ export const runShellCommand: RunShellCommand = (input) =>
     child.once("close", (code) => resolve({ stdout, stderr, code: code ?? 1 }));
   });
 
-function workspacePath(workspaceDir: string, requested?: string): string {
-  const root = path.resolve(workspaceDir);
-  const candidate = path.resolve(root, requested?.trim() || ".");
-  if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) {
-    throw new Error("Shell cwd must stay inside the local workspace");
-  }
-  return candidate;
-}
-
 export interface ShellToolOptions {
   workspaceDir: string;
   run?: RunShellCommand;
@@ -78,12 +68,11 @@ export function createShellTool(options: ShellToolOptions): LocalTool {
     async execute({ args, signal }) {
       const command = typeof args.command === "string" ? args.command.trim() : "";
       if (!command) throw new Error("Shell command cannot be empty");
-      const cwd = workspacePath(
+      const target = await resolveWritableWorkspacePath(
         options.workspaceDir,
-        typeof args.cwd === "string" ? args.cwd : undefined,
+        typeof args.cwd === "string" ? args.cwd : ".",
       );
-      await mkdir(cwd, { recursive: true });
-      return run({ command, cwd, signal });
+      return run({ command, cwd: target.path, signal });
     },
   };
 }

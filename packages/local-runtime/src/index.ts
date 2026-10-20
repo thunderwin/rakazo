@@ -8,6 +8,7 @@ export type {
   LocalAgentRunRequest,
   LocalAgentTool,
 } from "./agent.js";
+export { createFileTools } from "./file-tools.js";
 export { LocalRuntime, type LocalRuntimeOptions, type SendMessageResult } from "./runtime.js";
 export { LocalRuntimeService, type LocalRuntimeServiceOptions } from "./service.js";
 export {

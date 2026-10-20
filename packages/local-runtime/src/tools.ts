@@ -47,7 +47,7 @@ export class LocalToolRegistry implements LocalToolProvider {
   async execute(request: LocalToolExecutionRequest): Promise<unknown> {
     const tool = this.tools.get(request.name);
     if (!tool) throw new Error(`Tool ${request.name} is not available`);
-    if (!(await this.approve(request))) {
+    if (!tool.definition.readOnly && !(await this.approve(request))) {
       throw new Error(`Tool ${request.name} was not approved`);
     }
     request.signal?.throwIfAborted();
