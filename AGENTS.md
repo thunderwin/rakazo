@@ -17,3 +17,49 @@
 - For UI changes, link the CI E2E screenshot that shows the change on the PR; add the web test that opens that screen if it is missing. For native-only mobile UI that CI cannot capture, say so in the PR instead of linking an unrelated web screenshot.
 - UI system. Colors live in `@rakazo/ui-tokens` as semantic tokens (background, card, muted, border, primary, destructive, ...) with one TypeScript source that generates `tokens.css`; never hardcode a product hex or use `[var(--…)]` arbitrary values. Web and Electron use shadcn/ui on Base UI, vendored into `packages/ui-web` via `pnpm exec shadcn add` from the official registry only (third-party registries are a supply-chain risk); reuse those components before writing chrome by hand, and reuse `apps/web/src/components/ai/` for AI moments (loading, shimmer, success). The app is monochrome: primary is ink, status colors are destructive/success/warning, bots carry the only identity color. Mobile is native-first: Expo Router, Expo UI, native sheets, menus, alerts and pickers wherever one exists; custom surfaces (thread, composer, avatars, cards) use plain StyleSheet with the shared tokens through `apps/mobile/lib/appearance`, and system chrome stays PlatformColor via `lib/native`. Mobile may diverge from web when the native pattern is better.
 - On mobile, use built-in native iOS controls (@expo/ui SwiftUI and Liquid Glass, native header items, context menus, alerts, pickers, and switches) wherever possible instead of custom React Native pills or buttons.
+
+## Fork-specific context
+
+This checkout is a product fork of `elie222/rakazo`, maintained at
+`thunderwin/rakazo`. The upstream project is the source of the agent runtime,
+web UI, desktop shell, and sandbox providers. This fork adds a branded desktop
+client and an operator-hosted deployment; it does not replace upstream behavior
+without a documented reason.
+
+Product intent:
+
+- Users install a branded desktop client, then sign up or sign in on the
+  operator's Rakazo server. The client loads that server's web UI and keeps the
+  session in its own Electron partition.
+- The client may ship a public server URL and brand assets. It must never ship
+  an admin token, shared user credential, database secret, encryption key, or
+  sandbox supervisor token. Authorization belongs on the server.
+- The default end-user deployment is a thin client plus a hosted server. The
+  Docker-based "this computer" mode is for development or power users, not the
+  default consumer install.
+- Branding lives in `brand/` and `packages/ui-tokens`; generated icons and CSS
+  are derived from those sources. Do not hand-edit generated assets.
+- Per-bot prompts and configurations live in `config/bot-templates/` and are
+  applied server-side when a user or bot is created. Do not hardcode product
+  prompts in the client.
+
+Read these before changing architecture, authentication, branding, or
+onboarding:
+
+- `docs/ARCHITECTURE.md` - current system boundaries and data flow.
+- `docs/FORK.md` - fork strategy, customization points, and release pipeline.
+- `docs/computer-runtime.md` - sandbox, terminal, and computer lifecycle.
+- `docs/self-host.md` - deployment and operations.
+
+Fork rules:
+
+- Keep the upstream merge path viable. Prefer configuration and isolated brand
+  modules over broad edits to upstream files. Record unavoidable core changes
+  in `docs/FORK.md`.
+- Use a top-level `serverUrl` build configuration for the operator's server;
+  never derive it from untrusted runtime input.
+- Treat `shell`, host-computer access, OIDC secrets, and sandbox credentials as
+  security-sensitive. Do not enable host-computer access for hosted users.
+- When behavior, configuration, or deployment changes, update the matching
+  document in the same change. Mark unverified ideas as "planned" rather than
+  describing them as current behavior.
