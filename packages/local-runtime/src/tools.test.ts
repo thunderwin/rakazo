@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createMessageBotTool } from "./message-bot-tool.js";
 import { createShellTool, type ShellCommandResult } from "./shell-tool.js";
 import { createSubagentTool } from "./subagent-tool.js";
 import { LocalToolRegistry } from "./tools.js";
@@ -112,5 +113,27 @@ describe("local shell tool", () => {
         inputSchema: expect.objectContaining({ required: ["name", "task"] }),
       }),
     ]);
+  });
+
+  it("runs peer bot messages without a manual approval prompt", async () => {
+    const deliver = vi.fn(async () => "peer reply");
+    const registry = new LocalToolRegistry([createMessageBotTool(deliver)], () => false);
+
+    await expect(
+      registry.execute({
+        botId: "source-bot",
+        name: "message_bot",
+        args: { confirm_name: "Researcher", message: "Check this." },
+        executionId: "message-1",
+      }),
+    ).resolves.toBe("peer reply");
+    expect(deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromBotId: "source-bot",
+        confirmName: "Researcher",
+        message: "Check this.",
+        intent: "request",
+      }),
+    );
   });
 });

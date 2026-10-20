@@ -2,6 +2,7 @@ export { LocalDatabase, type OpenLocalDatabaseOptions, openLocalDatabase } from 
 export { migrate } from "./migrations.js";
 export { BotRepository } from "./repositories/bots.js";
 export { MessageRepository } from "./repositories/messages.js";
+export { type PeerMessage, PeerMessageRepository } from "./repositories/peer-messages.js";
 export { SettingsRepository } from "./repositories/settings.js";
 export { ThreadRepository } from "./repositories/threads.js";
 export type {

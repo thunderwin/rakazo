@@ -84,4 +84,59 @@ describe("local runtime service", () => {
     });
     second.close();
   });
+
+  it("runs a persistent peer bot and records the request and reply", async () => {
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine,
+      tools,
+      resolveModel,
+    });
+    const source = service.createBot({ name: "Lead" });
+    const target = service.createBot({ name: "Researcher" });
+
+    await expect(
+      service.sendPeerMessage({
+        fromBotId: source.id,
+        botId: target.id,
+        message: "Check this finding.",
+        intent: "request",
+      }),
+    ).resolves.toBe("ok");
+
+    expect(service.listMessages(target.id).map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(service.db.peerMessages.listForBot(source.id)).toEqual([
+      expect.objectContaining({
+        fromBotId: source.id,
+        toBotId: target.id,
+        prompt: "Check this finding.",
+        reply: "ok",
+        status: "completed",
+      }),
+    ]);
+    service.close();
+  });
+
+  it("stops peer bot cycles", () => {
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine,
+      tools,
+      resolveModel,
+    });
+    const source = service.createBot({ name: "Lead" });
+    const target = service.createBot({ name: "Researcher" });
+
+    return expect(
+      service.sendPeerMessage({
+        fromBotId: target.id,
+        botId: source.id,
+        message: "Loop",
+        intent: "request",
+        peerChain: [source.id, target.id],
+      }),
+    )
+      .rejects.toThrow("cycle")
+      .finally(() => service.close());
+  });
 });

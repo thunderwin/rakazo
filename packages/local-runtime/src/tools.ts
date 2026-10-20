@@ -2,10 +2,12 @@ import type { Bot } from "@rakazo/local-db";
 import type { LocalAgentTool } from "./agent.js";
 
 export interface LocalToolExecutionRequest {
+  botId?: string;
   name: string;
   args: Record<string, unknown>;
   executionId: string;
   signal?: AbortSignal;
+  peerChain?: string[];
 }
 
 export interface LocalTool {
@@ -47,7 +49,8 @@ export class LocalToolRegistry implements LocalToolProvider {
   async execute(request: LocalToolExecutionRequest): Promise<unknown> {
     const tool = this.tools.get(request.name);
     if (!tool) throw new Error(`Tool ${request.name} is not available`);
-    if (!tool.definition.readOnly && !(await this.approve(request))) {
+    const requiresApproval = tool.definition.requiresApproval ?? !tool.definition.readOnly;
+    if (requiresApproval && !(await this.approve(request))) {
       throw new Error(`Tool ${request.name} was not approved`);
     }
     request.signal?.throwIfAborted();

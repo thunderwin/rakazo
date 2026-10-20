@@ -5,6 +5,7 @@ export function createSubagentTool(): LocalTool {
   return {
     definition: {
       name: "run_subagent",
+      requiresApproval: false,
       description:
         "Run a short-lived helper inside this turn only. It has no bot entry, thread, or computer of its own. Use it for parallel or isolated work whose result you will summarize.",
       inputSchema: {

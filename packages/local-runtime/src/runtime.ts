@@ -133,7 +133,14 @@ export class LocalRuntime {
         tools: toolDefinitions,
         model,
         executeTool: (name, args, executionId) =>
-          this.tools.execute({ name, args, executionId, signal: options.signal }),
+          this.tools.execute({
+            botId: bot.id,
+            name,
+            args,
+            executionId,
+            signal: options.signal,
+            peerChain: options.peerChain,
+          }),
       },
       options,
     )) {

@@ -12,6 +12,7 @@ export interface LocalAgentTool {
   description: string;
   inputSchema: Record<string, unknown>;
   readOnly?: boolean;
+  requiresApproval?: boolean;
 }
 
 export interface LocalAgentModel {
@@ -46,6 +47,8 @@ export interface LocalAgentRunRequest {
 export interface LocalAgentRunContext {
   signal?: AbortSignal;
   userId?: string;
+  /** Bot chain for persistent peer messaging; prevents cycles and runaway fan-out. */
+  peerChain?: string[];
 }
 
 export type LocalAgentEvent =

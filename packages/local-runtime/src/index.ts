@@ -9,6 +9,11 @@ export type {
   LocalAgentTool,
 } from "./agent.js";
 export { createFileTools } from "./file-tools.js";
+export {
+  createMessageBotTool,
+  type DeliverPeerBotMessage,
+  type PeerBotMessageRequest,
+} from "./message-bot-tool.js";
 export { LocalRuntime, type LocalRuntimeOptions, type SendMessageResult } from "./runtime.js";
 export { LocalRuntimeService, type LocalRuntimeServiceOptions } from "./service.js";
 export {

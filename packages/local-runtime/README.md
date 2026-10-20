@@ -22,10 +22,12 @@ Current implementation:
 - `list_files`, `read_file`, and `write_file` with workspace containment and
   approval only for writes
 - `run_subagent` through the existing Pi nested-agent loop
+- persistent `message_bot` delegation with a bounded bot chain and local
+  request/reply records
 - live run events and cancellation in the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-Persistent peer-bot messaging, groups, app launch, browser bridging, memory,
+Group chats and `handoff_to_bot`, app launch, browser bridging, memory,
 routines, and tool-run persistence are still separate migration work.

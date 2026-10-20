@@ -6,6 +6,7 @@ import {
   openLocalDatabase,
 } from "@rakazo/local-db";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
+import type { PeerBotMessageRequest } from "./message-bot-tool.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
 import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
 import { SqliteConversationStore } from "./store.js";
@@ -62,6 +63,54 @@ export class LocalRuntimeService {
 
   abort(runId: string): Promise<void> {
     return this.runtime.abort(runId);
+  }
+
+  async sendPeerMessage(input: PeerBotMessageRequest): Promise<string> {
+    const source = this.db.bots.get(input.fromBotId);
+    if (!source) throw new Error("Source bot not found");
+    const target = input.botId
+      ? this.db.bots.get(input.botId)
+      : input.confirmName
+        ? this.db.bots
+            .list()
+            .filter((bot) => bot.name === input.confirmName)
+            .at(0)
+        : undefined;
+    if (!target) throw new Error("Target bot not found");
+    if (target.id === source.id) throw new Error("A bot cannot message itself");
+    if (
+      !input.botId &&
+      this.db.bots.list().filter((bot) => bot.name === input.confirmName).length !== 1
+    ) {
+      throw new Error("Target bot name is ambiguous; pass bot_id");
+    }
+    const chain = input.peerChain?.length ? [...input.peerChain] : [source.id];
+    if (chain.at(-1) !== source.id) chain.push(source.id);
+    if (chain.includes(target.id)) throw new Error("Bot message cycle detected");
+    if (chain.length >= 6) throw new Error("Bot message chain limit reached");
+
+    const record = this.db.peerMessages.create({
+      fromBotId: source.id,
+      toBotId: target.id,
+      intent: input.intent,
+      prompt: input.message,
+    });
+    try {
+      const result = await this.runtime.sendMessage(
+        target.id,
+        `Peer message from ${source.name} (${source.id}) [${input.intent}]:\n\n${input.message}\n\nReply directly in your final response. Do not call message_bot for this reply; the runtime returns your final answer to the caller automatically.`,
+        {
+          signal: input.signal,
+          peerChain: [...chain, target.id],
+        },
+      );
+      const reply = result.text.trim() || "Recipient completed without a text reply.";
+      this.db.peerMessages.complete(record.id, reply);
+      return reply;
+    } catch (error) {
+      this.db.peerMessages.fail(record.id, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   close(): void {

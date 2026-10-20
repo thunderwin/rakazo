@@ -165,9 +165,12 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   写入和 shell 仍逐次审批。
 - `run_subagent` 已接入 Pi 现有嵌套 Agent 循环；它是一次 run 内的临时助手，不创建
   独立 bot、thread 或电脑。
+- `message_bot` 已支持持久 bot 之间的私聊委派：请求和回复写入本地
+  `peer_messages`，目标 bot 在自己的 DM thread 中执行，调用链最大 6 个 bot 并阻止
+  循环。
 - run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
 
-仍待迁移：持久 peer bot 消息、群聊/handoff、应用启动、浏览器桥接、memory、
+仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、浏览器桥接、memory、
 routines、工具运行记录和完整的本地 Web UI/API。
 
 ### 4.3 本地数据库
@@ -191,9 +194,12 @@ routines、工具运行记录和完整的本地 Web UI/API。
 - 提供导出/恢复；V1 不做云端同步。
 - 本地数据库是唯一事实来源。
 
-当前 schema 已有 bots、threads、messages、settings 和 routines 表；repository
-覆盖 bots、threads、messages、settings。memory、tool runs 和 routines 的
+当前 schema 已有 bots、threads、messages、peer_messages、settings 和 routines 表；
+repository 覆盖 bots、threads、messages、peer_messages、settings。memory、tool runs 和 routines 的
 repository/本地调度尚未实现。
+
+`peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
+审计；它不保存到服务器。
 
 账号间隔离目前是目录和数据库文件隔离，不是磁盘加密。同一 OS 用户仍可直接读取这些
 SQLite 文件；数据库和备份加密仍是待办项。

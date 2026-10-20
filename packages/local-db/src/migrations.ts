@@ -68,6 +68,28 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX routines_bot_id ON routines(bot_id);
     `,
   },
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE peer_messages (
+        id TEXT PRIMARY KEY,
+        from_bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        to_bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        intent TEXT NOT NULL DEFAULT 'request',
+        prompt TEXT NOT NULL,
+        reply TEXT,
+        status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed')),
+        error TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT
+      );
+
+      CREATE INDEX peer_messages_from_bot_created
+        ON peer_messages(from_bot_id, created_at);
+      CREATE INDEX peer_messages_to_bot_created
+        ON peer_messages(to_bot_id, created_at);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

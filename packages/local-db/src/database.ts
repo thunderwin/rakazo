@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import { migrate } from "./migrations.js";
 import { BotRepository } from "./repositories/bots.js";
 import { MessageRepository } from "./repositories/messages.js";
+import { PeerMessageRepository } from "./repositories/peer-messages.js";
 import { SettingsRepository } from "./repositories/settings.js";
 import { ThreadRepository } from "./repositories/threads.js";
 
@@ -17,6 +18,7 @@ export class LocalDatabase {
   readonly bots: BotRepository;
   readonly threads: ThreadRepository;
   readonly messages: MessageRepository;
+  readonly peerMessages: PeerMessageRepository;
   readonly settings: SettingsRepository;
 
   constructor(options: OpenLocalDatabaseOptions) {
@@ -32,6 +34,7 @@ export class LocalDatabase {
     this.bots = new BotRepository(this.sqlite);
     this.threads = new ThreadRepository(this.sqlite);
     this.messages = new MessageRepository(this.sqlite);
+    this.peerMessages = new PeerMessageRepository(this.sqlite);
     this.settings = new SettingsRepository(this.sqlite);
   }
 

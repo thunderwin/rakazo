@@ -3,6 +3,7 @@ import type { Bot } from "@rakazo/local-db";
 import {
   type ApproveLocalTool,
   createFileTools,
+  createMessageBotTool,
   createShellTool,
   createSubagentTool,
   type LocalAgentEngine,
@@ -29,15 +30,20 @@ export async function createDesktopLocalRuntime(
   options: DesktopLocalRuntimeOptions,
 ): Promise<LocalRuntimeService> {
   const account = await prepareLocalAccountData(options.userDataDir, options.accountId);
+  let service: LocalRuntimeService | undefined;
   const tools = new LocalToolRegistry(
     [
       createShellTool({ workspaceDir: account.workspaceDir }),
       createSubagentTool(),
+      createMessageBotTool(async (request) => {
+        if (!service) throw new Error("Local runtime is not ready");
+        return service.sendPeerMessage(request);
+      }),
       ...createFileTools({ workspaceDir: account.workspaceDir }),
     ],
     options.approveTool,
   );
-  return new LocalRuntimeService({
+  service = new LocalRuntimeService({
     databasePath: account.databasePath,
     engine: options.engine ?? new PiLocalAgentEngine(),
     tools,
@@ -45,6 +51,7 @@ export async function createDesktopLocalRuntime(
     onRunStart: options.onRunStart,
     onEvent: options.onEvent,
   });
+  return service;
 }
 
 export function defaultLocalModel(input: {
