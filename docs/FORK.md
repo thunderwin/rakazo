@@ -1,19 +1,23 @@
-# Fork 与品牌化流水线
+# Fork 与产品化流水线
 
-> 状态：初始化文档。品牌名、域名、登录方式和 bot 模板内容仍待确认。
-> 本文中的“当前代码”指本仓库从上游同步到的实现；“计划”表示尚未落地。
+> 状态：初始化文档。V1 方向已确认，代码尚未改造。
+> 品牌名、域名、登录方式、模型供应商和具体 bot 模板仍待确认。
 
 ## 1. 为什么 fork
 
-这个 fork 的目标不是重写 Rakazo，而是把上游的 Agent 平台包装成自己的产品：
+这个 fork 不是把 Rakazo 原样换个 logo，而是把它改造成 **单设备 local-first**
+产品：
 
-- 自己的品牌、图标、颜色和安装包
-- 自己的服务器地址和登录入口
-- 自己的默认 bot 模板、prompt 和工具策略
-- 自己的发布和更新渠道
+- 用户安装客户端，Agent 和工具在用户电脑上运行。
+- 对话、bot、记忆和文件保存在客户端本地。
+- 服务器只做账号、充值、模型网关、设备管理和监控。
+- 模型网关是主要收入路径。
 
-上游仍然提供核心能力：Web UI、Electron 壳、API、Agent runtime、sandbox 和
-电脑工具。这样可以在获得上游修复的同时，保持自己的产品层。
+V1 不做多设备、团队协作、团队电脑、移动端和本地模型。完整范围见
+`docs/V1.md`。
+
+上游仍然提供可复用的基础：Web UI、Electron 壳、Pi runtime、工具协议和
+部分 provider 代码。品牌和产品层放在 fork 中维护。
 
 ## 2. 远端和分支
 
@@ -22,13 +26,11 @@ origin    https://github.com/thunderwin/rakazo.git
 upstream  https://github.com/elie222/rakazo.git
 ```
 
-推荐约定：
+约定：
 
-- `main` 跟踪自己的产品主线。
+- `main` 是自己的产品主线。
 - `upstream/main` 只用于同步，不直接发布。
-- 每次同步使用 merge，不要 rebase 已经发布的提交。
-
-同步命令：
+- 使用 merge 同步上游，不 rebase 已发布的提交。
 
 ```bash
 git fetch upstream
@@ -39,27 +41,31 @@ pnpm check
 pnpm test
 ```
 
-如果冲突集中在品牌文件，说明分层是健康的；如果每个文件都在冲突，说明对上游核心的
-修改过多，需要把定制收回到配置层。
+冲突应尽量集中在品牌文件、默认服务器配置和本地 runtime 接入点。如果核心文件
+大面积冲突，说明定制层放错了位置。
 
 ## 3. 代码分区
 
-新增或维护以下目录：
+V1 预期新增或维护：
 
 ```text
-brand/                    品牌源文件
-config/bot-templates/     bot 模板和默认配置
-config/prompts/           产品级 prompt（可选）
-scripts/                  品牌生成、模板 seed 等脚本
-docs/                     架构和 fork 说明
+brand/                       品牌源文件和生成规则
+config/bot-templates/        内置 bot 模板
+config/prompts/              产品级 prompt
+packages/local-runtime/      Agent 循环和本地工具编排（计划）
+packages/local-db/           SQLite schema、迁移和 repository（计划）
+apps/desktop/src/runtime/    Electron 本地 runtime 入口（计划）
+apps/browser-extension/      浏览器扩展和 Native Messaging（计划）
+scripts/                     模板 seed、品牌生成、迁移脚本
+docs/                        架构、V1 范围、fork 说明
 ```
 
 原则：
 
-- 能在配置层解决的，不改核心代码。
-- 能在服务端解决的，不写进客户端。
-- 必须改上游文件时，改动尽量小，并在本文记录原因。
-- 不手动修改生成文件；修改源文件后重新生成。
+- 能在本地配置层解决的，不改上游核心。
+- 需要重构上游 executor 时，先抽接口，不复制整套代码。
+- 不把用户数据、对话或记忆放到服务器。
+- 不修改生成文件；修改源文件后重新生成。
 
 ## 4. 品牌改动清单
 
@@ -79,9 +85,9 @@ docs/                     架构和 fork 说明
 - `WEB_ORIGIN`、`API_URL`、`AUTH_URL`
 - `SIGNUPS_ENABLED` 和 `SIGNUP_ALLOWLIST`
 - OIDC/SSO（如启用）
-- 默认 Space、角色和 bot 模板
-- `shell` 审批规则和本机电脑开关
-- 模型凭据和 sandbox provider
+- 模型网关、额度、计费
+- 设备注册和撤销
+- 崩溃/监控上报
 
 ### 4.3 不要改的东西
 
@@ -90,127 +96,116 @@ docs/                     架构和 fork 说明
 - 不要在客户端放管理员 token、数据库密码或共享用户密码。
 - 不要为了品牌化复制整套 UI 代码。
 
-## 5. 默认服务器和登录
+## 5. 登录、设备和模型网关
 
-目标体验：
+目标流程：
 
 ```text
-下载安装
-  -> 客户端读取内置 serverUrl
-  -> 打开服务器的登录页
+客户端打开你的网站/登录页
   -> 用户注册或登录
-  -> Electron 保存 session cookie
-  -> 下次启动直接进入
+  -> 客户端创建设备身份
+  -> 服务器签发短期设备 token
+  -> 本地 Runtime 使用 token 调模型网关
+  -> 网关扣额度并转发给模型供应商
 ```
 
-实现方式：
+要求：
 
-1. 增加构建时配置，例如 `RAKAZO_DEFAULT_SERVER_URL`。
-2. 修改 `resolveStartupTarget`：没有保存配置时返回默认服务器，而不是 setup。
-3. 托管版本隐藏“Change Server”，保留 `RAKAZO_FORCE_SETUP=1` 作为支持入口。
-4. 服务器保持正常注册策略；如果要限制用户，使用 allowlist。
-5. 不内置管理员 token；每个用户使用自己的账号和 session。
+- 客户端内置公开的 `serverUrl`，不内置任何长期密钥。
+- 设备 token 存在 OS keychain/DPAPI，可撤销。
+- 模型供应商 key 只在服务器。
+- 额度、限流和风控以服务器为准。
+- 模型网关会看到 prompt/回复；隐私政策必须说明。
 
-相关代码：
+## 6. 本地 runtime 和数据库
 
-- `apps/desktop/src/setup-config.ts`
-- `apps/desktop/src/main.ts`
-- `apps/desktop/src/setup-store.ts`
+### 6.1 本地 runtime
 
-## 6. Bot 模板和 prompt
+- 运行在 Electron utility process 或独立本地进程。
+- 复用 `packages/core`、`packages/adapters`、`packages/contracts` 中可复用的部分。
+- 先抽 repository 接口，再把 `executor.ts` 与 Prisma 解耦。
+- 本地工具包括 shell、文件、应用启动和浏览器桥接。
+- 所有高风险工具都要有授权、可见状态和停止入口。
 
-### 6.1 v1：配置文件 + seed 脚本
+### 6.2 本地数据库
 
-适合先上线。每个模板是一个 JSON 文件，例如：
+- SQLite 是唯一事实来源。
+- 存储 bot、thread、message、memory、routine、settings 和工具记录。
+- 升级时执行迁移；失败保留备份。
+- 提供导出/导入；V1 不做云端同步。
+- 敏感字段和备份加密。
 
-```json
-{
-  "key": "researcher",
-  "version": 1,
-  "name": "Researcher",
-  "title": "Research and verification",
-  "description": "Finds sources, checks claims, and reports conclusions.",
-  "instructions": "You are a careful researcher...",
-  "color": "blue",
-  "modelProvider": "openrouter",
-  "modelId": "your-model-id",
-  "thinkingLevel": "medium",
-  "disabledBuiltinTools": ["shell"],
-  "routines": []
-}
-```
+### 6.3 浏览器状态
 
-seed 脚本要求：
+- 优先使用用户现有浏览器 + 扩展，不复制 Cookie 文件。
+- 扩展通过 Native Messaging 或本地 WebSocket 与 runtime 通信。
+- 按站点授权，提供暂停和撤销。
+- 网页内容按不可信数据处理。
 
-- 幂等：重复执行不会创建重复 bot。
-- 只影响新用户或新 bot，不覆盖用户已经修改的 instructions。
-- 模板带 `key` 和 `version`，方便追踪。
-- 失败时不留下半成品；最好使用事务。
+## 7. Bot 模板和 prompt
 
-### 6.2 v2：数据库模板和管理界面
+模板和 prompt 是产品的一部分，但属于本地内容：
 
-当模板数量增加、需要运营后台时，增加 `BotTemplate` 表和 RPC：
+- 打包在客户端 `config/bot-templates/` 和 `config/prompts/`。
+- 首次创建 bot 时 seed 到本地 SQLite。
+- 模板带 `key` 和 `version`。
+- 只影响新 bot，不覆盖用户编辑过的 instructions。
+- 服务器以后可以下发签名的模板更新，但不保存用户 bot 数据。
 
-- 模板列表、启用/停用
-- 模板版本
-- 对哪些用户或 Space 可见
-- 从模板创建 bot
-- 用户主动“恢复模板”
+每个模板至少包含：
 
-模板字段可以包含：
-
+- `key`、`version`
 - 名称、标题、描述、颜色
 - `instructions`
-- 模型 provider/id、thinking level
-- `disabledBuiltinTools`
-- 默认 routine
-- 初始消息或欢迎语
+- 模型 provider/id 和 thinking level
+- 禁用工具
+- 可选 routine 和初始消息
 
-### 6.3 prompt 放置原则
+prompt 不是安全边界。工具权限、审批、沙箱和本地权限要独立实现。
 
-- **单个 bot 的角色和行为**：放在模板的 `instructions`，创建后写入 `bot.instructions`。
-- **产品级全局规则**：放在服务端 prompt 文件或单一注入点，不要散落在 UI。
-- **安全策略**：不要只靠 prompt；用工具开关、审批规则、角色和 sandbox 隔离。
+## 8. 构建和发布流水线
 
-## 7. 构建和发布流水线
-
-### 7.1 本地开发
+### 8.1 本地开发
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm db:generate
-pnpm db:migrate
 pnpm dev
 ```
 
-需要 Node 22.22.2+、24.x 或 26+，以及 Docker。
+Node 版本使用 `.nvmrc` 的 24.x。当前上游仍需要 Postgres/Docker 才能跑完整服务；
+local-first 改造完成后，客户端开发应尽量不依赖服务器业务库。
 
-### 7.2 品牌构建
+### 8.2 客户端构建
 
 ```text
 修改 brand/ 和 ui-tokens
   -> 生成图标和 CSS
   -> 构建 web
+  -> 构建 local runtime
   -> 构建 desktop
   -> 生成安装包
 ```
 
-### 7.3 服务端发布
+### 8.3 服务器发布
 
 ```text
-构建 API/worker/computer 镜像
+构建 API 镜像
   -> 推送自己的镜像仓库
-  -> 备份数据库
+  -> 备份控制面数据库
   -> 执行迁移
-  -> 滚动更新 API/worker
+  -> 更新 API
   -> 健康检查
 ```
 
-### 7.4 客户端发布
+V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 sandbox supervisor
+和 computer 镜像。模型网关仍然需要高可用和限流。
+
+### 8.4 客户端发布
 
 ```text
 打版本 tag
-  -> CI 构建 web + desktop
+  -> CI 构建 web + runtime + desktop
   -> macOS 签名 + notarization
   -> Windows 签名（建议）
   -> Linux AppImage
@@ -218,9 +213,16 @@ pnpm dev
   -> 小范围发布，再全量
 ```
 
-自动更新必须改成自己的仓库或更新服务器，否则客户端会尝试从上游更新。
+自动更新必须指向自己的仓库或更新服务器。客户端升级还要处理本地 SQLite 迁移。
 
-## 8. 上游同步检查表
+更新分层见 `docs/UPDATES.md`：
+
+- 配置、prompt、bot 模板走签名配置包，立即生效。
+- runtime 后台下载，V1 下次启动生效。
+- Electron/Chromium 退出时安装，必须重启。
+- 数据库迁移在副本上执行，失败保留旧库。
+
+## 9. 上游同步检查表
 
 - [ ] `git fetch upstream`
 - [ ] `git merge upstream/main`
@@ -228,24 +230,28 @@ pnpm dev
 - [ ] `pnpm lint`
 - [ ] `pnpm check`
 - [ ] `pnpm test`
-- [ ] 登录、建 bot、发消息、shell/文件工具至少跑一遍
-- [ ] 检查品牌文案和默认服务器是否仍正确
-- [ ] 检查安装包更新源和 appId 是否仍指向自己
+- [ ] 登录、模型网关、建 bot、发消息、至少一个本地工具跑通
+- [ ] 本地数据库迁移和备份可用
+- [ ] 配置包签名和回滚可用
+- [ ] 品牌文案和默认服务器仍正确
+- [ ] 安装包更新源和 appId 仍指向自己
 
-## 9. 安全红线
+## 10. 安全红线
 
 - 客户端只放公开配置，不放长期密钥。
-- 托管用户默认不能启用本机电脑模式。
-- `shell` 默认免审批；发布前必须决定是否改成强制审批或白名单。
-- 每个用户独立账号；禁止共享管理员账号。
-- 生产环境使用 HTTPS、可信 origin、速率限制和审计。
-- 多租户部署要验证 Space 隔离和 sandbox 隔离。
+- 模型供应商 key 只在服务器。
+- 模型网关必须按用户/设备/模型限额，不能信任客户端扣费。
+- 本地数据库和备份加密。
+- 浏览器扩展按站点授权，不静默读取所有页面。
+- `shell` 默认免审批的问题必须在本地 runtime 中修正，至少提供强制审批或白名单。
+- 遥测只回传元数据，默认不回传对话正文和文件内容。
 
-## 10. 待确认
+## 11. 待确认
 
 - 品牌名、Logo、主色和域名
-- 用户登录方式：邮箱密码、邀请码、OIDC/SSO
+- 登录方式：邮箱密码、邀请码、OIDC/SSO
+- 模型供应商、模型列表和定价
+- 充值/额度单位（token、次数或积分）
 - 首发平台：macOS、Windows、Linux
-- 服务端部署位置和 sandbox provider
 - 首批 bot 模板的名称、prompt 和可用工具
-- 是否保留“本机电脑”模式给高级用户
+- 浏览器扩展的首发渠道（Chrome Web Store / 企业安装）

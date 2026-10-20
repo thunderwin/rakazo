@@ -22,31 +22,38 @@
 
 This checkout is a product fork of `elie222/rakazo`, maintained at
 `thunderwin/rakazo`. The upstream project is the source of the agent runtime,
-web UI, desktop shell, and sandbox providers. This fork adds a branded desktop
-client and an operator-hosted deployment; it does not replace upstream behavior
-without a documented reason.
+web UI, desktop shell, and sandbox providers. This fork is moving to a
+single-device local-first product; it does not replace upstream behavior without
+a documented reason.
 
 Product intent:
 
-- Users install a branded desktop client, then sign up or sign in on the
-  operator's Rakazo server. The client loads that server's web UI and keeps the
-  session in its own Electron partition.
+- Users install a branded desktop client, sign up or sign in against the
+  operator's server, and then run the Agent locally on that device.
+- The server is a thin control plane: auth, billing/credits, model gateway,
+  device registry, telemetry, crash reporting, and update feed. The model
+  gateway is the intended revenue path.
+- The client owns the Agent loop, tool execution, bot configuration,
+  conversations, memory, routines, and the local SQLite database. The server
+  must not store conversation content as business data.
 - The client may ship a public server URL and brand assets. It must never ship
-  an admin token, shared user credential, database secret, encryption key, or
-  sandbox supervisor token. Authorization belongs on the server.
-- The default end-user deployment is a thin client plus a hosted server. The
-  Docker-based "this computer" mode is for development or power users, not the
-  default consumer install.
+  an admin token, shared user credential, provider API key, database secret,
+  encryption key, or sandbox supervisor token.
+- V1 is single-device. Do not add multi-device sync, teams, shared computers,
+  or mobile clients without a new documented decision.
 - Branding lives in `brand/` and `packages/ui-tokens`; generated icons and CSS
   are derived from those sources. Do not hand-edit generated assets.
 - Per-bot prompts and configurations live in `config/bot-templates/` and are
-  applied server-side when a user or bot is created. Do not hardcode product
-  prompts in the client.
+  packaged with the client, then seeded into the local database when a bot is
+  created. The server may deliver signed template updates, but must not store
+  user bot data.
 
 Read these before changing architecture, authentication, branding, or
 onboarding:
 
 - `docs/ARCHITECTURE.md` - current system boundaries and data flow.
+- `docs/V1.md` - the accepted V1 scope and acceptance criteria.
+- `docs/UPDATES.md` - update channels, signing, rollback, and local DB migration.
 - `docs/FORK.md` - fork strategy, customization points, and release pipeline.
 - `docs/computer-runtime.md` - sandbox, terminal, and computer lifecycle.
 - `docs/self-host.md` - deployment and operations.
@@ -58,8 +65,17 @@ Fork rules:
   in `docs/FORK.md`.
 - Use a top-level `serverUrl` build configuration for the operator's server;
   never derive it from untrusted runtime input.
-- Treat `shell`, host-computer access, OIDC secrets, and sandbox credentials as
-  security-sensitive. Do not enable host-computer access for hosted users.
+- This fork's V1 intentionally uses the operator's hosted model gateway for
+  metered model access. That is an accepted exception to upstream's
+  "no hosted vendor required" default; keep provider SDKs behind the gateway.
+- Treat local shell access, browser-extension permissions, device tokens, model
+  gateway tokens, and provider credentials as security-sensitive. The model
+  gateway sees prompts and responses; disclose that in the privacy policy.
+- Do not add server-side Agent execution or server-side conversation storage to
+  V1. The local SQLite database is the source of truth.
+- Never load unsigned remote code or configuration. Update manifests and
+  runtime/config bundles must be signed and hash-verified. Keep the previous
+  version for rollback, and never migrate the only local database in place.
 - When behavior, configuration, or deployment changes, update the matching
   document in the same change. Mark unverified ideas as "planned" rather than
   describing them as current behavior.

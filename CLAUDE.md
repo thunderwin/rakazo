@@ -1,5 +1,7 @@
 @AGENTS.md
 @docs/ARCHITECTURE.md
+@docs/V1.md
+@docs/UPDATES.md
 @docs/FORK.md
 
 This is the `thunderwin/rakazo` product fork. Read the imported documents before

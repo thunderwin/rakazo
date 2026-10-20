@@ -12,6 +12,11 @@ can run on your own machine. It is available on the web, as an Electron desktop 
 [iPhone](https://apps.apple.com/app/rakazo/id6801531099) and [Android](https://github.com/elie222/rakazo/releases/download/android/rakazo.apk). Bring your own model
 and computer provider, or run the complete stack locally.
 
+> **Fork note:** this repository is being adapted into a single-device local-first
+> product. The current code still follows the upstream server-centric architecture.
+> See [`docs/V1.md`](./docs/V1.md) and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+> for the target scope and the current-to-target migration path.
+
 It is an open source, self-hosted alternative to Grok Bot, Meta Muse, OpenAI Dots, Instinct,
 OpenClaw, Hermes Agent, and Hark Pro.
 
