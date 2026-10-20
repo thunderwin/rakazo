@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "cross-env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 turbo dev --filter=@rakazo/api --filter=@rakazo/worker --filter=@rakazo/web --filter=@rakazo/sandbox-supervisor",
+    "dev:gateway": "tsx scripts/dev-model-gateway.ts",
     "build": "turbo build",
     "check": "turbo check",
     "lint": "biome check .",

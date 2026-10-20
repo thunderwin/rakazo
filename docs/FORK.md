@@ -194,6 +194,23 @@ pnpm --filter @rakazo/desktop dev
 `RAKAZO_DEV_MODEL_GATEWAY_TOKEN` 只用于本地开发，生产必须由登录后的设备 token
 替代，不能打进安装包。
 
+没有真实模型网关时，可以启动开发用模拟器：
+
+```bash
+pnpm dev:gateway
+```
+
+另一个终端：
+
+```bash
+RAKAZO_LOCAL_UI=1 \
+RAKAZO_MODEL_GATEWAY_URL=http://127.0.0.1:8787 \
+RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-token \
+pnpm --filter @rakazo/desktop dev
+```
+
+模拟器只做 SSE 回显，不会调用真实模型，也不会写任何远端数据。
+
 ### 8.2 客户端构建
 
 ```text
