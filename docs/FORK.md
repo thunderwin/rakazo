@@ -52,7 +52,7 @@ V1 预期新增或维护：
 brand/                       品牌源文件和生成规则
 config/bot-templates/        内置 bot 模板
 config/prompts/              产品级 prompt
-packages/local-runtime/      Agent 循环和本地工具编排（计划）
+packages/local-runtime/      Agent 循环和本地工具编排（v1 文本链路基础已建立）
 packages/local-db/           SQLite schema、迁移和 repository（v1 基础已建立）
 apps/desktop/src/runtime/    Electron 本地 runtime 入口（计划）
 apps/browser-extension/      浏览器扩展和 Native Messaging（计划）

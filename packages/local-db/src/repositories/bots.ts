@@ -101,8 +101,18 @@ export class BotRepository {
     const now = new Date().toISOString();
     const next: Bot = {
       ...current,
-      ...input,
       id,
+      name: input.name ?? current.name,
+      title: input.title ?? current.title,
+      description: input.description ?? current.description,
+      instructions: input.instructions ?? current.instructions,
+      color: input.color ?? current.color,
+      modelProvider:
+        input.modelProvider === undefined ? current.modelProvider : input.modelProvider,
+      modelId: input.modelId === undefined ? current.modelId : input.modelId,
+      thinkingLevel:
+        input.thinkingLevel === undefined ? current.thinkingLevel : input.thinkingLevel,
+      disabledBuiltinTools: input.disabledBuiltinTools ?? current.disabledBuiltinTools,
       updatedAt: now,
     };
     this.db

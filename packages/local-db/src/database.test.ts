@@ -62,6 +62,71 @@ describe("local database", () => {
     const db = openLocalDatabase(":memory:");
     db.settings.set("ui", { theme: "dark", sidebar: 280 });
     expect(db.settings.get("ui")).toEqual({ theme: "dark", sidebar: 280 });
+    db.settings.set("ui", { theme: "light" });
+    expect(db.settings.get("ui")).toEqual({ theme: "light" });
+    db.close();
+  });
+
+  it("updates only supplied bot fields and can clear nullable ones", async () => {
+    const db = openLocalDatabase(":memory:");
+    const bot = db.bots.create({
+      name: "Researcher",
+      title: "Research",
+      instructions: "Verify sources.",
+      modelProvider: "openrouter",
+      modelId: "model-a",
+      disabledBuiltinTools: ["shell"],
+    });
+
+    const updated = db.bots.update(bot.id, {
+      title: "Deep research",
+      modelProvider: null,
+      modelId: null,
+    });
+
+    expect(updated).toMatchObject({
+      id: bot.id,
+      name: "Researcher",
+      title: "Deep research",
+      instructions: "Verify sources.",
+      modelProvider: null,
+      modelId: null,
+      disabledBuiltinTools: ["shell"],
+    });
+    expect(db.bots.update("missing", { name: "Nope" })).toBeNull();
+    db.close();
+  });
+
+  it("reuses one thread per bot and keeps message order", async () => {
+    const db = openLocalDatabase(":memory:");
+    const bot = db.bots.create({ name: "Chief" });
+    const thread = db.threads.getOrCreateForBot(bot.id);
+    expect(db.threads.getOrCreateForBot(bot.id).id).toBe(thread.id);
+    expect(db.threads.getForBot(bot.id)?.id).toBe(thread.id);
+
+    for (const text of ["one", "two", "three"]) {
+      db.messages.append({
+        threadId: thread.id,
+        role: "user",
+        blocks: [{ kind: "text", text }],
+      });
+    }
+
+    expect(db.messages.list(thread.id).map((message) => message.sequence)).toEqual([1, 2, 3]);
+    expect(db.messages.list(thread.id, { limit: 2 }).map((message) => message.sequence)).toEqual([
+      2, 3,
+    ]);
+    expect(db.messages.list(thread.id, { limit: 0 }).map((message) => message.sequence)).toEqual([
+      3,
+    ]);
+    db.close();
+  });
+
+  it("enables WAL and foreign keys for file databases", async () => {
+    const file = await tempDatabasePath();
+    const db = openLocalDatabase(file);
+    expect(db.sqlite.pragma("journal_mode", { simple: true })).toBe("wal");
+    expect(db.sqlite.pragma("foreign_keys", { simple: true })).toBe(1);
     db.close();
   });
 
@@ -79,7 +144,7 @@ describe("local database", () => {
 
   it("backs up to a separate database", async () => {
     const file = await tempDatabasePath();
-    const backup = await tempDatabasePath();
+    const backup = path.join(path.dirname(file), "nested", "backup.sqlite");
     const db = openLocalDatabase(file);
     const bot = db.bots.create({ name: "Backup" });
     await db.backupTo(backup);
