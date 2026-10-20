@@ -1,18 +1,26 @@
 # @rakazo/local-runtime
 
-Minimal local runtime boundary for the desktop client.
+Provider-neutral orchestration for the desktop client's local-first Agent.
 
-It owns the local SQLite connection through `@rakazo/local-db`, creates a bot
-thread, sends local conversation history to a `ModelGateway`, and persists the
-assistant reply. The gateway is an interface so the desktop client can call the
-operator's metered model gateway without embedding provider keys.
+The package exposes three boundaries:
 
-Current scope:
+- `LocalAgentEngine` runs one provider-neutral Agent loop.
+- `LocalConversationStore` persists bots, threads, and messages; SQLite is the
+  current implementation.
+- `LocalToolProvider` exposes tool schemas, bot-level filters, and execution
+  behind an approval gate.
 
-- text-only local chat
-- OpenAI-compatible New API gateway client with SSE
-- tool_calls parsing (execution is a later milestone)
-- local runtime service for one desktop process
+Electron composes these ports with the existing Pi runtime in
+`apps/desktop/src/pi-local-agent-engine.ts`. The Pi adapter points at the
+operator's OpenAI-compatible model gateway with the current Better Auth session
+token, while the Agent loop and tool results stay on the device.
+
+Current implementation:
+
+- local Pi Agent loop, including tool calls and tool results
+- `shell` tool scoped to the local workspace, with one-time Electron approval
+- SQLite bot/thread/message/settings persistence
 - bot template loading and idempotent seeding
 
-Tool execution, browser bridging, and the Pi agent loop are the next milestones.
+Files, app launch, browser bridging, memory, routines, and tool-run persistence
+are still separate migration work.

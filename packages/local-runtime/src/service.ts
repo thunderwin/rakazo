@@ -4,12 +4,16 @@ import {
   type LocalDatabase,
   openLocalDatabase,
 } from "@rakazo/local-db";
-import type { ModelGateway } from "./model-gateway.js";
+import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
+import { SqliteConversationStore } from "./store.js";
+import type { LocalToolProvider } from "./tools.js";
 
 export interface LocalRuntimeServiceOptions {
   databasePath: string;
-  gateway: ModelGateway;
+  engine: LocalAgentEngine;
+  tools: LocalToolProvider;
+  resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
 }
 
 /** Owns the local DB and runtime for one desktop process. */
@@ -19,7 +23,12 @@ export class LocalRuntimeService {
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
-    this.runtime = new LocalRuntime({ db: this.db, gateway: options.gateway });
+    this.runtime = new LocalRuntime({
+      store: new SqliteConversationStore(this.db),
+      engine: options.engine,
+      tools: options.tools,
+      resolveModel: options.resolveModel,
+    });
   }
 
   listBots(): Bot[] {
@@ -40,9 +49,13 @@ export class LocalRuntimeService {
   sendMessage(
     botId: string,
     text: string,
-    options: { signal?: AbortSignal } = {},
+    options: LocalAgentRunContext = {},
   ): Promise<SendMessageResult> {
     return this.runtime.sendMessage(botId, text, options);
+  }
+
+  abort(runId: string): Promise<void> {
+    return this.runtime.abort(runId);
   }
 
   close(): void {
