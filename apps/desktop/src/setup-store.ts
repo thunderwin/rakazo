@@ -56,6 +56,7 @@ export async function writeSetup(userDataDir: string, setup: DesktopSetup): Prom
  * contents after an interrupted write.
  */
 export async function writePrivateFile(destination: string, contents: string): Promise<void> {
+  await mkdir(path.dirname(destination), { recursive: true });
   const temporary = `${destination}.${process.pid}.${randomUUID()}.tmp`;
   let file: Awaited<ReturnType<typeof open>> | undefined;
   try {

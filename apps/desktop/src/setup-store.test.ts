@@ -2,7 +2,14 @@ import { mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { clearSetup, readSetup, setupFilePath, writeSetup } from "./setup-store.js";
+import {
+  clearSetup,
+  readPrivateFile,
+  readSetup,
+  setupFilePath,
+  writePrivateFile,
+  writeSetup,
+} from "./setup-store.js";
 
 let userData: string;
 
@@ -40,6 +47,12 @@ describe("setup store", () => {
       mode: "new",
       serverUrl: "http://127.0.0.1:5173",
     });
+  });
+
+  it("creates missing parent directories for private atomic writes", async () => {
+    const destination = path.join(userData, "local", "nested", "session.bin");
+    await writePrivateFile(destination, "private");
+    await expect(readPrivateFile(destination, 1024)).resolves.toBe("private");
   });
 
   it.runIf(process.platform !== "win32")("keeps the saved address private", async () => {
