@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rakazo Local</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="local.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>Rakazo Local</strong>
+          <span>Local-first preview</span>
+        </div>
+        <div class="new-bot">
+          <input id="new-bot-name" type="text" maxlength="120" placeholder="New bot name" />
+          <button id="create-bot" type="button">Add</button>
+        </div>
+        <nav id="bots" class="bot-list" aria-label="Bots"></nav>
+        <p class="footnote">Data stays in this app's local SQLite database.</p>
+      </aside>
+
+      <main class="main">
+        <header class="header">
+          <div>
+            <h1 id="bot-title">Local chat</h1>
+            <p id="bot-detail">Create a bot to begin.</p>
+          </div>
+          <span id="status" role="status"></span>
+        </header>
+
+        <section id="messages" class="messages" aria-live="polite"></section>
+
+        <form id="composer" class="composer">
+          <textarea
+            id="message-text"
+            rows="3"
+            maxlength="100000"
+            placeholder="Message your local bot…"
+          ></textarea>
+          <button id="send" type="submit">Send</button>
+        </form>
+      </main>
+    </div>
+    <script src="local.js"></script>
+  </body>
+</html>

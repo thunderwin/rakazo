@@ -33,12 +33,14 @@ describe("desktop preload bridge", () => {
     expect(bridge.platform).toBe("linux");
     expect(Object.keys(bridge).sort()).toEqual([
       "computer",
+      "local",
       "localSettings",
       "oauth",
       "platform",
       "update",
       "window",
     ]);
+    expect(Object.keys(bridge.local!).sort()).toEqual(["bots", "messages"]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
       "minimize",
@@ -57,6 +59,10 @@ describe("desktop preload bridge", () => {
     await bridge.update.check();
     await bridge.update.download();
     await bridge.update.install();
+    await bridge.local?.bots.list();
+    await bridge.local?.bots.create({ name: "Chief" });
+    await bridge.local?.messages.list("bot-1");
+    await bridge.local?.messages.send("bot-1", "Hello");
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -68,6 +74,10 @@ describe("desktop preload bridge", () => {
       "desktop.update.check",
       "desktop.update.download",
       "desktop.update.install",
+      "desktop.local.bots.list",
+      "desktop.local.bots.create",
+      "desktop.local.messages.list",
+      "desktop.local.messages.send",
     ]);
   });
 

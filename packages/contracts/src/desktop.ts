@@ -36,6 +36,64 @@ export interface RakazoDesktopOAuthCallback {
   state?: string;
 }
 
+export interface DesktopLocalBot {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  instructions: string;
+  color: string;
+  modelProvider: string | null;
+  modelId: string | null;
+  thinkingLevel: string | null;
+  disabledBuiltinTools: string[];
+  templateKey: string | null;
+  templateVersion: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalMessage {
+  id: string;
+  threadId: string;
+  sequence: number;
+  role: "user" | "bot" | "system";
+  blocks: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalCreateBotInput {
+  name: string;
+  title?: string;
+  description?: string;
+  instructions?: string;
+  color?: string;
+  modelProvider?: string | null;
+  modelId?: string | null;
+  thinkingLevel?: string | null;
+  disabledBuiltinTools?: string[];
+}
+
+export interface RakazoDesktopLocal {
+  bots: {
+    list: () => Promise<DesktopLocalBot[]>;
+    create: (input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;
+  };
+  messages: {
+    list: (botId: string) => Promise<DesktopLocalMessage[]>;
+    send: (
+      botId: string,
+      text: string,
+    ) => Promise<{
+      thread: { id: string; botId: string; title: string; createdAt: string; updatedAt: string };
+      userMessage: DesktopLocalMessage;
+      assistantMessage: DesktopLocalMessage | null;
+      text: string;
+    }>;
+  };
+}
+
 export interface RakazoDesktop {
   computer?: {
     requestAccess: () => Promise<boolean>;
@@ -54,6 +112,8 @@ export interface RakazoDesktop {
     state: () => Promise<{ minimized: boolean; maximized: boolean; fullScreen: boolean }>;
   };
   update: RakazoDesktopUpdate;
+  /** Present only in the local-first window; main-process IPC validates the sender. */
+  local?: RakazoDesktopLocal;
   oauth: {
     /**
      * Open system-browser auth. A redirect_uri must be HTTP loopback with state;

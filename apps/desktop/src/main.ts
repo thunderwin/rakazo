@@ -4,10 +4,12 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { DesktopReachability, DesktopSetup } from "@rakazo/contracts";
 import { LOCAL_SETTINGS_PAGE } from "@rakazo/contracts/local-settings";
+import type { LocalRuntimeService } from "@rakazo/local-runtime";
 import {
   app,
   BrowserWindow,
   dialog,
+  type IpcMainInvokeEvent,
   ipcMain,
   Menu,
   net,
@@ -26,6 +28,8 @@ import {
 import { openBrowserAuth } from "./browser-auth.js";
 import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cli.js";
 import { prepareHostComputer } from "./host-computer.js";
+import { createLocalGateway } from "./local-gateway.js";
+import { createDesktopLocalRuntime } from "./local-runtime.js";
 import { requestLocalSettings } from "./local-settings.js";
 import {
   LocalStackController,
@@ -118,6 +122,9 @@ let launchUpdateCheckScheduled = false;
 let localStack: LocalStackController;
 let hostComputer: Awaited<ReturnType<typeof prepareHostComputer>> | undefined;
 let requestingComputerAccess = false;
+let localRuntimeService: LocalRuntimeService | undefined;
+let localWindow: BrowserWindow | null = null;
+let localIpcInstalled = false;
 
 markOnce("rk:main:module-evaluated");
 if (PERFORMANCE_USER_DATA) {
@@ -905,6 +912,109 @@ function syncHostComputerAccess() {
   installApplicationMenu();
 }
 
+function requireLocalRuntime(): LocalRuntimeService {
+  if (!localRuntimeService) throw new Error("Local runtime is not ready");
+  return localRuntimeService;
+}
+
+function requireLocalWindow(event: IpcMainInvokeEvent): void {
+  if (
+    localWindow === null ||
+    localWindow.isDestroyed() ||
+    event.sender !== localWindow.webContents ||
+    event.senderFrame !== event.sender.mainFrame
+  ) {
+    throw new Error("Local window is not active");
+  }
+}
+
+function localRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function localString(value: unknown, label: string, maxLength: number): string {
+  if (typeof value !== "string" || value.trim() === "" || value.length > maxLength) {
+    throw new Error(`${label} is invalid`);
+  }
+  return value;
+}
+
+function optionalLocalString(value: unknown, label: string, maxLength: number): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length > maxLength) {
+    throw new Error(`${label} is invalid`);
+  }
+  return value;
+}
+
+function installLocalIpc() {
+  if (localIpcInstalled) return;
+  localIpcInstalled = true;
+
+  ipcMain.handle("desktop.local.bots.list", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listBots();
+  });
+  ipcMain.handle("desktop.local.bots.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Bot input");
+    return requireLocalRuntime().createBot({
+      name: localString(value.name, "Bot name", 120),
+      title: optionalLocalString(value.title, "Bot title", 200),
+      description: optionalLocalString(value.description, "Bot description", 2000),
+      instructions: optionalLocalString(value.instructions, "Bot instructions", 40_000),
+      color: optionalLocalString(value.color, "Bot color", 40),
+      modelProvider: optionalLocalString(value.modelProvider, "Model provider", 200) ?? null,
+      modelId: optionalLocalString(value.modelId, "Model id", 300) ?? null,
+      thinkingLevel: optionalLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
+    });
+  });
+  ipcMain.handle("desktop.local.messages.list", (event, botId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listMessages(localString(botId, "Bot id", 200));
+  });
+  ipcMain.handle("desktop.local.messages.send", async (event, botId: unknown, text: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().sendMessage(
+      localString(botId, "Bot id", 200),
+      localString(text, "Message", 100_000),
+    );
+  });
+}
+
+async function openLocalMode(userDataDir: string) {
+  const service = createDesktopLocalRuntime({
+    userDataDir,
+    gateway: createLocalGateway(),
+  });
+  localRuntimeService = service;
+  installLocalIpc();
+
+  const icon = developmentIcon();
+  const win = new BrowserWindow({
+    ...browserWindowOptions(process.platform),
+    ...(icon ? { icon } : {}),
+    webPreferences: {
+      preload: path.join(import.meta.dirname, "preload.cjs"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+  localWindow = win;
+  win.once("closed", () => {
+    if (localWindow === win) localWindow = null;
+    if (localRuntimeService === service) {
+      localRuntimeService = undefined;
+      service.close();
+    }
+  });
+  await win.loadFile(path.join(import.meta.dirname, "local.html"));
+}
+
 /** Drop the previous app window after the new server is opened and persisted. */
 function commitPendingAppSwitch() {
   syncHostComputerAccess();
@@ -1009,6 +1119,10 @@ function safeOrigin(targetUrl: string) {
 app.whenReady().then(async () => {
   installSessionPermissions(session.defaultSession, permissionTarget);
   const userDataDir = app.getPath("userData");
+  if (process.env.RAKAZO_LOCAL_UI === "1") {
+    await openLocalMode(userDataDir);
+    return;
+  }
   try {
     hostComputer = await prepareHostComputer(userDataDir);
   } catch {
@@ -1412,6 +1526,8 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
   quitting = true;
   clearTimeout(warmWindowTimer);
+  localRuntimeService?.close();
+  localRuntimeService = undefined;
   // Containers keep running; only an in-flight pull/up is cut short.
   hostComputer?.activate(false);
   void hostComputer?.close();

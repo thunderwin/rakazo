@@ -176,6 +176,24 @@ pnpm dev
 Node 版本使用 `.nvmrc` 的 24.x。当前上游仍需要 Postgres/Docker 才能跑完整服务；
 local-first 改造完成后，客户端开发应尽量不依赖服务器业务库。
 
+本地窗口预览：
+
+```bash
+RAKAZO_LOCAL_UI=1 pnpm --filter @rakazo/desktop dev
+```
+
+开发时如果要接模型网关：
+
+```bash
+RAKAZO_LOCAL_UI=1 \
+RAKAZO_MODEL_GATEWAY_URL=https://your-api.example.com \
+RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-only-token \
+pnpm --filter @rakazo/desktop dev
+```
+
+`RAKAZO_DEV_MODEL_GATEWAY_TOKEN` 只用于本地开发，生产必须由登录后的设备 token
+替代，不能打进安装包。
+
 ### 8.2 客户端构建
 
 ```text
