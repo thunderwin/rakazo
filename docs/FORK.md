@@ -85,7 +85,7 @@ docs/                        架构、V1 范围、fork 说明
 - `WEB_ORIGIN`、`API_URL`、`AUTH_URL`
 - `SIGNUPS_ENABLED` 和 `SIGNUP_ALLOWLIST`
 - OIDC/SSO（如启用）
-- 模型网关、额度、计费
+- `MODEL_GATEWAY_ENABLED`、模型网关、额度、计费
 - 设备注册和撤销
 - 崩溃/监控上报
 

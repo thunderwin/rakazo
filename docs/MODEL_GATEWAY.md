@@ -1,6 +1,6 @@
 # Model Gateway Protocol
 
-> 状态：V1 协议草案，客户端实现已存在（`HttpModelGateway`），服务器端尚未实现。
+> 状态：V1 协议草案。客户端和最小 OpenRouter 服务器网关已实现；额度/计费尚未接入。
 
 ## 1. 目的
 
@@ -111,6 +111,25 @@ data: {"message":"insufficient credits"}
 
 ## 7. 服务器实现要求
 
+当前实现：
+
+- `apps/api/src/model-gateway.ts`
+- `POST /v1/model/chat`
+- Better Auth session token（支持 `Authorization: Bearer`）
+- 仅支持 OpenRouter 的部署模型
+- 代理 OpenRouter SSE，并转换成客户端事件
+
+配置：
+
+```bash
+MODEL_GATEWAY_ENABLED=true
+PI_DEFAULT_PROVIDER=openrouter
+PI_DEFAULT_MODEL=openai/gpt-6-luna
+OPENROUTER_API_KEY=...
+```
+
+注意：当前版本**还没有接入额度扣减和账单**。在完成配额、用量记录和风控前，不要把它作为公开付费能力启用。
+
 - 每个请求校验设备 token 和用户额度。
 - 不信任客户端传来的 `botId` 做授权。
 - 供应商 key 只在服务器密钥库。
@@ -129,4 +148,5 @@ data: {"message":"insufficient credits"}
 - 非 2xx 响应
 - Bearer token 和请求体
 
-后续服务器实现必须复用同一协议，并增加集成测试。
+服务器侧测试在 `apps/api/src/model-gateway.test.ts`，覆盖 OpenRouter SSE、鉴权后的
+处理器输入、禁用状态、限流和非 2xx。后续接入额度系统时必须增加扣费/并发测试。

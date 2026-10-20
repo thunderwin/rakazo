@@ -63,6 +63,7 @@ import {
   reconcileCloudAgents,
   reconcileComputerUpdates,
   removePiUserSessions,
+  resolveDeploymentModel,
   ScriptedAgentRuntime,
   SmtpEmailProvider,
   SpaceMemoryProviderResolver,
@@ -114,6 +115,7 @@ import {
 } from "./messaging-inbound.js";
 import { createMessagingReceipts } from "./messaging-receipts.js";
 import { mountMessagingWebhookRoutes } from "./messaging-webhook.js";
+import { modelGatewayResponse } from "./model-gateway.js";
 import { monitoringRoutes } from "./monitoring.js";
 import { mountApiRequestBodyLimits } from "./request-body-limit.js";
 import { createRouter } from "./router.js";
@@ -664,6 +666,23 @@ export async function createApp(
     return actor && { actor, sessionId: session.session.id };
   };
   const sessionActor = async (request: Request) => (await requestSession(request))?.actor ?? null;
+  app.post("/v1/model/chat", async (c) => {
+    const actor = await sessionActor(c.req.raw);
+    if (!actor) return c.json({ error: "Unauthorized" }, 401);
+    const deployment = resolveDeploymentModel();
+    try {
+      return await modelGatewayResponse(c.req.raw, {
+        enabled: env.modelGatewayEnabled === true,
+        provider: deployment.provider,
+        model: deployment.model,
+        apiKey: env.deploymentModelKey,
+        userId: actor.userId,
+      });
+    } catch (error) {
+      getLogger().error("model gateway request failed", error);
+      return c.json({ error: "Model gateway request failed" }, 502);
+    }
+  });
   app.use("/rpc/*", async (c, next) => {
     const session = await requestSession(c.req.raw);
     const actor = session?.actor ?? null;
