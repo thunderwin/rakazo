@@ -44,6 +44,21 @@ credentials from the metadata endpoint.
 Auto Review uses that LLM checker by default. To use TypeSafe Jev instead, set
 `RAKAZO_AUTO_REVIEW_PROVIDER=jev` and `TYPESAFE_API_KEY`. Core still runs with neither.
 
+For the local-first desktop gateway, Rakazo does not call a model provider directly. Configure
+the New API control plane instead:
+
+```env
+NEW_API_BASE_URL=https://newapi.example.com
+NEW_API_ADMIN_TOKEN=replace-with-new-api-admin-access-token
+NEW_API_ADMIN_USER_ID=1
+NEW_API_DEFAULT_MODEL=
+```
+
+New API owns user quota, channel selection, pricing, top-ups, and settlement. Keep
+`DEBUG=false` or unset in production so prompt and response bodies are not logged. The
+`OPENROUTER_API_KEY` setting remains available for the upstream server-side runtime, but the
+local-first desktop gateway does not use it.
+
 The example defaults to `edge` (main builds). Every publish is multi-arch (`amd64` + `arm64`), so
 arm64 hosts need no special tag. Do not assume `latest` is present until a stable release exists.
 
@@ -382,6 +397,10 @@ E2B_API_KEY=              # when SANDBOX_PROVIDER=e2b
 DAYTONA_API_KEY=          # when SANDBOX_PROVIDER=daytona
 CREATEOS_SANDBOX_API_KEY= # when SANDBOX_PROVIDER=createos
 BOAT_API_KEY=             # when SANDBOX_PROVIDER=boat
+NEW_API_BASE_URL=https://newapi.example.com
+NEW_API_ADMIN_TOKEN=replace-with-new-api-admin-access-token
+NEW_API_ADMIN_USER_ID=1
+NEW_API_DEFAULT_MODEL=
 ```
 
 To use an operator-controlled OpenAI-compatible server such as Ollama, LM Studio, llama.cpp, or

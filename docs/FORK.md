@@ -10,7 +10,7 @@
 
 - 用户安装客户端，Agent 和工具在用户电脑上运行。
 - 对话、bot、记忆和文件保存在客户端本地。
-- 服务器只做账号、充值、模型网关、设备管理和监控。
+- 服务器只做账号、New API 映射、模型网关和监控；充值和额度由 New API 负责。
 - 模型网关是主要收入路径。
 
 V1 不做多设备、团队协作、团队电脑、移动端和本地模型。完整范围见
@@ -85,8 +85,8 @@ docs/                        架构、V1 范围、fork 说明
 - `WEB_ORIGIN`、`API_URL`、`AUTH_URL`
 - `SIGNUPS_ENABLED` 和 `SIGNUP_ALLOWLIST`
 - OIDC/SSO（如启用）
-- `MODEL_GATEWAY_ENABLED`、模型网关、额度、计费
-- 设备注册和撤销
+- `NEW_API_BASE_URL`、`NEW_API_ADMIN_TOKEN`、`NEW_API_ADMIN_USER_ID`、
+  `NEW_API_DEFAULT_MODEL`
 - 崩溃/监控上报
 
 ### 4.3 不要改的东西
@@ -96,25 +96,25 @@ docs/                        架构、V1 范围、fork 说明
 - 不要在客户端放管理员 token、数据库密码或共享用户密码。
 - 不要为了品牌化复制整套 UI 代码。
 
-## 5. 登录、设备和模型网关
+## 5. 登录、会话和模型网关
 
 目标流程：
 
 ```text
 客户端打开你的网站/登录页
   -> 用户注册或登录
-  -> 客户端创建设备身份
-  -> 服务器签发短期设备 token
-  -> 本地 Runtime 使用 token 调模型网关
-  -> 网关扣额度并转发给模型供应商
+  -> 客户端保存 Better Auth session token
+  -> 本地 Runtime 使用 session token 调 Rakazo 网关
+  -> Rakazo 映射到 New API token
+  -> New API 扣额度并转发给模型供应商
 ```
 
 要求：
 
 - 客户端内置公开的 `serverUrl`，不内置任何长期密钥。
-- 设备 token 存在 OS keychain/DPAPI，可撤销。
+- session token 存在 OS keychain/DPAPI；设备级撤销是后续工作。
 - 模型供应商 key 只在服务器。
-- 额度、限流和风控以服务器为准。
+- 额度、限流和风控以 New API 为准。
 - 模型网关会看到 prompt/回复；隐私政策必须说明。
 
 ## 6. 本地 runtime 和数据库
@@ -191,7 +191,8 @@ pnpm --filter @rakazo/desktop dev
 ```
 
 客户端通过 `/api/auth/sign-in/email` 登录，session token 由 Electron `safeStorage`
-加密后保存在本地；本地 runtime 再把它作为 Bearer token 调 `/v1/model/chat`。
+加密后保存在本地；本地 runtime 再把它作为 Bearer token 调
+`/v1/model/openai/chat/completions`。
 
 开发时如果要接模型网关：
 
@@ -202,8 +203,8 @@ RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-only-token \
 pnpm --filter @rakazo/desktop dev
 ```
 
-`RAKAZO_DEV_MODEL_GATEWAY_TOKEN` 只用于本地开发，生产必须由登录后的设备 token
-替代，不能打进安装包。
+`RAKAZO_DEV_MODEL_GATEWAY_TOKEN` 只用于本地开发，生产必须由登录后的 session token
+替代，不能打进安装包。开发模拟器现在实现 OpenAI 兼容端点。
 
 没有真实模型网关时，可以启动开发用模拟器：
 
@@ -220,7 +221,7 @@ RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-token \
 pnpm --filter @rakazo/desktop dev
 ```
 
-模拟器只做 SSE 回显，不会调用真实模型，也不会写任何远端数据。
+模拟器只做 OpenAI 兼容 SSE 回显，不会调用真实模型，也不会写任何远端数据。
 
 ### 8.2 客户端构建
 
@@ -286,7 +287,8 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 
 - 客户端只放公开配置，不放长期密钥。
 - 模型供应商 key 只在服务器。
-- 模型网关必须按用户/设备/模型限额，不能信任客户端扣费。
+- New API 负责用户额度、渠道和扣费；Rakazo 不信任客户端上报的额度，管理员
+  access token 只存在服务器。
 - 本地数据库和备份加密。
 - 浏览器扩展按站点授权，不静默读取所有页面。
 - `shell` 默认免审批的问题必须在本地 runtime 中修正，至少提供强制审批或白名单。

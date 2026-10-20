@@ -72,6 +72,9 @@ Fork rules:
 - Treat local shell access, browser-extension permissions, device tokens, model
   gateway tokens, and provider credentials as security-sensitive. The model
   gateway sees prompts and responses; disclose that in the privacy policy.
+- New API admin credentials and per-user API tokens are server-only. Never log a
+  full New API key, and keep the New API relay body logger (`DEBUG=true`) off in
+  production.
 - Do not add server-side Agent execution or server-side conversation storage to
   V1. The local SQLite database is the source of truth.
 - Never load unsigned remote code or configuration. Update manifests and

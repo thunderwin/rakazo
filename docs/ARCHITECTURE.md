@@ -13,9 +13,8 @@ V1 采用 **单设备 local-first**：
 | 能力 | V1 位置 |
 |---|---|
 | 注册、登录、账号安全 | 服务器 |
-| 充值、订阅、额度、用量 | 服务器 |
+| 充值、订阅、额度、用量 | New API |
 | 模型网关 | 服务器（主要收入路径） |
-| 设备注册和撤销 | 服务器 |
 | 崩溃上报、监控、审计元数据 | 服务器 |
 | Agent 循环 | 客户端 |
 | shell、文件、浏览器、应用控制 | 客户端 |
@@ -40,12 +39,12 @@ V1 采用 **单设备 local-first**：
 │  Local SQLite                                │
 │  Device identity (Keychain / DPAPI)          │
 └───────────────────┬──────────────────────────┘
-                    │ 只走登录、额度、模型调用、日志
+                    │ 只走登录、模型调用、日志
                     ▼
 ┌──────────────────────────────────────────────┐
 │ 你的服务器（薄控制面）                       │
 │  Better Auth / 账号                          │
-│  订阅 / 充值 / 额度                          │
+│  New API 用户映射                            │
 │  Model Gateway                               │
 │  Device registry                             │
 │  Telemetry / crash / update feed             │
@@ -57,7 +56,8 @@ V1 采用 **单设备 local-first**：
 ```text
 用户消息
   -> 本地 Agent Runtime
-  -> 服务器模型网关（鉴权、扣额度、转发）
+  -> 服务器模型网关（鉴权、New API 令牌映射、转发）
+  -> New API（额度与结算）
   -> 模型供应商
   -> 模型返回文本或工具调用
   -> 本地 Runtime 执行工具
@@ -115,9 +115,8 @@ API (Hono + oRPC) + Pi agent runtime
 保留：
 
 - Better Auth / 注册 / 登录 / 会话
-- 账号、订阅、充值、额度
+- 账号、会话
 - 模型网关
-- 设备注册、撤销、短期 token
 - 用量记录、错误和崩溃元数据
 - 客户端版本检查、更新 feed
 
@@ -171,19 +170,22 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 
 ```text
 Local Runtime
-  -> POST /v1/model/...
-  -> 鉴权、额度、provider 选择
+  -> POST /v1/model/openai/chat/completions
+  -> Better Auth session 鉴权 + New API 用户令牌映射
+  -> New API /v1/chat/completions
   -> 供应商
-  -> SSE 流式返回
+  -> OpenAI SSE 原样返回
 ```
 
 要求：
 
-- 短期设备 token，可撤销。
-- 按用户、设备、模型、token 用量限额。
-- 供应商长期 key 只存在服务器。
-- 记录用量元数据，不把对话正文作为业务数据保存。
-- 对共享账号、异常频率和滥用做风控。
+- New API 负责额度、倍率、渠道、充值和结算。
+- Rakazo 负责 session 鉴权和 Rakazo userId -> New API token 映射。
+- New API token 在 Rakazo 控制面加密存储，客户端从不接触。
+- 透传 `tools`、`tool_calls` 和其他 OpenAI 字段；流式请求强制
+  `stream_options.include_usage=true`。
+- 供应商 key 只存在 New API。
+- New API 和 Rakazo 都能看到 prompt/回复；生产要求 `DEBUG=false`。
 
 ### 4.5 浏览器桥接
 
@@ -201,30 +203,31 @@ Local Runtime
 - 应用启动和屏幕控制：按平台能力提供，并明确权限。
 - 高风险工具不能仅靠 prompt 约束，必须有工具级权限和服务端/本地审批策略。
 
-## 5. 认证、设备和计费
+## 5. 认证、会话和计费
 
 ```text
 用户在客户端登录
   -> 服务器返回 session
-  -> 客户端注册设备（device id + public key）
-  -> 服务器返回设备绑定的短期 token
-  -> 客户端把 token 存入 OS keychain
-  -> 模型网关按 token 扣额度
+  -> 客户端把 session token 存入 OS keychain
+  -> 模型网关映射到用户的 New API token
+  -> New API 按该用户额度结算
+
+V1 继续使用 Better Auth session token；设备注册和短期设备 token 是后续工作。
 ```
 
 原则：
 
-- 客户端不可信；额度和权限判断必须在服务器。
-- 设备可单独撤销。
+- 客户端不可信；额度和权限判断由 New API 和 Rakazo 服务端校验。
+- V1 通过 session 撤销访问；设备级撤销尚未实现。
 - 不在客户端做唯一扣费判断。
 - 多设备在 V1 不共享本地数据；每台设备是独立本地库。
 
 ## 6. 数据边界
 
-| 数据 | 服务器 | 客户端 |
+| 数据 | 服务端 / New API | 客户端 |
 |---|---|---|
 | 账号、密码哈希、session | 是 | 只存 session/token |
-| 订阅、充值、额度、用量 | 是 | 只存展示缓存 |
+| 订阅、充值、额度、用量 | New API | 只存展示缓存 |
 | bot 配置、instructions | 否 | 是 |
 | thread、message | 否 | 是 |
 | memory、routines | 否 | 是 |
@@ -257,7 +260,7 @@ V1 不存在服务器端的跨设备恢复。用户换机或重装需要本地�
 服务器只需要：
 
 - 一个 API 服务
-- 一个小型控制面数据库（用户、额度、设备、用量）
+- 一个小型控制面数据库（用户、New API 映射、审计元数据）
 - 模型网关
 - 监控和更新 feed
 
@@ -284,7 +287,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 2. 新增本地 SQLite repository，实现 bot/thread/message/memory/routine。
 3. 新增 Local Agent Runtime 入口（Electron utility process 或本地 API）。
 4. 让 Web UI 连接本地 API/IPC，而不是远程 API。
-5. 服务器 API 只保留 auth、billing、model gateway、devices、telemetry。
+5. 服务器 API 只保留 auth、New API 映射、model gateway、telemetry。
 6. 把 bot 模板和 prompt 打包到客户端，seed 到本地 SQLite。
 7. 浏览器扩展 + Native Messaging。
 8. 本地备份、导出、迁移和崩溃恢复。
@@ -310,7 +313,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 
 - 客户端拥有用户级权限，必须默认最小权限并提供停止按钮。
 - 模型网关能看到 prompt/回复；隐私政策必须披露。
-- 设备 token 短期化、可撤销、存 OS keychain。
+- V1 的 session token 存 OS keychain；设备级撤销是后续工作。
 - 本地数据库加密；备份加密。
 - 浏览器扩展按站点授权，不静默读取所有页面。
 - 网页、工具输出和其他 bot 的内容都按不可信数据处理。
