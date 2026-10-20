@@ -1313,6 +1313,16 @@ async function openLocalMode(userDataDir: string) {
     },
   });
   localWindow = win;
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    const external = safeExternalUrl(url);
+    if (external !== null) void shell.openExternal(external);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    event.preventDefault();
+    const external = safeExternalUrl(url);
+    if (external !== null) void shell.openExternal(external);
+  });
   win.once("closed", () => {
     if (localWindow === win) localWindow = null;
     void closeLocalRuntime();
@@ -1329,7 +1339,7 @@ async function openLocalMode(userDataDir: string) {
   } else {
     await startLocalRuntime("development");
   }
-  await win.loadFile(path.join(import.meta.dirname, "local.html"));
+  await win.loadFile(path.join(import.meta.dirname, "local-web/local.html"));
 }
 
 /** Drop the previous app window after the new server is opened and persisted. */

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "cross-env NODE_ENV=production vite build",
+    "build:local": "cross-env NODE_ENV=production vite build --config vite.local.config.ts",
     "preview": "vite preview",
     "check": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --root ../.. apps/web/src",

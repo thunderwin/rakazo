@@ -137,7 +137,8 @@ docs/                        架构、V1 范围、fork 说明
 - `shell`、`list_files`、`read_file`、`write_file` 已接入 Pi tool loop；写操作和
   shell 逐次授权，只读文件工具直接执行。浏览器工具已通过 loopback bridge 接入；
   应用启动和桌面操作待迁移。
-- 预览 UI 已接收实时 run 事件并可停止当前执行；完整 Web UI 尚未接入。
+- 本地 React renderer 复用原版 BotAvatar、mention、Markdown 和 UI primitives，
+  通过 IPC 接收实时 run 事件并可停止当前执行；旧 `local.html` 预览已删除。
 - 所有高风险工具都要有授权、可见状态和停止入口。
 
 ### 6.2 本地数据库
@@ -209,6 +210,7 @@ pnpm --filter @rakazo/browser-extension build
 pnpm --filter @rakazo/browser-extension check
 pnpm --filter @rakazo/browser-extension test
 pnpm --filter @rakazo/browser-extension test:e2e
+pnpm --filter @rakazo/web build:local
 ```
 
 扩展的 `dist/` 可在 `chrome://extensions` 中通过“加载已解压的扩展程序”进行本地验证。

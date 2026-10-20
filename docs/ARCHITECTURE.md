@@ -168,14 +168,18 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - `message_bot` 已支持持久 bot 之间的私聊委派：请求和回复写入本地
   `peer_messages`，目标 bot 在自己的 DM thread 中执行，调用链最大 6 个 bot 并阻止
   循环。
-- run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
+- 原版 React 视觉组件已接入独立本地 renderer：electron 打包 `apps/web/dist-local`，
+  UI 通过本地 IPC 使用 SQLite/runtime，不访问服务端 oRPC。
+- 本地 renderer 复用 `BotAvatar`、原版 mention picker/键盘逻辑、`ChatMarkdown` 和共享
+  UI primitives；bot 名称、颜色、头像、mention chip、Markdown 和错误卡片保持统一身份。
+- run 事件已通过 IPC 流到本地 React UI，并支持按 run id 停止当前模型或工具执行。
 - 模型、工具或浏览器操作失败时仍保存已经生成的文本和工具调用，并附带错误块；
   `onRunEnd` 统一清理活动 run、审批缓存和浏览器 Agent Window。Stop 同样进入该清理路径。
 - 本地设置页可以复制诊断信息，包含版本、平台、登录状态、活动 run、浏览器桥和
   更新状态；不包含消息正文、session token、New API token 或浏览器 Cookie。
 
 仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、桌面操作、memory、
-routines、工具运行记录和完整的本地 Web UI/API。
+routines 和工具运行记录。服务器专属的团队、电脑、账号管理页面不会进入本地 renderer。
 
 ### 4.3 本地数据库
 
@@ -252,7 +256,7 @@ Local Runtime
 ### 4.6 本地工具
 
 - `shell`：已通过 `LocalToolRegistry` 在用户电脑执行命令；Electron 每次弹出
-  “Allow once”授权，拒绝后不运行。预览 UI 已有停止按钮。
+  “Allow once”授权，拒绝后不运行。本地 React UI 已有停止按钮。
 - 文件：`list_files` 和 `read_file` 在 workspace 内只读执行；`write_file` 写入
   workspace 并逐次审批。符号链接路径和路径逃逸会被拒绝。
 - 应用启动和屏幕控制：按平台能力提供，并明确权限。
@@ -348,7 +352,8 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 1. 已定义本地 engine/store/tool 端口，并用 Pi adapter 组合；不复制 executor。
 2. SQLite store 已覆盖 bot/thread/message；memory、routine 和 tool run 仍待实现。
 3. 本地 runtime 已接入 Electron 主进程；独立 utility process 仍待拆分。
-4. 现有 Web UI 连接本地 API/IPC 尚未完成，当前仍是 `local.html` 预览。
+4. 原版 React 组件已通过 `apps/web/src/local-main.tsx` 和 `dist-local` 接入本地
+   IPC；旧 `local.html` 预览和手工 JS/CSS 已删除。
 5. 服务器 API 只保留 auth、New API 映射、model gateway、telemetry。
 6. 把 bot 模板和 prompt 打包到客户端，seed 到本地 SQLite。
 7. 浏览器扩展和 loopback bridge 已接入；商店发布和复杂站点兼容仍待完成。
@@ -405,4 +410,5 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/desktop-release.md`：桌面端签名和发布。
 - `docs/BROWSER.md`：浏览器扩展、配对、工具和权限边界。
 - `docs/COMPUTER_USE.md`：桌面 computer use 设计草案。
+- `docs/LOCAL_UI.md`：本地 React UI 的组件来源、mention、错误和验证。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。
