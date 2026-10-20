@@ -167,6 +167,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 
 ### 4.4 模型网关
 
+协议见 `docs/MODEL_GATEWAY.md`。
+
 ```text
 Local Runtime
   -> POST /v1/model/...

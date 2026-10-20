@@ -54,6 +54,7 @@ onboarding:
 - `docs/ARCHITECTURE.md` - current system boundaries and data flow.
 - `docs/V1.md` - the accepted V1 scope and acceptance criteria.
 - `docs/UPDATES.md` - update channels, signing, rollback, and local DB migration.
+- `docs/MODEL_GATEWAY.md` - the client/server model gateway protocol.
 - `docs/FORK.md` - fork strategy, customization points, and release pipeline.
 - `docs/computer-runtime.md` - sandbox, terminal, and computer lifecycle.
 - `docs/self-host.md` - deployment and operations.

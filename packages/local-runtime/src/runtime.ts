@@ -78,6 +78,10 @@ export class LocalRuntime {
     const request: ModelGatewayRequest = {
       botId: bot.id,
       instructions: bot.instructions,
+      ...(bot.modelProvider && bot.modelId
+        ? { model: { provider: bot.modelProvider, id: bot.modelId } }
+        : {}),
+      ...(bot.thinkingLevel ? { thinkingLevel: bot.thinkingLevel } : {}),
       messages: history,
       signal: options.signal,
     };

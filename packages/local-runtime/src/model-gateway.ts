@@ -8,6 +8,8 @@ export interface GatewayMessage {
 export interface ModelGatewayRequest {
   botId: string;
   instructions: string;
+  model?: { provider: string; id: string };
+  thinkingLevel?: string;
   messages: GatewayMessage[];
   signal?: AbortSignal;
 }

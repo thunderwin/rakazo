@@ -1,3 +1,4 @@
+export { HttpModelGateway, type HttpModelGatewayOptions } from "./http-model-gateway.js";
 export type {
   GatewayMessage,
   GatewayRole,

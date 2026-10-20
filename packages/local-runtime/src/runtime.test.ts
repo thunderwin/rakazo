@@ -37,6 +37,9 @@ describe("local runtime", () => {
     const bot = runtime.createBot({
       name: "Researcher",
       instructions: "Verify sources.",
+      modelProvider: "openrouter",
+      modelId: "model-a",
+      thinkingLevel: "medium",
     });
 
     const result = await runtime.sendMessage(bot.id, "Find the source.");
@@ -46,6 +49,8 @@ describe("local runtime", () => {
     expect(gateway.requests[0]).toMatchObject({
       botId: bot.id,
       instructions: "Verify sources.",
+      model: { provider: "openrouter", id: "model-a" },
+      thinkingLevel: "medium",
       messages: [{ role: "user", content: "Find the source." }],
     });
     expect(db.messages.list(result.thread.id).map((message) => message.role)).toEqual([
