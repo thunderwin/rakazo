@@ -19,8 +19,11 @@ Current implementation:
 
 - local Pi Agent loop, including tool calls and tool results
 - `shell` tool scoped to the local workspace, with one-time Electron approval
+- `list_files`, `read_file`, and `write_file` with workspace containment and
+  approval only for writes
+- live run events and cancellation in the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
 - bot template loading and idempotent seeding
 
-Files, app launch, browser bridging, memory, routines, and tool-run persistence
-are still separate migration work.
+App launch, browser bridging, memory, routines, and tool-run persistence are
+still separate migration work.

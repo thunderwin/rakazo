@@ -154,9 +154,12 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - SQLite 实现当前保存 bot、thread、message 和 settings。
 - 本地 `shell` 工具已接入 Pi 工具循环，并在 Electron 中逐次请求用户批准；命令的
   工作目录限定在本地 workspace。
+- `list_files`、`read_file`、`write_file` 已接入本地 workspace；只读工具不弹审批，
+  写入和 shell 仍逐次审批。
+- run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
 
-仍待迁移：文件工具、应用启动、浏览器桥接、memory、routines、工具运行记录和完整的
-本地 Web UI/API。
+仍待迁移：应用启动、浏览器桥接、memory、routines、工具运行记录和完整的本地 Web
+UI/API。
 
 ### 4.3 本地数据库
 
@@ -218,8 +221,9 @@ Local Runtime
 ### 4.6 本地工具
 
 - `shell`：已通过 `LocalToolRegistry` 在用户电脑执行命令；Electron 每次弹出
-  “Allow once”授权，拒绝后不运行。停止入口仍待接入 UI。
-- 文件：读写用户选择的工作区。
+  “Allow once”授权，拒绝后不运行。预览 UI 已有停止按钮。
+- 文件：`list_files` 和 `read_file` 在 workspace 内只读执行；`write_file` 写入
+  workspace 并逐次审批。符号链接路径和路径逃逸会被拒绝。
 - 应用启动和屏幕控制：按平台能力提供，并明确权限。
 - 高风险工具不能仅靠 prompt 约束，必须有工具级权限和服务端/本地审批策略。
 

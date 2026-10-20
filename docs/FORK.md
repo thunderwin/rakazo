@@ -126,7 +126,9 @@ docs/                        架构、V1 范围、fork 说明
 - 当前运行在 Electron 主进程；utility process 拆分仍待完成。
 - `@rakazo/local-runtime` 定义 Agent、store、tool 三个端口，不依赖 Prisma。
 - `PiLocalAgentEngine` 复用现有的 `PiAgentRuntime`，没有复制服务器 executor。
-- `shell` 已接入 Pi tool loop 和逐次 Electron 授权；文件、应用和浏览器工具待迁移。
+- `shell`、`list_files`、`read_file`、`write_file` 已接入 Pi tool loop；写操作和
+  shell 逐次授权，只读文件工具直接执行。应用和浏览器工具待迁移。
+- 预览 UI 已接收实时 run 事件并可停止当前执行；完整 Web UI 尚未接入。
 - 所有高风险工具都要有授权、可见状态和停止入口。
 
 ### 6.2 本地数据库

@@ -1,8 +1,8 @@
 # Computer runtime
 
 > Fork V1 状态（核实日期 2026-10-20）：桌面 local-first 运行时不使用本文描述的
-> 服务器 sandbox supervisor。Electron 已在本机运行 Pi loop 和一个带逐次授权的
-> `shell` 工具；文件、应用、屏幕和浏览器工具仍待迁移。下面保留上游 computer
+> 服务器 sandbox supervisor。Electron 已在本机运行 Pi loop、带逐次授权的
+> `shell`，以及 workspace 内受限制的文件读写；应用、屏幕和浏览器工具仍待迁移。下面保留上游 computer
 > runtime 的行为说明，作为后续工具能力迁移参考，不代表当前 fork 客户端已经具备
 > 这些功能。
 
