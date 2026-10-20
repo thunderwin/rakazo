@@ -15,6 +15,12 @@ export interface LocalRuntimeOptions {
   engine: LocalAgentEngine;
   tools: LocalToolProvider;
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
+  onRunStart?: (run: {
+    runId: string;
+    botId: string;
+    threadId: string;
+    userMessageId: string;
+  }) => void | Promise<void>;
   onEvent?: (event: LocalAgentEvent, runId: string) => void | Promise<void>;
 }
 
@@ -65,6 +71,7 @@ export class LocalRuntime {
   private readonly engine: LocalAgentEngine;
   private readonly tools: LocalToolProvider;
   private readonly resolveModel: LocalRuntimeOptions["resolveModel"];
+  private readonly onRunStart: LocalRuntimeOptions["onRunStart"];
   private readonly onEvent: LocalRuntimeOptions["onEvent"];
 
   constructor(options: LocalRuntimeOptions) {
@@ -72,6 +79,7 @@ export class LocalRuntime {
     this.engine = options.engine;
     this.tools = options.tools;
     this.resolveModel = options.resolveModel;
+    this.onRunStart = options.onRunStart;
     this.onEvent = options.onEvent;
   }
 
@@ -107,6 +115,12 @@ export class LocalRuntime {
     const events: LocalAgentEvent[] = [];
     const toolCalls: SendMessageResult["toolCalls"] = [];
 
+    await this.onRunStart?.({
+      runId,
+      botId: bot.id,
+      threadId: thread.id,
+      userMessageId: userMessage.id,
+    });
     for await (const event of this.engine.run(
       {
         botId: bot.id,

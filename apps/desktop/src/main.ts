@@ -1005,6 +1005,10 @@ function installLocalIpc() {
       localString(text, "Message", 100_000),
     );
   });
+  ipcMain.handle("desktop.local.runs.cancel", async (event, runId: unknown) => {
+    requireLocalWindow(event);
+    await requireLocalRuntime().abort(localString(runId, "Run id", 200));
+  });
 }
 
 async function openLocalMode(userDataDir: string) {
@@ -1040,6 +1044,16 @@ async function openLocalMode(userDataDir: string) {
           ? await dialog.showMessageBox(options)
           : await dialog.showMessageBox(localWindow, options);
       return result.response === 0;
+    },
+    onRunStart: (run) => {
+      if (localWindow !== null && !localWindow.isDestroyed()) {
+        localWindow.webContents.send("desktop.local.run.started", run);
+      }
+    },
+    onEvent: (event, runId) => {
+      if (localWindow !== null && !localWindow.isDestroyed()) {
+        localWindow.webContents.send("desktop.local.run.event", { runId, event });
+      }
     },
     resolveModel: async (bot) => {
       if (!gatewayUrl) throw new Error("The local model gateway is not configured.");

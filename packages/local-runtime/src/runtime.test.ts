@@ -61,16 +61,21 @@ const probeTool: LocalTool = {
 function setup(engine: LocalAgentEngine, approve = true) {
   const db = openLocalDatabase(":memory:");
   const events: LocalAgentEvent[] = [];
+  const starts: Array<{ runId: string; botId: string; threadId: string; userMessageId: string }> =
+    [];
   const runtime = new LocalRuntime({
     store: new SqliteConversationStore(db),
     engine,
     tools: new LocalToolRegistry([probeTool], () => approve),
     resolveModel: () => model,
+    onRunStart: (run) => {
+      starts.push(run);
+    },
     onEvent: (event) => {
       events.push(event);
     },
   });
-  return { db, runtime, events };
+  return { db, runtime, events, starts };
 }
 
 describe("local runtime", () => {
@@ -89,7 +94,7 @@ describe("local runtime", () => {
       yield { type: "text", text: " world" };
       yield { type: "done" };
     });
-    const { db, runtime, events } = setup(engine);
+    const { db, runtime, events, starts } = setup(engine);
     const bot = runtime.createBot({
       name: "Researcher",
       instructions: "Verify sources.",
@@ -111,6 +116,14 @@ describe("local runtime", () => {
       sourceMessageId: result.userMessage.id,
     });
     expect(events.map((event) => event.type)).toEqual(["text", "text", "done"]);
+    expect(starts).toEqual([
+      {
+        runId: result.runId,
+        botId: bot.id,
+        threadId: result.thread.id,
+        userMessageId: result.userMessage.id,
+      },
+    ]);
     expect(db.messages.list(result.thread.id).map((message) => message.role)).toEqual([
       "user",
       "bot",

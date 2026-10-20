@@ -117,4 +117,67 @@ describe("desktop local UI", () => {
     await vi.waitFor(() => expect(listBots).toHaveBeenCalled());
     dom.window.close();
   });
+
+  it("streams run events and stops the active run", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    let startedListener: ((run: { runId: string }) => void) | undefined;
+    let eventListener:
+      | ((update: { runId: string; event: { type: string; text?: string } }) => void)
+      | undefined;
+    let finishSend: ((value: unknown) => void) | undefined;
+    const sendMessage = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishSend = resolve;
+        }),
+    );
+    const cancel = vi.fn(async () => undefined);
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: { list: vi.fn(async () => [bot]), create: vi.fn(async () => bot) },
+      messages: { list: vi.fn(async () => []), send: sendMessage },
+      runs: {
+        cancel,
+        onStarted: (listener) => {
+          startedListener = listener;
+        },
+        onEvent: (listener) => {
+          eventListener = listener;
+        },
+      },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.querySelector(".bot")?.textContent).toBe("Chief"),
+    );
+    const text = dom.window.document.getElementById("message-text") as HTMLTextAreaElement;
+    text.value = "Stream this";
+    dom.window.document
+      .getElementById("composer")
+      ?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith("bot-1", "Stream this"));
+
+    startedListener?.({ runId: "run-1" });
+    eventListener?.({ runId: "run-1", event: { type: "progress", text: "Reading files" } });
+    eventListener?.({ runId: "run-1", event: { type: "text", text: "Partial answer" } });
+    expect(dom.window.document.querySelector(".message.live")?.textContent).toContain(
+      "Partial answer",
+    );
+
+    (dom.window.document.getElementById("stop") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(cancel).toHaveBeenCalledWith("run-1"));
+    finishSend?.({});
+    await vi.waitFor(() =>
+      expect((dom.window.document.getElementById("stop") as HTMLButtonElement).hidden).toBe(true),
+    );
+    dom.window.close();
+  });
 });

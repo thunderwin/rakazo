@@ -75,6 +75,24 @@ export interface DesktopLocalCreateBotInput {
   disabledBuiltinTools?: string[];
 }
 
+export interface DesktopLocalRunStarted {
+  runId: string;
+  botId: string;
+  threadId: string;
+  userMessageId: string;
+}
+
+export interface DesktopLocalRunEvent {
+  runId: string;
+  event: {
+    type: string;
+    text?: string;
+    name?: string;
+    args?: Record<string, unknown>;
+    executionId?: string;
+  };
+}
+
 export interface RakazoDesktopLocal {
   auth: {
     status: () => Promise<{ signedIn: boolean; serverUrl: string | null }>;
@@ -95,7 +113,19 @@ export interface RakazoDesktopLocal {
       userMessage: DesktopLocalMessage;
       assistantMessage: DesktopLocalMessage | null;
       text: string;
+      runId: string;
+      events: DesktopLocalRunEvent["event"][];
+      toolCalls: Array<{
+        executionId: string;
+        name: string;
+        arguments: Record<string, unknown>;
+      }>;
     }>;
+  };
+  runs: {
+    cancel: (runId: string) => Promise<void>;
+    onStarted: (listener: (run: DesktopLocalRunStarted) => void) => () => void;
+    onEvent: (listener: (update: DesktopLocalRunEvent) => void) => () => void;
   };
 }
 

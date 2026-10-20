@@ -3,9 +3,11 @@ import { OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
 import type { Bot } from "@rakazo/local-db";
 import {
   type ApproveLocalTool,
+  createFileTools,
   createShellTool,
   type LocalAgentEngine,
   type LocalAgentModel,
+  type LocalRuntimeOptions,
   LocalRuntimeService,
   LocalToolRegistry,
 } from "@rakazo/local-runtime";
@@ -16,6 +18,8 @@ export interface DesktopLocalRuntimeOptions {
   engine?: LocalAgentEngine;
   approveTool: ApproveLocalTool;
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
+  onRunStart?: LocalRuntimeOptions["onRunStart"];
+  onEvent?: LocalRuntimeOptions["onEvent"];
 }
 
 /** The desktop process owns one SQLite database under its userData directory. */
@@ -23,12 +27,9 @@ export function createDesktopLocalRuntime(
   options: DesktopLocalRuntimeOptions,
 ): LocalRuntimeService {
   const localDir = path.join(options.userDataDir, "local");
+  const workspaceDir = path.join(localDir, "workspace");
   const tools = new LocalToolRegistry(
-    [
-      createShellTool({
-        workspaceDir: path.join(localDir, "workspace"),
-      }),
-    ],
+    [createShellTool({ workspaceDir }), ...createFileTools({ workspaceDir })],
     options.approveTool,
   );
   return new LocalRuntimeService({
@@ -36,6 +37,8 @@ export function createDesktopLocalRuntime(
     engine: options.engine ?? new PiLocalAgentEngine(),
     tools,
     resolveModel: options.resolveModel,
+    onRunStart: options.onRunStart,
+    onEvent: options.onEvent,
   });
 }
 

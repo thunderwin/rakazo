@@ -199,7 +199,7 @@ button:disabled {
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   border-top: 1px solid var(--border);
   padding: 14px 24px 20px;
@@ -218,6 +218,11 @@ button:disabled {
   align-self: end;
   min-width: 84px;
   padding: 10px 16px;
+}
+
+.composer button.stop {
+  border-color: var(--destructive);
+  color: var(--destructive);
 }
 
 .login {

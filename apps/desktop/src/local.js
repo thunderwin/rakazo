@@ -10,6 +10,7 @@
   const composer = document.getElementById("composer");
   const messageText = document.getElementById("message-text");
   const sendButton = document.getElementById("send");
+  const stopButton = document.getElementById("stop");
   const loginElement = document.getElementById("login");
   const loginForm = document.getElementById("login-form");
   const loginEmail = document.getElementById("login-email");
@@ -21,7 +22,11 @@
 
   let bots = [];
   let activeBotId = null;
+  let activeRunId = null;
   let busy = false;
+  let stopRequested = false;
+  let liveText = "";
+  let liveStatus = "";
   let hasServerUrl = false;
 
   function setStatus(message, isError = false) {
@@ -74,9 +79,42 @@
       messagesElement.append(article);
     }
     messagesElement.scrollTop = messagesElement.scrollHeight;
+    renderLive();
+  }
+
+  function renderLive() {
+    messagesElement.querySelector(".message.live")?.remove();
+    if (!liveText && !liveStatus) return;
+    const article = document.createElement("article");
+    article.className = "message bot live";
+    const role = document.createElement("span");
+    role.className = "role";
+    role.textContent = "Bot";
+    const text = document.createElement("span");
+    text.textContent = [liveStatus, liveText].filter(Boolean).join("\n\n");
+    article.append(role, text);
+    messagesElement.append(article);
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+  }
+
+  function setBusy(next) {
+    busy = next;
+    sendButton.disabled = next;
+    messageText.disabled = next;
+    stopButton.hidden = !next;
+    stopButton.disabled = false;
+  }
+
+  function toolLabel(event) {
+    if (event.name === "shell") return "Running a local command…";
+    if (event.name === "list_files") return "Listing local files…";
+    if (event.name === "read_file") return "Reading a local file…";
+    if (event.name === "write_file") return "Writing a local file…";
+    return `Using ${event.name}…`;
   }
 
   async function selectBot(botId) {
+    if (busy && botId !== activeBotId) return;
     activeBotId = botId;
     const bot = bots.find((item) => item.id === botId);
     titleElement.textContent = bot?.name ?? "Local chat";
@@ -181,21 +219,49 @@
   async function sendMessage() {
     const text = messageText.value.trim();
     if (!text || !activeBotId || busy) return;
-    busy = true;
-    sendButton.disabled = true;
-    messageText.disabled = true;
-    setStatus("Thinking…");
+    activeRunId = null;
+    stopRequested = false;
+    liveText = "";
+    liveStatus = "Thinking…";
+    setBusy(true);
+    setStatus("");
+    const optimistic = document.createElement("article");
+    optimistic.className = "message user optimistic";
+    const role = document.createElement("span");
+    role.className = "role";
+    role.textContent = "You";
+    const body = document.createElement("span");
+    body.textContent = text;
+    optimistic.append(role, body);
+    messagesElement.append(optimistic);
+    renderLive();
     try {
       await api.messages.send(activeBotId, text);
       messageText.value = "";
-      await selectBot(activeBotId);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not send message", true);
+      const message = error instanceof Error ? error.message : "Could not send message";
+      setStatus(stopRequested ? "Stopped" : message, !stopRequested);
     } finally {
-      busy = false;
-      sendButton.disabled = false;
-      messageText.disabled = false;
+      activeRunId = null;
+      liveText = "";
+      liveStatus = "";
+      setBusy(false);
+      await selectBot(activeBotId);
       messageText.focus();
+    }
+  }
+
+  async function stopRun() {
+    if (!activeRunId || !api.runs) return;
+    stopRequested = true;
+    stopButton.disabled = true;
+    liveStatus = "Stopping…";
+    renderLive();
+    try {
+      await api.runs.cancel(activeRunId);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not stop the run", true);
+      stopButton.disabled = false;
     }
   }
 
@@ -221,6 +287,25 @@
     void login();
   });
   logoutButton.addEventListener("click", () => void logout());
+  stopButton.addEventListener("click", () => void stopRun());
+
+  api?.runs?.onStarted((run) => {
+    activeRunId = run.runId;
+  });
+  api?.runs?.onEvent(({ runId, event }) => {
+    if (runId !== activeRunId || !event || typeof event !== "object") return;
+    if (event.type === "text" && typeof event.text === "string") {
+      liveText += event.text;
+      liveStatus = "";
+    } else if (event.type === "progress" && typeof event.text === "string") {
+      liveStatus = event.text;
+    } else if (event.type === "tool") {
+      liveStatus = toolLabel(event);
+    } else if (event.type === "ask" && typeof event.text === "string") {
+      liveStatus = event.text;
+    }
+    renderLive();
+  });
 
   if (!api) {
     setStatus("Local bridge is unavailable.", true);
