@@ -10,10 +10,19 @@
   const composer = document.getElementById("composer");
   const messageText = document.getElementById("message-text");
   const sendButton = document.getElementById("send");
+  const loginElement = document.getElementById("login");
+  const loginForm = document.getElementById("login-form");
+  const loginEmail = document.getElementById("login-email");
+  const loginPassword = document.getElementById("login-password");
+  const loginSubmit = document.getElementById("login-submit");
+  const loginError = document.getElementById("login-error");
+  const loginServer = document.getElementById("login-server");
+  const logoutButton = document.getElementById("logout");
 
   let bots = [];
   let activeBotId = null;
   let busy = false;
+  let hasServerUrl = false;
 
   function setStatus(message, isError = false) {
     statusElement.textContent = message ?? "";
@@ -111,6 +120,64 @@
     }
   }
 
+  function showLogin(serverUrl) {
+    hasServerUrl = true;
+    loginServer.textContent = serverUrl;
+    loginElement.hidden = false;
+    logoutButton.hidden = true;
+    loginError.textContent = "";
+    loginEmail.focus();
+  }
+
+  function hideLogin() {
+    loginElement.hidden = true;
+    logoutButton.hidden = !hasServerUrl;
+  }
+
+  async function login() {
+    loginSubmit.disabled = true;
+    loginError.textContent = "";
+    try {
+      await api.auth.login(loginEmail.value, loginPassword.value);
+      loginPassword.value = "";
+      hideLogin();
+      await refreshBots();
+      setStatus("");
+    } catch (error) {
+      loginError.textContent = error instanceof Error ? error.message : "Could not sign in";
+    } finally {
+      loginSubmit.disabled = false;
+    }
+  }
+
+  async function logout() {
+    await api.auth.logout().catch(() => undefined);
+    bots = [];
+    activeBotId = null;
+    botsElement.replaceChildren();
+    messagesElement.replaceChildren();
+    titleElement.textContent = "Local chat";
+    detailElement.textContent = "Sign in to continue.";
+    setStatus("");
+    if (hasServerUrl) showLogin(loginServer.textContent ?? "");
+  }
+
+  async function initialize() {
+    const status = await api.auth.status();
+    if (status.serverUrl) {
+      if (!status.signedIn) {
+        showLogin(status.serverUrl);
+        return;
+      }
+      hasServerUrl = true;
+      hideLogin();
+    } else {
+      loginElement.hidden = true;
+      logoutButton.hidden = true;
+    }
+    await refreshBots();
+  }
+
   async function sendMessage() {
     const text = messageText.value.trim();
     if (!text || !activeBotId || busy) return;
@@ -149,12 +216,17 @@
       void sendMessage();
     }
   });
+  loginForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void login();
+  });
+  logoutButton.addEventListener("click", () => void logout());
 
   if (!api) {
     setStatus("Local bridge is unavailable.", true);
     return;
   }
-  void refreshBots().catch((error) => {
+  void initialize().catch((error) => {
     setStatus(error instanceof Error ? error.message : "Could not open local database", true);
   });
 })();

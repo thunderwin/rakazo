@@ -6,7 +6,8 @@
     "DEV_GATEWAY_TOKEN",
     "RAKAZO_DEV_MODEL_GATEWAY_TOKEN",
     "RAKAZO_LOCAL_UI",
-    "RAKAZO_MODEL_GATEWAY_URL"
+    "RAKAZO_MODEL_GATEWAY_URL",
+    "RAKAZO_SERVER_URL"
   ],
   "tasks": {
     "generate": {

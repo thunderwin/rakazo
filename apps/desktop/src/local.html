@@ -32,7 +32,10 @@
             <h1 id="bot-title">Local chat</h1>
             <p id="bot-detail">Create a bot to begin.</p>
           </div>
-          <span id="status" role="status"></span>
+          <div class="header-actions">
+            <span id="status" role="status"></span>
+            <button id="logout" type="button" hidden>Sign out</button>
+          </div>
         </header>
 
         <section id="messages" class="messages" aria-live="polite"></section>
@@ -46,6 +49,29 @@
           ></textarea>
           <button id="send" type="submit">Send</button>
         </form>
+
+        <section id="login" class="login" hidden>
+          <form id="login-form" class="login-card">
+            <h2>Sign in</h2>
+            <p id="login-server"></p>
+            <label>
+              Email
+              <input id="login-email" type="email" autocomplete="username" required />
+            </label>
+            <label>
+              Password
+              <input
+                id="login-password"
+                type="password"
+                autocomplete="current-password"
+                minlength="8"
+                required
+              />
+            </label>
+            <button id="login-submit" type="submit">Sign in</button>
+            <p id="login-error" class="login-error" role="alert"></p>
+          </form>
+        </section>
       </main>
     </div>
     <script src="local.js"></script>

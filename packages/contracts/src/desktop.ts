@@ -76,6 +76,11 @@ export interface DesktopLocalCreateBotInput {
 }
 
 export interface RakazoDesktopLocal {
+  auth: {
+    status: () => Promise<{ signedIn: boolean; serverUrl: string | null }>;
+    login: (email: string, password: string) => Promise<void>;
+    logout: () => Promise<void>;
+  };
   bots: {
     list: () => Promise<DesktopLocalBot[]>;
     create: (input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;

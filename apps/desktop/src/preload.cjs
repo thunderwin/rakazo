@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     install: () => ipcRenderer.invoke("desktop.update.install"),
   },
   local: {
+    auth: {
+      status: () => ipcRenderer.invoke("desktop.local.auth.status"),
+      login: (email, password) => ipcRenderer.invoke("desktop.local.auth.login", email, password),
+      logout: () => ipcRenderer.invoke("desktop.local.auth.logout"),
+    },
     bots: {
       list: () => ipcRenderer.invoke("desktop.local.bots.list"),
       create: (input) => ipcRenderer.invoke("desktop.local.bots.create", input),

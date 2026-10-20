@@ -4,7 +4,7 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { DesktopReachability, DesktopSetup } from "@rakazo/contracts";
 import { LOCAL_SETTINGS_PAGE } from "@rakazo/contracts/local-settings";
-import type { LocalRuntimeService } from "@rakazo/local-runtime";
+import type { LocalRuntimeService, ModelGateway } from "@rakazo/local-runtime";
 import {
   app,
   BrowserWindow,
@@ -28,7 +28,9 @@ import {
 import { openBrowserAuth } from "./browser-auth.js";
 import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cli.js";
 import { prepareHostComputer } from "./host-computer.js";
-import { createLocalGateway } from "./local-gateway.js";
+import { LocalAuth } from "./local-auth.js";
+import { createSafeStorageVault } from "./local-auth-vault.js";
+import { createAuthenticatedGateway, createLocalGateway } from "./local-gateway.js";
 import { createDesktopLocalRuntime } from "./local-runtime.js";
 import { requestLocalSettings } from "./local-settings.js";
 import {
@@ -123,6 +125,7 @@ let localStack: LocalStackController;
 let hostComputer: Awaited<ReturnType<typeof prepareHostComputer>> | undefined;
 let requestingComputerAccess = false;
 let localRuntimeService: LocalRuntimeService | undefined;
+let localAuth: LocalAuth | undefined;
 let localWindow: BrowserWindow | null = null;
 let localIpcInstalled = false;
 
@@ -917,6 +920,11 @@ function requireLocalRuntime(): LocalRuntimeService {
   return localRuntimeService;
 }
 
+function requireLocalAuth(): LocalAuth {
+  if (!localAuth) throw new Error("Server URL is not configured");
+  return localAuth;
+}
+
 function requireLocalWindow(event: IpcMainInvokeEvent): void {
   if (
     localWindow === null ||
@@ -954,6 +962,21 @@ function installLocalIpc() {
   if (localIpcInstalled) return;
   localIpcInstalled = true;
 
+  ipcMain.handle("desktop.local.auth.status", async (event) => {
+    requireLocalWindow(event);
+    return localAuth ? localAuth.status() : { signedIn: false, serverUrl: null };
+  });
+  ipcMain.handle("desktop.local.auth.login", async (event, email: unknown, password: unknown) => {
+    requireLocalWindow(event);
+    await requireLocalAuth().signIn(
+      localString(email, "Email", 320),
+      localString(password, "Password", 1000),
+    );
+  });
+  ipcMain.handle("desktop.local.auth.logout", async (event) => {
+    requireLocalWindow(event);
+    await requireLocalAuth().signOut();
+  });
   ipcMain.handle("desktop.local.bots.list", (event) => {
     requireLocalWindow(event);
     return requireLocalRuntime().listBots();
@@ -986,9 +1009,21 @@ function installLocalIpc() {
 }
 
 async function openLocalMode(userDataDir: string) {
+  const serverUrl = process.env.RAKAZO_SERVER_URL?.trim();
+  let gateway: ModelGateway;
+  if (serverUrl) {
+    const auth = new LocalAuth({
+      serverUrl,
+      vault: createSafeStorageVault(userDataDir),
+    });
+    localAuth = auth;
+    gateway = createAuthenticatedGateway(serverUrl, () => auth.getToken());
+  } else {
+    gateway = createLocalGateway();
+  }
   const service = createDesktopLocalRuntime({
     userDataDir,
-    gateway: createLocalGateway(),
+    gateway,
   });
   localRuntimeService = service;
   installLocalIpc();
@@ -1011,6 +1046,7 @@ async function openLocalMode(userDataDir: string) {
       localRuntimeService = undefined;
       service.close();
     }
+    localAuth = undefined;
   });
   await win.loadFile(path.join(import.meta.dirname, "local.html"));
 }
@@ -1528,6 +1564,7 @@ app.on("before-quit", () => {
   clearTimeout(warmWindowTimer);
   localRuntimeService?.close();
   localRuntimeService = undefined;
+  localAuth = undefined;
   // Containers keep running; only an in-flight pull/up is cut short.
   hostComputer?.activate(false);
   void hostComputer?.close();

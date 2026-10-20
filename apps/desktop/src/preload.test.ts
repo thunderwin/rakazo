@@ -40,7 +40,7 @@ describe("desktop preload bridge", () => {
       "update",
       "window",
     ]);
-    expect(Object.keys(bridge.local!).sort()).toEqual(["bots", "messages"]);
+    expect(Object.keys(bridge.local!).sort()).toEqual(["auth", "bots", "messages"]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
       "minimize",
@@ -60,6 +60,9 @@ describe("desktop preload bridge", () => {
     await bridge.update.download();
     await bridge.update.install();
     await bridge.local?.bots.list();
+    await bridge.local?.auth.status();
+    await bridge.local?.auth.login("user@example.com", "password12");
+    await bridge.local?.auth.logout();
     await bridge.local?.bots.create({ name: "Chief" });
     await bridge.local?.messages.list("bot-1");
     await bridge.local?.messages.send("bot-1", "Hello");
@@ -75,6 +78,9 @@ describe("desktop preload bridge", () => {
       "desktop.update.download",
       "desktop.update.install",
       "desktop.local.bots.list",
+      "desktop.local.auth.status",
+      "desktop.local.auth.login",
+      "desktop.local.auth.logout",
       "desktop.local.bots.create",
       "desktop.local.messages.list",
       "desktop.local.messages.send",

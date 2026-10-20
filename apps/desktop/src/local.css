@@ -114,6 +114,7 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  position: relative;
 }
 
 .header {
@@ -140,6 +141,17 @@ button:disabled {
   color: var(--muted-foreground);
   font-size: 12px;
   text-align: right;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 #status.error {
@@ -207,4 +219,61 @@ button:disabled {
   align-self: end;
   min-width: 84px;
   padding: 10px 16px;
+}
+
+.login {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  padding: 24px;
+}
+
+.login[hidden] {
+  display: none;
+}
+
+.login-card {
+  display: flex;
+  width: min(420px, 100%);
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  padding: 24px;
+}
+
+.login-card h2,
+.login-card p {
+  margin: 0;
+}
+
+.login-card p,
+.login-card label {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-card input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--foreground);
+  padding: 10px 12px;
+}
+
+.login-error {
+  color: var(--destructive);
+}
+
+#logout[hidden] {
+  display: none;
 }

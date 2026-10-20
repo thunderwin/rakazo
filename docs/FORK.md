@@ -182,6 +182,17 @@ local-first 改造完成后，客户端开发应尽量不依赖服务器业务�
 RAKAZO_LOCAL_UI=1 pnpm --filter @rakazo/desktop dev
 ```
 
+接真实服务器登录：
+
+```bash
+RAKAZO_LOCAL_UI=1 \
+RAKAZO_SERVER_URL=https://your-api.example.com \
+pnpm --filter @rakazo/desktop dev
+```
+
+客户端通过 `/api/auth/sign-in/email` 登录，session token 由 Electron `safeStorage`
+加密后保存在本地；本地 runtime 再把它作为 Bearer token 调 `/v1/model/chat`。
+
 开发时如果要接模型网关：
 
 ```bash

@@ -18,3 +18,10 @@ export function createLocalGateway(
   if (!baseUrl || !token) return unavailable;
   return new HttpModelGateway({ baseUrl, getToken: () => token });
 }
+
+export function createAuthenticatedGateway(
+  serverUrl: string,
+  getToken: () => Promise<string>,
+): ModelGateway {
+  return new HttpModelGateway({ baseUrl: serverUrl, getToken });
+}

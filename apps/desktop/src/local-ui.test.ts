@@ -43,6 +43,11 @@ describe("desktop local UI", () => {
       text: "",
     }));
     const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: "https://app.example.com" })),
+        login: vi.fn(async () => undefined),
+        logout: vi.fn(async () => undefined),
+      },
       bots: {
         list: vi.fn(async () => [bot]),
         create: vi.fn(async () => bot),
@@ -70,6 +75,46 @@ describe("desktop local UI", () => {
 
     await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith("bot-1", "Next message"));
     expect(listMessages).toHaveBeenCalledWith("bot-1");
+    dom.window.close();
+  });
+
+  it("requires sign-in when a server URL is configured", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const login = vi.fn(async () => undefined);
+    const listBots = vi.fn(async () => [bot]);
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({
+          signedIn: false,
+          serverUrl: "https://app.example.com",
+        })),
+        login,
+        logout: vi.fn(async () => undefined),
+      },
+      bots: { list: listBots, create: vi.fn(async () => bot) },
+      messages: { list: vi.fn(async () => [message]), send: vi.fn() },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("login")?.hasAttribute("hidden")).toBe(false),
+    );
+    expect(dom.window.document.getElementById("login-server")?.textContent).toBe(
+      "https://app.example.com",
+    );
+
+    (dom.window.document.getElementById("login-email") as HTMLInputElement).value =
+      "user@example.com";
+    (dom.window.document.getElementById("login-password") as HTMLInputElement).value = "password12";
+    dom.window.document
+      .getElementById("login-form")
+      ?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => expect(login).toHaveBeenCalledWith("user@example.com", "password12"));
+    await vi.waitFor(() => expect(listBots).toHaveBeenCalled());
     dom.window.close();
   });
 });
