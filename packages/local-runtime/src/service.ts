@@ -1,11 +1,13 @@
 import {
   type Bot,
   type CreateBotInput,
+  type JsonValue,
   type LocalDatabase,
   openLocalDatabase,
 } from "@rakazo/local-db";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
+import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
 import { SqliteConversationStore } from "./store.js";
 import type { LocalToolProvider } from "./tools.js";
 
@@ -64,5 +66,18 @@ export class LocalRuntimeService {
 
   close(): void {
     this.db.close();
+  }
+
+  getUserSettings(): LocalUserSettings {
+    return parseLocalUserSettings(this.db.settings.get("local.user-settings"));
+  }
+
+  updateUserSettings(input: Partial<LocalUserSettings>): LocalUserSettings {
+    const next = parseLocalUserSettings({
+      ...this.getUserSettings(),
+      ...input,
+    });
+    this.db.settings.set("local.user-settings", next as unknown as JsonValue);
+    return next;
   }
 }

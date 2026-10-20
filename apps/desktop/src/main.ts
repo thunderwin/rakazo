@@ -713,7 +713,7 @@ function installApplicationMenu() {
   };
   const changeServer: Electron.MenuItemConstructorOptions = {
     id: "change-rakazo-server",
-    label: "Change Rakazo Server…",
+    label: "Change ericBot Server…",
     accelerator: "CmdOrCtrl+Shift+K",
     click: () => showSetupWindow(),
   };
@@ -799,7 +799,7 @@ async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<Deskto
         ok: false,
         status: response.status,
         url,
-        error: "That address redirects elsewhere. Enter the final Rakazo server address.",
+        error: "That address redirects elsewhere. Enter the final ericBot server address.",
       };
     }
     if (!response.ok) {
@@ -816,7 +816,7 @@ async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<Deskto
         ok: false,
         status: response.status,
         url,
-        error: "That address did not respond like a Rakazo server.",
+        error: "That address did not respond like an ericBot server.",
       };
     }
     return {
@@ -992,10 +992,12 @@ async function startLocalRuntime(accountId: string): Promise<void> {
       if (!context.gatewayUrl) throw new Error("The local model gateway is not configured.");
       const token = localAuth ? await localAuth.getToken() : context.developmentToken;
       if (!token) throw new Error("Sign in to connect the model gateway.");
+      const defaultModelId = localRuntimeService?.getUserSettings().defaultModelId;
       return defaultLocalModel({
         baseUrl: `${context.gatewayUrl.replace(/\/+$/, "")}/v1/model/openai`,
         apiKey: token,
         bot,
+        ...(defaultModelId ? { fallbackModelId: defaultModelId } : {}),
       });
     },
   });
@@ -1118,6 +1120,37 @@ function installLocalIpc() {
       thinkingLevel: optionalLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
     });
   });
+  ipcMain.handle("desktop.local.bots.update", (event, botId: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    const id = localString(botId, "Bot id", 200);
+    const value = localRecord(input, "Bot input");
+    const updated = requireLocalRuntime().db.bots.update(id, {
+      ...(value.name === undefined ? {} : { name: localString(value.name, "Bot name", 120) }),
+      ...(value.title === undefined
+        ? {}
+        : { title: optionalLocalString(value.title, "Bot title", 200) ?? "" }),
+      ...(value.description === undefined
+        ? {}
+        : {
+            description: optionalLocalString(value.description, "Bot description", 2000) ?? "",
+          }),
+      ...(value.instructions === undefined
+        ? {}
+        : {
+            instructions: optionalLocalString(value.instructions, "Bot instructions", 40_000) ?? "",
+          }),
+      ...(value.modelId === undefined
+        ? {}
+        : { modelId: optionalLocalString(value.modelId, "Model id", 300) ?? null }),
+      ...(value.thinkingLevel === undefined
+        ? {}
+        : {
+            thinkingLevel: optionalLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
+          }),
+    });
+    if (!updated) throw new Error("Bot not found");
+    return updated;
+  });
   ipcMain.handle("desktop.local.messages.list", (event, botId: unknown) => {
     requireLocalWindow(event);
     return requireLocalRuntime().listMessages(localString(botId, "Bot id", 200));
@@ -1132,6 +1165,35 @@ function installLocalIpc() {
   ipcMain.handle("desktop.local.runs.cancel", async (event, runId: unknown) => {
     requireLocalWindow(event);
     await requireLocalRuntime().abort(localString(runId, "Run id", 200));
+  });
+  ipcMain.handle("desktop.local.settings.get", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().getUserSettings();
+  });
+  ipcMain.handle("desktop.local.settings.update", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Settings");
+    if (
+      value.theme !== undefined &&
+      value.theme !== "system" &&
+      value.theme !== "light" &&
+      value.theme !== "dark"
+    ) {
+      throw new Error("Theme is invalid");
+    }
+    if (value.sendWithEnter !== undefined && typeof value.sendWithEnter !== "boolean") {
+      throw new Error("Send preference is invalid");
+    }
+    return requireLocalRuntime().updateUserSettings({
+      ...(value.theme === undefined ? {} : { theme: value.theme }),
+      ...(value.sendWithEnter === undefined ? {} : { sendWithEnter: value.sendWithEnter }),
+      ...(value.defaultModelId === undefined
+        ? {}
+        : {
+            defaultModelId:
+              optionalLocalString(value.defaultModelId, "Default model", 300)?.trim() || null,
+          }),
+    });
   });
 }
 
@@ -1541,7 +1603,7 @@ app.whenReady().then(async () => {
         if (managedUrl === null || !(await localStack.matchesDesiredStack())) {
           return {
             ok: false,
-            error: "The app-managed Rakazo services are not ready. Retry setup.",
+            error: "The app-managed ericBot services are not ready. Retry setup.",
           };
         }
         openSetup = { mode: "new", serverUrl: managedUrl };

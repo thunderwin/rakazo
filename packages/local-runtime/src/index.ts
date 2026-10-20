@@ -12,6 +12,11 @@ export { createFileTools } from "./file-tools.js";
 export { LocalRuntime, type LocalRuntimeOptions, type SendMessageResult } from "./runtime.js";
 export { LocalRuntimeService, type LocalRuntimeServiceOptions } from "./service.js";
 export {
+  DEFAULT_LOCAL_USER_SETTINGS,
+  type LocalUserSettings,
+  parseLocalUserSettings,
+} from "./settings.js";
+export {
   createShellTool,
   type RunShellCommand,
   runShellCommand,

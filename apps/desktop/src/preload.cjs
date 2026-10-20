@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     bots: {
       list: () => ipcRenderer.invoke("desktop.local.bots.list"),
       create: (input) => ipcRenderer.invoke("desktop.local.bots.create", input),
+      update: (botId, input) => ipcRenderer.invoke("desktop.local.bots.update", botId, input),
     },
     messages: {
       list: (botId) => ipcRenderer.invoke("desktop.local.messages.list", botId),
@@ -55,6 +56,10 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
         ipcRenderer.on("desktop.local.run.event", handler);
         return () => ipcRenderer.off("desktop.local.run.event", handler);
       },
+    },
+    settings: {
+      get: () => ipcRenderer.invoke("desktop.local.settings.get"),
+      update: (input) => ipcRenderer.invoke("desktop.local.settings.update", input),
     },
   },
   oauth: {

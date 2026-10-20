@@ -1,9 +1,9 @@
 {
   "name": "@rakazo/desktop",
-  "productName": "Rakazo",
+  "productName": "ericBot",
   "version": "0.3.1",
   "author": {
-    "name": "Rakazo"
+    "name": "ericBot"
   },
   "license": "Apache-2.0",
   "type": "module",
@@ -40,7 +40,7 @@
     "vitest": "4.1.12"
   },
   "build": {
-    "appId": "dev.rakazo.desktop",
+    "appId": "com.ericbot.desktop",
     "directories": {
       "output": "out",
       "buildResources": "assets"
@@ -67,7 +67,7 @@
       }
     ],
     "extraMetadata": {
-      "name": "rakazo",
+      "name": "ericbot",
       "main": "dist/main.js"
     },
     "mac": {
@@ -88,7 +88,7 @@
       "verifyUpdateCodeSignature": true
     },
     "linux": {
-      "executableName": "rakazo",
+      "executableName": "ericbot",
       "icon": "assets/icon.png",
       "target": [
         "AppImage"

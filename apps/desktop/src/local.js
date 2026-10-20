@@ -23,6 +23,19 @@
   const loginError = document.getElementById("login-error");
   const loginServer = document.getElementById("login-server");
   const logoutButton = document.getElementById("logout");
+  const settingsOpen = document.getElementById("settings-open");
+  const settingsView = document.getElementById("settings-view");
+  const settingsForm = document.getElementById("settings-form");
+  const settingsDefaultModel = document.getElementById("settings-default-model");
+  const settingsTheme = document.getElementById("settings-theme");
+  const settingsEnter = document.getElementById("settings-enter");
+  const settingsError = document.getElementById("settings-error");
+  const settingsCancel = document.getElementById("settings-cancel");
+  const botSettingsName = document.getElementById("bot-settings-name");
+  const botSettingsDescription = document.getElementById("bot-settings-description");
+  const botSettingsModel = document.getElementById("bot-settings-model");
+  const botSettingsThinking = document.getElementById("bot-settings-thinking");
+  const botSettingsInstructions = document.getElementById("bot-settings-instructions");
 
   let bots = [];
   let activeBotId = null;
@@ -33,10 +46,85 @@
   let liveStatus = "";
   let hasServerUrl = false;
   let signUpMode = false;
+  let userSettings = {
+    theme: "system",
+    sendWithEnter: true,
+    defaultModelId: null,
+  };
 
   function setStatus(message, isError = false) {
     statusElement.textContent = message ?? "";
     statusElement.classList.toggle("error", isError);
+  }
+
+  function errorMessage(error, fallback) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "message" in error &&
+      typeof error.message === "string" &&
+      error.message
+    ) {
+      return error.message;
+    }
+    return fallback;
+  }
+
+  function applyTheme() {
+    const prefersLight =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: light)").matches
+        : false;
+    const theme =
+      userSettings.theme === "system" ? (prefersLight ? "light" : "dark") : userSettings.theme;
+    document.documentElement.dataset.theme = theme;
+  }
+
+  async function loadSettings() {
+    if (!api.settings) return;
+    userSettings = await api.settings.get();
+    applyTheme();
+  }
+
+  function openBotSettings() {
+    const bot = bots.find((item) => item.id === activeBotId);
+    settingsDefaultModel.value = userSettings.defaultModelId ?? "";
+    settingsTheme.value = userSettings.theme;
+    settingsEnter.checked = userSettings.sendWithEnter;
+    settingsError.textContent = "";
+    botSettingsName.value = bot?.name ?? "";
+    botSettingsDescription.value = bot?.description ?? "";
+    botSettingsModel.value = bot?.modelId ?? "";
+    botSettingsThinking.value = bot?.thinkingLevel ?? "";
+    botSettingsInstructions.value = bot?.instructions ?? "";
+    settingsView.hidden = false;
+    settingsDefaultModel.focus();
+  }
+
+  async function saveSettings() {
+    settingsError.textContent = "";
+    try {
+      userSettings = await api.settings.update({
+        theme: settingsTheme.value,
+        sendWithEnter: settingsEnter.checked,
+        defaultModelId: settingsDefaultModel.value.trim() || null,
+      });
+      applyTheme();
+      if (activeBotId) {
+        await api.bots.update(activeBotId, {
+          name: botSettingsName.value,
+          description: botSettingsDescription.value,
+          instructions: botSettingsInstructions.value,
+          modelId: botSettingsModel.value.trim() || null,
+          thinkingLevel: botSettingsThinking.value || null,
+        });
+        await refreshBots();
+      }
+      settingsView.hidden = true;
+    } catch (error) {
+      settingsError.textContent =
+        error instanceof Error ? error.message : "Could not save settings";
+    }
   }
 
   function textOfMessage(message) {
@@ -168,6 +256,8 @@
     loginServer.textContent = serverUrl;
     loginElement.hidden = false;
     logoutButton.hidden = true;
+    settingsOpen.hidden = true;
+    settingsView.hidden = true;
     loginError.textContent = "";
     loginEmail.focus();
   }
@@ -189,6 +279,8 @@
       loginPassword.value = "";
       hideLogin();
       await refreshBots();
+      await loadSettings();
+      settingsOpen.hidden = !api.settings;
       setStatus("");
     } catch (error) {
       loginError.textContent = error instanceof Error ? error.message : "Could not sign in";
@@ -209,6 +301,8 @@
 
   async function logout() {
     await api.auth.logout().catch(() => undefined);
+    settingsOpen.hidden = true;
+    settingsView.hidden = true;
     bots = [];
     activeBotId = null;
     botsElement.replaceChildren();
@@ -231,8 +325,12 @@
     } else {
       loginElement.hidden = true;
       logoutButton.hidden = true;
+      settingsOpen.hidden = true;
+      settingsView.hidden = true;
     }
     await refreshBots();
+    await loadSettings();
+    settingsOpen.hidden = !api.settings;
   }
 
   async function sendMessage() {
@@ -254,18 +352,19 @@
     optimistic.append(role, body);
     messagesElement.append(optimistic);
     renderLive();
+    let terminalError = null;
     try {
       await api.messages.send(activeBotId, text);
       messageText.value = "";
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not send message";
-      setStatus(stopRequested ? "Stopped" : message, !stopRequested);
+      terminalError = stopRequested ? "Stopped" : errorMessage(error, "Could not send message");
     } finally {
       activeRunId = null;
       liveText = "";
       liveStatus = "";
       setBusy(false);
       await selectBot(activeBotId);
+      if (terminalError) setStatus(terminalError, !stopRequested);
       messageText.focus();
     }
   }
@@ -296,7 +395,7 @@
     void sendMessage();
   });
   messageText.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (userSettings.sendWithEnter && event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       void sendMessage();
     }
@@ -304,6 +403,14 @@
   loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void login();
+  });
+  settingsOpen.addEventListener("click", openBotSettings);
+  settingsCancel.addEventListener("click", () => {
+    settingsView.hidden = true;
+  });
+  settingsForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void saveSettings();
   });
   loginToggle.addEventListener("click", () => setSignUpMode(!signUpMode));
   logoutButton.addEventListener("click", () => void logout());

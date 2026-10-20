@@ -40,7 +40,13 @@ describe("desktop preload bridge", () => {
       "update",
       "window",
     ]);
-    expect(Object.keys(bridge.local!).sort()).toEqual(["auth", "bots", "messages", "runs"]);
+    expect(Object.keys(bridge.local!).sort()).toEqual([
+      "auth",
+      "bots",
+      "messages",
+      "runs",
+      "settings",
+    ]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
       "minimize",
@@ -65,9 +71,12 @@ describe("desktop preload bridge", () => {
     await bridge.local?.auth.signUp("User", "user@example.com", "password12");
     await bridge.local?.auth.logout();
     await bridge.local?.bots.create({ name: "Chief" });
+    await bridge.local?.bots.update("bot-1", { name: "Chief" });
     await bridge.local?.messages.list("bot-1");
     await bridge.local?.messages.send("bot-1", "Hello");
     await bridge.local?.runs.cancel("run-1");
+    await bridge.local?.settings.get();
+    await bridge.local?.settings.update({ theme: "light" });
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -85,9 +94,12 @@ describe("desktop preload bridge", () => {
       "desktop.local.auth.signUp",
       "desktop.local.auth.logout",
       "desktop.local.bots.create",
+      "desktop.local.bots.update",
       "desktop.local.messages.list",
       "desktop.local.messages.send",
       "desktop.local.runs.cancel",
+      "desktop.local.settings.get",
+      "desktop.local.settings.update",
     ]);
   });
 

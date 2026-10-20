@@ -60,4 +60,28 @@ describe("local runtime service", () => {
     expect(service.listMessages("missing")).toEqual([]);
     service.close();
   });
+
+  it("persists client settings in the account database", async () => {
+    const databasePath = await tempDbPath();
+    const first = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    expect(first.getUserSettings()).toEqual({
+      theme: "system",
+      sendWithEnter: true,
+      defaultModelId: null,
+    });
+    first.updateUserSettings({
+      theme: "light",
+      sendWithEnter: false,
+      defaultModelId: "model-a",
+    });
+    first.close();
+
+    const second = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    expect(second.getUserSettings()).toEqual({
+      theme: "light",
+      sendWithEnter: false,
+      defaultModelId: "model-a",
+    });
+    second.close();
+  });
 });

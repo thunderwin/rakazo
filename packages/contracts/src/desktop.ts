@@ -75,6 +75,12 @@ export interface DesktopLocalCreateBotInput {
   disabledBuiltinTools?: string[];
 }
 
+export interface DesktopLocalUserSettings {
+  theme: "system" | "light" | "dark";
+  sendWithEnter: boolean;
+  defaultModelId: string | null;
+}
+
 export interface DesktopLocalRunStarted {
   runId: string;
   botId: string;
@@ -109,6 +115,7 @@ export interface RakazoDesktopLocal {
   bots: {
     list: () => Promise<DesktopLocalBot[]>;
     create: (input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;
+    update: (botId: string, input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;
   };
   messages: {
     list: (botId: string) => Promise<DesktopLocalMessage[]>;
@@ -133,6 +140,10 @@ export interface RakazoDesktopLocal {
     cancel: (runId: string) => Promise<void>;
     onStarted: (listener: (run: DesktopLocalRunStarted) => void) => () => void;
     onEvent: (listener: (update: DesktopLocalRunEvent) => void) => () => void;
+  };
+  settings: {
+    get: () => Promise<DesktopLocalUserSettings>;
+    update: (input: Partial<DesktopLocalUserSettings>) => Promise<DesktopLocalUserSettings>;
   };
 }
 

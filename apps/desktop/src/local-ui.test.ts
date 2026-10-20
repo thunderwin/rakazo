@@ -160,6 +160,110 @@ describe("desktop local UI", () => {
     dom.window.close();
   });
 
+  it("saves client and bot settings locally", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const updateSettings = vi.fn(async (input) => ({
+      theme: input.theme,
+      sendWithEnter: input.sendWithEnter,
+      defaultModelId: input.defaultModelId,
+    }));
+    const updateBot = vi.fn(async () => bot);
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        signUp: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: {
+        list: vi.fn(async () => [bot]),
+        create: vi.fn(async () => bot),
+        update: updateBot,
+      },
+      messages: { list: vi.fn(async () => []), send: vi.fn() },
+      settings: {
+        get: vi.fn(async () => ({
+          theme: "system",
+          sendWithEnter: true,
+          defaultModelId: null,
+        })),
+        update: updateSettings,
+      },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("settings-open")?.hasAttribute("hidden")).toBe(
+        false,
+      ),
+    );
+    (dom.window.document.getElementById("settings-open") as HTMLButtonElement).click();
+    (dom.window.document.getElementById("settings-default-model") as HTMLInputElement).value =
+      "default-model";
+    (dom.window.document.getElementById("settings-theme") as HTMLSelectElement).value = "light";
+    (dom.window.document.getElementById("settings-enter") as HTMLInputElement).checked = false;
+    (dom.window.document.getElementById("bot-settings-name") as HTMLInputElement).value = "Renamed";
+    (dom.window.document.getElementById("bot-settings-model") as HTMLInputElement).value =
+      "bot-model";
+    dom.window.document
+      .getElementById("settings-form")
+      ?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith({
+        theme: "light",
+        sendWithEnter: false,
+        defaultModelId: "default-model",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(updateBot).toHaveBeenCalledWith(
+        "bot-1",
+        expect.objectContaining({ name: "Renamed", modelId: "bot-model" }),
+      ),
+    );
+    dom.window.close();
+  });
+
+  it("keeps a send error visible after refreshing the thread", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({ signedIn: true, serverUrl: null })),
+        login: vi.fn(),
+        signUp: vi.fn(),
+        logout: vi.fn(),
+      },
+      bots: { list: vi.fn(async () => [bot]), create: vi.fn(async () => bot) },
+      messages: {
+        list: vi.fn(async () => []),
+        send: vi.fn(async () => {
+          throw new Error("provider failed");
+        }),
+      },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.querySelector(".bot")?.textContent).toBe("Chief"),
+    );
+    (dom.window.document.getElementById("message-text") as HTMLTextAreaElement).value = "Hello";
+    dom.window.document
+      .getElementById("composer")
+      ?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("status")?.textContent).toBe("provider failed"),
+    );
+    dom.window.close();
+  });
+
   it("streams run events and stops the active run", async () => {
     const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
     const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
