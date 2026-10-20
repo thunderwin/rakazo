@@ -932,14 +932,18 @@ function requireLocalRuntime(): LocalRuntimeService {
 async function closeLocalRuntime(): Promise<void> {
   localRuntimeGeneration += 1;
   const service = localRuntimeService;
-  const runs = [...activeLocalRuns];
   localRuntimeService = undefined;
   localRuntimeAccountId = null;
+  await abortActiveLocalRuns(service);
+  service?.close();
+}
+
+async function abortActiveLocalRuns(service = localRuntimeService): Promise<void> {
+  const runs = [...activeLocalRuns];
   activeLocalRuns.clear();
   if (service) {
     await Promise.allSettled(runs.map((runId) => service.abort(runId)));
   }
-  service?.close();
 }
 
 async function startLocalRuntime(accountId: string): Promise<void> {
@@ -1047,7 +1051,15 @@ function installLocalIpc() {
 
   ipcMain.handle("desktop.local.auth.status", async (event) => {
     requireLocalWindow(event);
-    return localAuth ? localAuth.status() : { signedIn: false, serverUrl: null, userId: null };
+    return localAuth
+      ? localAuth.status()
+      : {
+          signedIn: false,
+          serverUrl: null,
+          userId: null,
+          email: null,
+          name: null,
+        };
   });
   ipcMain.handle("desktop.local.auth.login", async (event, email: unknown, password: unknown) => {
     requireLocalWindow(event);
@@ -1064,6 +1076,25 @@ function installLocalIpc() {
       throw error;
     }
   });
+  ipcMain.handle(
+    "desktop.local.auth.signUp",
+    async (event, name: unknown, email: unknown, password: unknown) => {
+      requireLocalWindow(event);
+      const session = await requireLocalAuth().signUp(
+        localString(name, "Name", 200),
+        localString(email, "Email", 320),
+        localString(password, "Password", 1000),
+      );
+      try {
+        await startLocalRuntime(session.userId);
+      } catch (error) {
+        await requireLocalAuth()
+          .signOut()
+          .catch(() => undefined);
+        throw error;
+      }
+    },
+  );
   ipcMain.handle("desktop.local.auth.logout", async (event) => {
     requireLocalWindow(event);
     await closeLocalRuntime();

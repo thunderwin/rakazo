@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     auth: {
       status: () => ipcRenderer.invoke("desktop.local.auth.status"),
       login: (email, password) => ipcRenderer.invoke("desktop.local.auth.login", email, password),
+      signUp: (name, email, password) =>
+        ipcRenderer.invoke("desktop.local.auth.signUp", name, email, password),
       logout: () => ipcRenderer.invoke("desktop.local.auth.logout"),
     },
     bots: {

@@ -53,8 +53,12 @@
 
         <section id="login" class="login" hidden>
           <form id="login-form" class="login-card">
-            <h2>Sign in</h2>
+            <h2 id="login-title">Sign in</h2>
             <p id="login-server"></p>
+            <label id="login-name-field" hidden>
+              Name
+              <input id="login-name" type="text" autocomplete="name" maxlength="200" />
+            </label>
             <label>
               Email
               <input id="login-email" type="email" autocomplete="username" required />
@@ -70,6 +74,7 @@
               />
             </label>
             <button id="login-submit" type="submit">Sign in</button>
+            <button id="login-toggle" type="button">Create account</button>
             <p id="login-error" class="login-error" role="alert"></p>
           </form>
         </section>

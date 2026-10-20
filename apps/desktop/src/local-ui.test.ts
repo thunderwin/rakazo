@@ -118,6 +118,48 @@ describe("desktop local UI", () => {
     dom.window.close();
   });
 
+  it("creates an account from the local sign-in card", async () => {
+    const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
+    const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");
+    const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/" });
+    const signUp = vi.fn(async () => undefined);
+    const api = {
+      auth: {
+        status: vi.fn(async () => ({
+          signedIn: false,
+          serverUrl: "https://app.example.com",
+          userId: null,
+          email: null,
+          name: null,
+        })),
+        login: vi.fn(),
+        signUp,
+        logout: vi.fn(),
+      },
+      bots: { list: vi.fn(async () => [bot]), create: vi.fn(async () => bot) },
+      messages: { list: vi.fn(async () => []), send: vi.fn() },
+    };
+    Object.assign(dom.window, { rakazoDesktop: { platform: "linux", local: api } });
+
+    dom.window.eval(script);
+    await vi.waitFor(() =>
+      expect(dom.window.document.getElementById("login")?.hasAttribute("hidden")).toBe(false),
+    );
+    (dom.window.document.getElementById("login-toggle") as HTMLButtonElement).click();
+    (dom.window.document.getElementById("login-name") as HTMLInputElement).value = "New User";
+    (dom.window.document.getElementById("login-email") as HTMLInputElement).value =
+      "new@example.com";
+    (dom.window.document.getElementById("login-password") as HTMLInputElement).value = "password12";
+    dom.window.document
+      .getElementById("login-form")
+      ?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(signUp).toHaveBeenCalledWith("New User", "new@example.com", "password12"),
+    );
+    dom.window.close();
+  });
+
   it("streams run events and stops the active run", async () => {
     const html = await readFile(path.join(import.meta.dirname, "local.html"), "utf8");
     const script = await readFile(path.join(import.meta.dirname, "local.js"), "utf8");

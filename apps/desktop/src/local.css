@@ -266,6 +266,11 @@ button:disabled {
   gap: 6px;
 }
 
+.login-card button + button {
+  border-color: transparent;
+  background: transparent;
+}
+
 .login-card input {
   border: 1px solid var(--border);
   border-radius: 8px;

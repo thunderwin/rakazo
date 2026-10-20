@@ -16,6 +16,10 @@
   const loginEmail = document.getElementById("login-email");
   const loginPassword = document.getElementById("login-password");
   const loginSubmit = document.getElementById("login-submit");
+  const loginToggle = document.getElementById("login-toggle");
+  const loginTitle = document.getElementById("login-title");
+  const loginNameField = document.getElementById("login-name-field");
+  const loginName = document.getElementById("login-name");
   const loginError = document.getElementById("login-error");
   const loginServer = document.getElementById("login-server");
   const logoutButton = document.getElementById("logout");
@@ -28,6 +32,7 @@
   let liveText = "";
   let liveStatus = "";
   let hasServerUrl = false;
+  let signUpMode = false;
 
   function setStatus(message, isError = false) {
     statusElement.textContent = message ?? "";
@@ -176,7 +181,11 @@
     loginSubmit.disabled = true;
     loginError.textContent = "";
     try {
-      await api.auth.login(loginEmail.value, loginPassword.value);
+      if (signUpMode) {
+        await api.auth.signUp(loginName.value, loginEmail.value, loginPassword.value);
+      } else {
+        await api.auth.login(loginEmail.value, loginPassword.value);
+      }
       loginPassword.value = "";
       hideLogin();
       await refreshBots();
@@ -186,6 +195,16 @@
     } finally {
       loginSubmit.disabled = false;
     }
+  }
+
+  function setSignUpMode(next) {
+    signUpMode = next;
+    loginTitle.textContent = next ? "Create account" : "Sign in";
+    loginNameField.hidden = !next;
+    loginSubmit.textContent = next ? "Create account" : "Sign in";
+    loginToggle.textContent = next ? "Back to sign in" : "Create account";
+    loginError.textContent = "";
+    (next ? loginName : loginEmail).focus();
   }
 
   async function logout() {
@@ -286,6 +305,7 @@
     event.preventDefault();
     void login();
   });
+  loginToggle.addEventListener("click", () => setSignUpMode(!signUpMode));
   logoutButton.addEventListener("click", () => void logout());
   stopButton.addEventListener("click", () => void stopRun());
 

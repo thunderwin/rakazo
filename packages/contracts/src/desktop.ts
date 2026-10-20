@@ -99,8 +99,11 @@ export interface RakazoDesktopLocal {
       signedIn: boolean;
       serverUrl: string | null;
       userId: string | null;
+      email: string | null;
+      name: string | null;
     }>;
     login: (email: string, password: string) => Promise<void>;
+    signUp: (name: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
   };
   bots: {

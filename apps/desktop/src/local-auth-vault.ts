@@ -20,8 +20,16 @@ export function createSafeStorageVault(userDataDir: string): SessionVault {
         return typeof parsed.token === "string" &&
           parsed.token &&
           typeof parsed.userId === "string" &&
-          parsed.userId
-          ? { token: parsed.token, userId: parsed.userId }
+          parsed.userId &&
+          typeof parsed.email === "string" &&
+          parsed.email &&
+          typeof parsed.name === "string"
+          ? {
+              token: parsed.token,
+              userId: parsed.userId,
+              email: parsed.email,
+              name: parsed.name,
+            }
           : null;
       } catch {
         return null;

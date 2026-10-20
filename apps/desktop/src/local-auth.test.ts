@@ -22,7 +22,13 @@ describe("desktop local auth", () => {
   it("signs in with email/password and persists the session token", async () => {
     const vault = memoryVault();
     const fetchImpl = vi.fn(
-      async () => new Response(JSON.stringify({ token: "session-token", user: { id: "user-1" } })),
+      async () =>
+        new Response(
+          JSON.stringify({
+            token: "session-token",
+            user: { id: "user-1", email: "user@example.com", name: "User" },
+          }),
+        ),
     );
     const auth = new LocalAuth({
       serverUrl: "https://app.example.com",
@@ -44,8 +50,15 @@ describe("desktop local auth", () => {
       signedIn: true,
       serverUrl: "https://app.example.com",
       userId: "user-1",
+      email: "user@example.com",
+      name: "User",
     });
-    expect(vault.session).toEqual({ token: "session-token", userId: "user-1" });
+    expect(vault.session).toEqual({
+      token: "session-token",
+      userId: "user-1",
+      email: "user@example.com",
+      name: "User",
+    });
   });
 
   it("does not save a token when sign-in fails", async () => {
@@ -64,7 +77,12 @@ describe("desktop local auth", () => {
     const auth = new LocalAuth({
       serverUrl: "https://app.example.com",
       vault,
-      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ token: "session-token" }))),
+      fetchImpl: vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ token: "session-token", user: { email: "user@example.com" } }),
+          ),
+      ),
     });
 
     await expect(auth.signIn("user@example.com", "password12")).rejects.toThrow(
@@ -74,7 +92,12 @@ describe("desktop local auth", () => {
   });
 
   it("clears the local token on sign-out", async () => {
-    const vault = memoryVault({ token: "session-token", userId: "user-1" });
+    const vault = memoryVault({
+      token: "session-token",
+      userId: "user-1",
+      email: "user@example.com",
+      name: "User",
+    });
     const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
     const auth = new LocalAuth({
       serverUrl: "https://app.example.com",
@@ -88,6 +111,31 @@ describe("desktop local auth", () => {
       expect.objectContaining({
         headers: expect.objectContaining({ authorization: "Bearer session-token" }),
       }),
+    );
+  });
+
+  it("creates an account and persists the returned session", async () => {
+    const vault = memoryVault();
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            token: "new-session",
+            user: { id: "user-2", email: "new@example.com", name: "New User" },
+          }),
+        ),
+    );
+    const auth = new LocalAuth({ serverUrl: "https://app.example.com", vault, fetchImpl });
+
+    await expect(auth.signUp("New User", "new@example.com", "password12")).resolves.toEqual({
+      token: "new-session",
+      userId: "user-2",
+      email: "new@example.com",
+      name: "New User",
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://app.example.com/api/auth/sign-up/email",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });

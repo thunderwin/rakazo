@@ -62,6 +62,7 @@ describe("desktop preload bridge", () => {
     await bridge.local?.bots.list();
     await bridge.local?.auth.status();
     await bridge.local?.auth.login("user@example.com", "password12");
+    await bridge.local?.auth.signUp("User", "user@example.com", "password12");
     await bridge.local?.auth.logout();
     await bridge.local?.bots.create({ name: "Chief" });
     await bridge.local?.messages.list("bot-1");
@@ -81,6 +82,7 @@ describe("desktop preload bridge", () => {
       "desktop.local.bots.list",
       "desktop.local.auth.status",
       "desktop.local.auth.login",
+      "desktop.local.auth.signUp",
       "desktop.local.auth.logout",
       "desktop.local.bots.create",
       "desktop.local.messages.list",
