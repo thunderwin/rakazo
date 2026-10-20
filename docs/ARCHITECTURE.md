@@ -146,7 +146,7 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 
 ### 4.3 本地数据库
 
-建议 SQLite，最低包含：
+使用 `better-sqlite3`（SQLite，WAL 模式，本地 runtime 作为唯一写入口），最低包含：
 
 - bots
 - threads

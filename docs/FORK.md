@@ -53,7 +53,7 @@ brand/                       品牌源文件和生成规则
 config/bot-templates/        内置 bot 模板
 config/prompts/              产品级 prompt
 packages/local-runtime/      Agent 循环和本地工具编排（计划）
-packages/local-db/           SQLite schema、迁移和 repository（计划）
+packages/local-db/           SQLite schema、迁移和 repository（v1 基础已建立）
 apps/desktop/src/runtime/    Electron 本地 runtime 入口（计划）
 apps/browser-extension/      浏览器扩展和 Native Messaging（计划）
 scripts/                     模板 seed、品牌生成、迁移脚本
@@ -129,7 +129,7 @@ docs/                        架构、V1 范围、fork 说明
 
 ### 6.2 本地数据库
 
-- SQLite 是唯一事实来源。
+- `better-sqlite3`（SQLite，WAL）是唯一事实来源；本地 runtime 是唯一写入口。
 - 存储 bot、thread、message、memory、routine、settings 和工具记录。
 - 升级时执行迁移；失败保留备份。
 - 提供导出/导入；V1 不做云端同步。
