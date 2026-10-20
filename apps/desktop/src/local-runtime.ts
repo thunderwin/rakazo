@@ -4,6 +4,7 @@ import {
   type ApproveLocalTool,
   createFileTools,
   createShellTool,
+  createSubagentTool,
   type LocalAgentEngine,
   type LocalAgentModel,
   type LocalRuntimeOptions,
@@ -31,6 +32,7 @@ export async function createDesktopLocalRuntime(
   const tools = new LocalToolRegistry(
     [
       createShellTool({ workspaceDir: account.workspaceDir }),
+      createSubagentTool(),
       ...createFileTools({ workspaceDir: account.workspaceDir }),
     ],
     options.approveTool,

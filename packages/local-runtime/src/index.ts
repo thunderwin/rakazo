@@ -28,6 +28,7 @@ export {
   type LocalConversationStore,
   SqliteConversationStore,
 } from "./store.js";
+export { createSubagentTool } from "./subagent-tool.js";
 export {
   type BotTemplate,
   loadBotTemplatesFromDirectory,

@@ -21,10 +21,11 @@ Current implementation:
 - `shell` tool scoped to the local workspace, with one-time Electron approval
 - `list_files`, `read_file`, and `write_file` with workspace containment and
   approval only for writes
+- `run_subagent` through the existing Pi nested-agent loop
 - live run events and cancellation in the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-App launch, browser bridging, memory, routines, and tool-run persistence are
-still separate migration work.
+Persistent peer-bot messaging, groups, app launch, browser bridging, memory,
+routines, and tool-run persistence are still separate migration work.

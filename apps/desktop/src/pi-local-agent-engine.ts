@@ -26,6 +26,11 @@ function toPiRequest(request: LocalAgentRunRequest): AgentRunRequest {
     tools: request.tools,
     model: request.model,
     contextStrategy: "current",
+    resolveModel: async (_provider, modelId) => ({
+      ...request.model,
+      provider: "openai-compatible",
+      id: modelId,
+    }),
     executeTool: request.executeTool,
   };
 }

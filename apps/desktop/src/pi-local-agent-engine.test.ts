@@ -47,6 +47,7 @@ describe("Pi local agent engine", () => {
       model: request.model,
       contextStrategy: "current",
     });
+    expect(toPiRequest(request).resolveModel).toBeTypeOf("function");
   });
 
   it("streams Pi events without hiding usage", async () => {
@@ -71,7 +72,9 @@ describe("Pi local agent engine", () => {
 
     for await (const event of engine.run(request, { userId: "user-1" })) events.push(event);
 
-    expect(seen).toEqual(toPiRequest(request));
+    const { resolveModel: _resolveModel, ...expectedRequest } = toPiRequest(request);
+    expect(seen).toMatchObject(expectedRequest);
+    expect(seen?.resolveModel).toBeTypeOf("function");
     expect(events).toEqual([
       { type: "text", text: "Working" },
       {
@@ -232,6 +235,135 @@ describe("Pi local agent engine", () => {
           expect.objectContaining({ type: "tool", name: "shell" }),
           { type: "text", text: "The probe worked." },
           expect.objectContaining({ type: "done" }),
+        ]),
+      );
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
+
+  it("runs a nested subagent through the local OpenAI-compatible gateway", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const server = createServer(async (request, response) => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of request) chunks.push(Buffer.from(chunk));
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+      bodies.push(body);
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      const chunk = (payload: unknown) => {
+        response.write(`data: ${JSON.stringify(payload)}\n\n`);
+      };
+      const messages = JSON.stringify(body.messages ?? []);
+      const isNested = messages.includes("SUBAGENT_TASK");
+      const isContinuation = messages.includes('"role":"tool"');
+      if (!isNested && !isContinuation) {
+        chunk({
+          id: "chatcmpl-subagent",
+          object: "chat.completion.chunk",
+          model: "model-a",
+          choices: [
+            {
+              index: 0,
+              delta: {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: "call-subagent",
+                    type: "function",
+                    function: {
+                      name: "run_subagent",
+                      arguments:
+                        '{"name":"inspector","task":"SUBAGENT_TASK","model_provider":"openai-compatible","model_id":"model-a"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: null,
+            },
+          ],
+        });
+        chunk({
+          id: "chatcmpl-subagent",
+          object: "chat.completion.chunk",
+          model: "model-a",
+          choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+        });
+      } else {
+        chunk({
+          id: isNested ? "chatcmpl-helper" : "chatcmpl-final",
+          object: "chat.completion.chunk",
+          model: "model-a",
+          choices: [
+            {
+              index: 0,
+              delta: {
+                role: "assistant",
+                content: isNested && !isContinuation ? "SUBAGENT_OK" : "Helper said SUBAGENT_OK",
+              },
+              finish_reason: null,
+            },
+          ],
+        });
+        chunk({
+          id: isNested ? "chatcmpl-helper" : "chatcmpl-final",
+          object: "chat.completion.chunk",
+          model: "model-a",
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        });
+      }
+      chunk({
+        id: "chatcmpl-usage",
+        object: "chat.completion.chunk",
+        model: "model-a",
+        choices: [],
+        usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 },
+      });
+      response.end("data: [DONE]\n\n");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as AddressInfo).port;
+    const executeTool = vi.fn(async () => ({ ok: true }));
+    const engine = new PiLocalAgentEngine(new PiAgentRuntime());
+
+    try {
+      const events = [];
+      for await (const event of engine.run({
+        ...request,
+        prompt: "Delegate this task.",
+        history: [],
+        tools: [
+          {
+            name: "run_subagent",
+            description: "Run a helper.",
+            inputSchema: {
+              type: "object",
+              properties: { name: { type: "string" }, task: { type: "string" } },
+              required: ["name", "task"],
+            },
+          },
+        ],
+        model: {
+          provider: "openai-compatible",
+          id: "model-a",
+          baseUrl: `http://127.0.0.1:${port}/v1/model/openai`,
+          apiKey: "test-token",
+          baseUrlIsExact: true,
+        },
+        executeTool,
+      })) {
+        events.push(event);
+      }
+
+      expect(bodies).toHaveLength(3);
+      expect(executeTool).not.toHaveBeenCalled();
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "subagent", status: "running" }),
+          expect.objectContaining({ type: "subagent", status: "completed" }),
+          { type: "text", text: "Helper said SUBAGENT_OK" },
         ]),
       );
     } finally {

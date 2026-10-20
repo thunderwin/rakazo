@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createShellTool, type ShellCommandResult } from "./shell-tool.js";
+import { createSubagentTool } from "./subagent-tool.js";
 import { LocalToolRegistry } from "./tools.js";
 
 const directories: string[] = [];
@@ -100,5 +101,16 @@ describe("local shell tool", () => {
     expect(
       registry.definitionsFor({ ...bot, disabledBuiltinTools: ["shell"] }).map((tool) => tool.name),
     ).toEqual([]);
+  });
+
+  it("exposes the Pi subagent tool without routing it through local approval", () => {
+    const registry = new LocalToolRegistry([createSubagentTool()], () => false);
+
+    expect(registry.definitionsFor(bot)).toEqual([
+      expect.objectContaining({
+        name: "run_subagent",
+        inputSchema: expect.objectContaining({ required: ["name", "task"] }),
+      }),
+    ]);
   });
 });

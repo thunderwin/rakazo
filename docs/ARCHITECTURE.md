@@ -163,10 +163,12 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   工作目录限定在本地 workspace。
 - `list_files`、`read_file`、`write_file` 已接入本地 workspace；只读工具不弹审批，
   写入和 shell 仍逐次审批。
+- `run_subagent` 已接入 Pi 现有嵌套 Agent 循环；它是一次 run 内的临时助手，不创建
+  独立 bot、thread 或电脑。
 - run 事件已通过 IPC 流到预览 UI，并支持按 run id 停止当前模型或工具执行。
 
-仍待迁移：应用启动、浏览器桥接、memory、routines、工具运行记录和完整的本地 Web
-UI/API。
+仍待迁移：持久 peer bot 消息、群聊/handoff、应用启动、浏览器桥接、memory、
+routines、工具运行记录和完整的本地 Web UI/API。
 
 ### 4.3 本地数据库
 
