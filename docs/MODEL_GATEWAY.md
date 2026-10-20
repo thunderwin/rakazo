@@ -127,7 +127,7 @@ Rakazo 只做必要处理：
 
 ### 客户端解析
 
-`packages/local-runtime` 的 OpenAI 客户端识别：
+桌面客户端的 Pi OpenAI-compatible provider 识别：
 
 - `choices[].delta.content`：文本
 - `choices[].delta.tool_calls`：工具调用，按 index 拼接 arguments
@@ -135,7 +135,13 @@ Rakazo 只做必要处理：
 - `[DONE]`
 - 错误帧或非 2xx
 
-工具调用在 V1 只被识别和保存，不在本任务执行 Pi 工具循环。
+Pi 在客户端完成工具循环。当前已接入 `shell`：模型发起调用后，本地 runtime 执行
+已获批准的工具，把结果作为 tool message 继续交给同一轮 Pi 循环。文件、应用和浏览器
+工具仍待接入；服务端只透传 OpenAI 协议，不执行任何工具。
+
+客户端请求仍只带 Better Auth session token。公开服务器地址由编译后的组合根提供，
+不是 bot 或模型返回的任意 URL。组合根把该地址标记为“精确 API 前缀”，避免 Pi/OpenAI
+SDK 再补一层 `/v1` 后请求成 `/v1/model/openai/v1/chat/completions`。
 
 ## 5. 错误映射
 
@@ -215,3 +221,4 @@ New API 的 `DEBUG=true` 会启用请求/响应正文调试输出；`LOG_DIR` �
 - New API 错误到 Rakazo 状态码的映射
 - 客户端断开取消上游
 - 未登录返回 401
+- 本地 Pi 请求映射、tool call 执行、工具审批和禁用工具过滤

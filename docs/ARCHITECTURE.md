@@ -4,7 +4,7 @@
 > `9221486`，核实日期 2026-10-20。
 >
 > **重要：本文把“V1 目标架构”和“当前上游实现”分开写。**
-> V1 目标尚未实现；当前代码仍然是服务器中心架构。
+> V1 目标尚未全部实现；客户端已迁移本地 Pi 循环和 `shell`，其余服务器中心路径仍在。
 
 ## 1. 决策摘要
 
@@ -68,9 +68,9 @@ V1 采用 **单设备 local-first**：
 模型网关会看到 prompt 和模型返回内容。这是计费、限流和风控的必要条件，V1 必须
 在隐私政策中明确说明。服务器不保存对话正文作为业务数据。
 
-## 3. 当前上游实现（as-is）
+## 3. 当前上游服务器路径（as-is）
 
-当前 Rakazo 不是 local-first，而是服务器中心架构：
+上游默认产品路径不是 local-first，而是服务器中心架构：
 
 ```text
 Desktop / Web / Mobile
@@ -106,7 +106,8 @@ API (Hono + oRPC) + Pi agent runtime
 - `packages/adapters/src/host-computer-server.ts`
 - `docs/computer-runtime.md`
 
-**结论：当前代码只能作为本地工具执行的起点，不能直接满足 V1 local-first。**
+**结论：这条上游服务器路径不能直接满足 V1 local-first。Fork 已在桌面客户端另建
+本地编排路径，复用 Pi runtime，而不是把 Prisma executor 搬进客户端。**
 
 ## 4. 组件职责
 
@@ -143,6 +144,20 @@ API (Hono + oRPC) + Pi agent runtime
 Local Agent Runtime 应作为独立进程或 Electron utility process 运行，避免阻塞渲染进程，
 也便于崩溃恢复和权限隔离。
 
+当前已建立的最小实现（核实日期 2026-10-20）：
+
+- `@rakazo/local-runtime` 把编排拆成 `LocalAgentEngine`、
+  `LocalConversationStore`、`LocalToolProvider` 三个端口。
+- `apps/desktop/src/pi-local-agent-engine.ts` 用现有 `PiAgentRuntime` 实现引擎端口。
+- 模型连接固定为 OpenAI-compatible，base URL 由组合根指向服务器网关；bot 只选择
+  model id，不能更改服务器地址或直接接触 New API。
+- SQLite 实现当前保存 bot、thread、message 和 settings。
+- 本地 `shell` 工具已接入 Pi 工具循环，并在 Electron 中逐次请求用户批准；命令的
+  工作目录限定在本地 workspace。
+
+仍待迁移：文件工具、应用启动、浏览器桥接、memory、routines、工具运行记录和完整的
+本地 Web UI/API。
+
 ### 4.3 本地数据库
 
 使用 `better-sqlite3`（SQLite，WAL 模式，本地 runtime 作为唯一写入口），最低包含：
@@ -163,6 +178,10 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 升级时执行迁移并保留备份。
 - 提供导出/恢复；V1 不做云端同步。
 - 本地数据库是唯一事实来源。
+
+当前 schema 已有 bots、threads、messages、settings 和 routines 表；repository
+覆盖 bots、threads、messages、settings。memory、tool runs 和 routines 的
+repository/本地调度尚未实现。
 
 ### 4.4 模型网关
 
@@ -198,10 +217,14 @@ Local Runtime
 
 ### 4.6 本地工具
 
-- `shell`：在用户电脑执行命令，需要显式授权和停止入口。
+- `shell`：已通过 `LocalToolRegistry` 在用户电脑执行命令；Electron 每次弹出
+  “Allow once”授权，拒绝后不运行。停止入口仍待接入 UI。
 - 文件：读写用户选择的工作区。
 - 应用启动和屏幕控制：按平台能力提供，并明确权限。
 - 高风险工具不能仅靠 prompt 约束，必须有工具级权限和服务端/本地审批策略。
+
+当前的 cwd 限制只约束命令的起始目录，不是文件系统沙箱；shell 的隔离边界仍是
+用户对每次执行的明确批准。
 
 ## 5. 认证、会话和计费
 
@@ -281,12 +304,13 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 
 ## 9. 从当前代码迁移
 
-这是重构，不是配置开关：
+这是重构，不是配置开关。V1 不迁移服务器端约一万行的 Prisma executor，而是在本地
+建立清晰的编排端口，并直接复用已经独立出来的 `PiAgentRuntime`：
 
-1. 把 `packages/adapters/src/executor.ts` 从 Prisma 解耦，改为 repository 接口。
-2. 新增本地 SQLite repository，实现 bot/thread/message/memory/routine。
-3. 新增 Local Agent Runtime 入口（Electron utility process 或本地 API）。
-4. 让 Web UI 连接本地 API/IPC，而不是远程 API。
+1. 已定义本地 engine/store/tool 端口，并用 Pi adapter 组合；不复制 executor。
+2. SQLite store 已覆盖 bot/thread/message；memory、routine 和 tool run 仍待实现。
+3. 本地 runtime 已接入 Electron 主进程；独立 utility process 仍待拆分。
+4. 现有 Web UI 连接本地 API/IPC 尚未完成，当前仍是 `local.html` 预览。
 5. 服务器 API 只保留 auth、New API 映射、model gateway、telemetry。
 6. 把 bot 模板和 prompt 打包到客户端，seed 到本地 SQLite。
 7. 浏览器扩展 + Native Messaging。

@@ -1,6 +1,6 @@
 # Fork 与产品化流水线
 
-> 状态：初始化文档。V1 方向已确认，代码尚未改造。
+> 状态：V1 方向已确认，本地编排基础和单工具闭环已建立，其余能力分阶段迁移。
 > 品牌名、域名、登录方式、模型供应商和具体 bot 模板仍待确认。
 
 ## 1. 为什么 fork
@@ -52,9 +52,10 @@ V1 预期新增或维护：
 brand/                       品牌源文件和生成规则
 config/bot-templates/        内置 bot 模板
 config/prompts/              产品级 prompt
-packages/local-runtime/      Agent 循环和本地工具编排（v1 文本链路基础已建立）
+packages/local-runtime/      Agent、store、tool 端口和本地编排（基础已建立）
 packages/local-db/           SQLite schema、迁移和 repository（v1 基础已建立）
-apps/desktop/src/runtime/    Electron 本地 runtime 入口（计划）
+apps/desktop/src/pi-local-agent-engine.ts
+                             Pi engine adapter 和 Electron 组合根
 apps/browser-extension/      浏览器扩展和 Native Messaging（计划）
 scripts/                     模板 seed、品牌生成、迁移脚本
 docs/                        架构、V1 范围、fork 说明
@@ -122,9 +123,10 @@ docs/                        架构、V1 范围、fork 说明
 ### 6.1 本地 runtime
 
 - 运行在 Electron utility process 或独立本地进程。
-- 复用 `packages/core`、`packages/adapters`、`packages/contracts` 中可复用的部分。
-- 先抽 repository 接口，再把 `executor.ts` 与 Prisma 解耦。
-- 本地工具包括 shell、文件、应用启动和浏览器桥接。
+- 当前运行在 Electron 主进程；utility process 拆分仍待完成。
+- `@rakazo/local-runtime` 定义 Agent、store、tool 三个端口，不依赖 Prisma。
+- `PiLocalAgentEngine` 复用现有的 `PiAgentRuntime`，没有复制服务器 executor。
+- `shell` 已接入 Pi tool loop 和逐次 Electron 授权；文件、应用和浏览器工具待迁移。
 - 所有高风险工具都要有授权、可见状态和停止入口。
 
 ### 6.2 本地数据库
@@ -291,7 +293,7 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
   access token 只存在服务器。
 - 本地数据库和备份加密。
 - 浏览器扩展按站点授权，不静默读取所有页面。
-- `shell` 默认免审批的问题必须在本地 runtime 中修正，至少提供强制审批或白名单。
+- 本地 `shell` 已改为逐次审批；仍需补齐任务停止入口和更细的工具策略。
 - 遥测只回传元数据，默认不回传对话正文和文件内容。
 
 ## 11. 待确认
