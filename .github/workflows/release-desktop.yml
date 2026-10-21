@@ -127,6 +127,8 @@ jobs:
         run: pnpm --filter @rakazo/web build && pnpm --filter @rakazo/desktop build
         env:
           RAKAZO_ALLOW_DEV_SECRETS: "1"
+          RAKAZO_BUILD_SERVER_URL: ${{ vars.RAKAZO_SERVER_URL }}
+          RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY: ${{ vars.RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY }}
 
       - name: Require macOS signing and notarization credentials
         if: runner.os == 'macOS'

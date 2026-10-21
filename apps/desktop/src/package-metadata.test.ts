@@ -13,6 +13,11 @@ const packageJson = JSON.parse(
   };
 };
 
+const buildScript = readFileSync(
+  path.resolve(import.meta.dirname, "../scripts/build.mjs"),
+  "utf8",
+);
+
 describe("desktop package metadata", () => {
   it("shares the customer-facing name between Electron and electron-builder", () => {
     expect(packageJson.productName).toBe("ericBot");
@@ -24,5 +29,14 @@ describe("desktop package metadata", () => {
     expect(packageJson.build?.publish).toEqual([
       { provider: "github", owner: "thunderwin", repo: "rakazo" },
     ]);
+  });
+
+  it("supports build-time server and manifest verification configuration", () => {
+    expect(buildScript).toContain("RAKAZO_BUILD_SERVER_URL");
+    expect(buildScript).toContain("RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY");
+    expect(buildScript).toContain('define["process.env.RAKAZO_SERVER_URL"]');
+    expect(buildScript).toContain(
+      'define["process.env.RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY"]',
+    );
   });
 });
