@@ -94,7 +94,7 @@ docs/                        架构、V1 范围、fork 说明
 - OIDC/SSO（如启用）
 - `NEW_API_BASE_URL`、`NEW_API_ADMIN_TOKEN`、`NEW_API_ADMIN_USER_ID`、
   `NEW_API_DEFAULT_MODEL`
-- 多企业、团队、RBAC、管理员控制面和 Client Manifest 分发
+- 多企业后端、单账号单企业、RBAC、管理员控制面和 Client Manifest 分发
 - 崩溃/监控上报
 
 ### 4.3 不要改的东西

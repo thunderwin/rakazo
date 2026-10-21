@@ -45,9 +45,10 @@ Product intent:
   encryption key, or sandbox supervisor token.
 - V1 is single-device. Do not add multi-device sync, shared human chat channels,
   shared computers, or mobile clients without a new documented decision.
-- The server control plane is multi-enterprise for membership, RBAC, assignments,
-  published templates, Knowledge, Skills, and routines. This does not imply shared
-  human chat messages or shared computers; those require a separate decision.
+- The server control plane can host multiple organizations, but a user account has at
+  most one active organization and the client has no organization switcher. The
+  organization is an account attribute used for billing and assigned presets. This
+  does not imply shared human chat messages or shared computers.
 - V1 ships as the desktop client only. Do not build or connect a separate web
   product unless a new decision expands the scope.
 - Branding lives in `brand/` and `packages/ui-tokens`; generated icons and CSS
