@@ -73,3 +73,56 @@ export interface Routine {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface LocalGroup {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GroupMember {
+  groupId: string;
+  botId: string;
+  position: number;
+  createdAt: string;
+}
+
+export interface LocalGroupWithMembers extends LocalGroup {
+  members: Bot[];
+}
+
+export interface CreateGroupInput {
+  name: string;
+  description?: string;
+  color?: string;
+  botIds: string[];
+}
+
+export interface GroupThread {
+  id: string;
+  groupId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GroupMessage {
+  id: string;
+  threadId: string;
+  sequence: number;
+  role: MessageRole;
+  botId: string | null;
+  blocks: JsonValue[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppendGroupMessageInput {
+  threadId: string;
+  role: MessageRole;
+  botId?: string | null;
+  blocks: JsonValue[];
+}

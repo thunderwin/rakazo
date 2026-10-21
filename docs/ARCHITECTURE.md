@@ -172,6 +172,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - `message_bot` 已支持持久 bot 之间的私聊委派：请求和回复写入本地
   `peer_messages`，目标 bot 在自己的 DM thread 中执行，调用链最大 6 个 bot 并阻止
   循环。
+- 本地群聊已支持 2–10 个 bot、共享 group thread、`@BotName`/`@everyone` 唤醒、
+  `handoff_to_bot`、loop/6-hop 限制、真实 bot 作者身份和 Stop 清理。
 - 原版 React 视觉组件已接入独立本地 renderer：electron 打包 `apps/web/dist-local`，
   UI 通过本地 IPC 使用 SQLite/runtime，不访问服务端 oRPC。
 - 本地 renderer 复用 `BotAvatar`、原版 mention picker/键盘逻辑、`ChatMarkdown` 和共享
@@ -182,7 +184,7 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 本地设置页可以复制诊断信息，包含版本、平台、登录状态、活动 run、浏览器桥和
   更新状态；不包含消息正文、session token、New API token 或浏览器 Cookie。
 
-仍待迁移：群聊和 `handoff_to_bot`、fleet 管理、应用启动、桌面操作、memory、
+仍待迁移：fleet 管理、应用启动、桌面操作、memory、
 routines 和工具运行记录。服务器专属的团队、电脑、账号管理页面不会进入本地 renderer。
 
 ### 4.3 本地数据库
@@ -206,8 +208,9 @@ routines 和工具运行记录。服务器专属的团队、电脑、账号管�
 - 提供导出/恢复；V1 不做云端同步。
 - 本地数据库是唯一事实来源。
 
-当前 schema 已有 bots、threads、messages、peer_messages、settings 和 routines 表；
-repository 覆盖 bots、threads、messages、peer_messages、settings。memory、tool runs 和 routines 的
+当前 schema 已有 bots、threads、messages、chat_groups、group_members、group_threads、
+group_messages、peer_messages、settings 和 routines 表；repository 覆盖 bots、threads、
+messages、群聊、peer_messages、settings。memory、tool runs 和 routines 的
 repository/本地调度尚未实现。
 
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
@@ -415,5 +418,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/BROWSER.md`：浏览器扩展、配对、工具和权限边界。
 - `docs/COMPUTER_USE.md`：桌面 computer use 设计草案。
 - `docs/LOCAL_UI.md`：本地 React UI 的组件来源、mention、错误和验证。
+- `docs/GROUPS.md`：本地群聊、群消息和 `handoff_to_bot`。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

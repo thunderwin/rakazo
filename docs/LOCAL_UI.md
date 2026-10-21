@@ -56,6 +56,8 @@ apps/web/src/local-main.tsx
 - 用户消息保持纯文本，但会对已知 bot 的 `@Name` 做身份高亮。
 - 流式回复继续使用 Markdown streaming 渲染。
 - 工具调用以可折叠的次要信息显示，不抢占正文层级。
+- 群聊使用 GroupAvatar；每条 bot 消息显示真实成员身份，handoff 使用独立事件卡片。
+- 群聊 mention picker 只选择当前群成员，并支持 `@everyone`。
 
 ## 4. 开发和验证
 
@@ -67,5 +69,5 @@ pnpm --filter @rakazo/desktop build
 ```
 
 组件测试覆盖 mention 选择与发送、BotAvatar/Markdown 渲染、模型额度错误、Retry
-保留输入和设置/浏览器状态。桌面构建继续由 `@rakazo/desktop` 的 `prebuild` 自动生成
-`dist-local`。
+保留输入、群聊与 handoff 展示以及设置/浏览器状态。桌面构建继续由
+`@rakazo/desktop` 的 `prebuild` 自动生成 `dist-local`。

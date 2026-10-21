@@ -44,6 +44,18 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       list: (botId) => ipcRenderer.invoke("desktop.local.messages.list", botId),
       send: (botId, text) => ipcRenderer.invoke("desktop.local.messages.send", botId, text),
     },
+    groups: {
+      list: () => ipcRenderer.invoke("desktop.local.groups.list"),
+      create: (input) => ipcRenderer.invoke("desktop.local.groups.create", input),
+      update: (groupId, input) => ipcRenderer.invoke("desktop.local.groups.update", groupId, input),
+      remove: (groupId) => ipcRenderer.invoke("desktop.local.groups.remove", groupId),
+      messages: {
+        list: (groupId) => ipcRenderer.invoke("desktop.local.groups.messages.list", groupId),
+        send: (groupId, text) =>
+          ipcRenderer.invoke("desktop.local.groups.messages.send", groupId, text),
+      },
+      cancel: (groupId) => ipcRenderer.invoke("desktop.local.groups.cancel", groupId),
+    },
     runs: {
       cancel: (runId) => ipcRenderer.invoke("desktop.local.runs.cancel", runId),
       onStarted: (listener) => {

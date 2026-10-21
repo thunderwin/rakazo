@@ -1,20 +1,29 @@
 import type { DesktopBrowserBridgeStatus, DesktopLocalRunStarted } from "@rakazo/contracts";
 import { GROK_COLOR_LIST } from "@rakazo/core";
-import { BotAvatar, Button, Skeleton } from "@rakazo/ui-web";
-import { AlertTriangle, Bot, Globe2, LogOut, Plus, Settings, X } from "lucide-react";
+import { BotAvatar, Button, GroupAvatar, Skeleton } from "@rakazo/ui-web";
+import { AlertTriangle, Bot, Globe2, LogOut, Plus, Settings, Users, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LocalAuthScreen } from "./LocalAuthScreen";
 import { LocalComposer } from "./LocalComposer";
+import { LocalGroupDialog } from "./LocalGroupDialog";
 import { LocalLiveMessage, LocalMessageView } from "./LocalMessageView";
 import { LocalSettingsDialog } from "./LocalSettings";
 import {
   type LocalBot,
   type LocalBridge,
+  type LocalGroup,
+  type LocalGroupMessage,
   type LocalMessage,
   type LocalRunEvent,
   type LocalSettings,
   localErrorMessage,
 } from "./types";
+
+type LocalTarget = { kind: "bot"; id: string } | { kind: "group"; id: string };
+
+function targetKey(target: LocalTarget | null): string | null {
+  return target ? `${target.kind}:${target.id}` : null;
+}
 
 const DEFAULT_SETTINGS: LocalSettings = {
   theme: "system",
@@ -66,6 +75,8 @@ function toolActivity(name: string | undefined): string {
       return "Scrolling the browser page";
     case "browser_borrow_tab":
       return "Taking over an existing tab";
+    case "handoff_to_bot":
+      return "Handing off to another bot";
     default:
       return name ? `Using ${name}` : "Working";
   }
@@ -133,13 +144,16 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     serverUrl: string | null;
   } | null>(null);
   const [bots, setBots] = useState<LocalBot[]>([]);
-  const [activeBotId, setActiveBotId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const [groups, setGroups] = useState<LocalGroup[]>([]);
+  const [activeTarget, setActiveTarget] = useState<LocalTarget | null>(null);
+  const [messages, setMessages] = useState<Array<LocalMessage | LocalGroupMessage>>([]);
   const [settings, setSettings] = useState<LocalSettings>(DEFAULT_SETTINGS);
   const [systemLight, setSystemLight] = useState(
     () => window.matchMedia("(prefers-color-scheme: light)").matches,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newBotName, setNewBotName] = useState("");
   const [creating, setCreating] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -148,18 +162,30 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   const [running, setRunning] = useState(false);
   const [liveText, setLiveText] = useState("");
   const [liveStatus, setLiveStatus] = useState("Thinking");
+  const [liveBotId, setLiveBotId] = useState<string | null>(null);
   const [pendingText, setPendingText] = useState("");
   const [browser, setBrowser] = useState<DesktopBrowserBridgeStatus | null>(null);
-  const activeBotIdRef = useRef<string | null>(null);
+  const activeTargetRef = useRef<LocalTarget | null>(null);
   const activeRunId = useRef<string | null>(null);
   const stopped = useRef(false);
   const messageScroller = useRef<HTMLDivElement>(null);
 
-  const activeBot = bots.find((bot) => bot.id === activeBotId) ?? null;
+  const activeBot =
+    activeTarget?.kind === "bot" ? (bots.find((bot) => bot.id === activeTarget.id) ?? null) : null;
+  const activeGroup =
+    activeTarget?.kind === "group"
+      ? (groups.find((group) => group.id === activeTarget.id) ?? null)
+      : null;
+  const editingGroup = editingGroupId
+    ? (groups.find((group) => group.id === editingGroupId) ?? null)
+    : null;
+  const activeMembers = activeGroup?.members ?? bots;
+  const activeName = activeGroup?.name ?? activeBot?.name ?? "chat";
+  const liveBot = bots.find((bot) => bot.id === liveBotId) ?? null;
 
   useEffect(() => {
-    activeBotIdRef.current = activeBotId;
-  }, [activeBotId]);
+    activeTargetRef.current = activeTarget;
+  }, [activeTarget]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: light)");
@@ -201,17 +227,23 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   }, [api]);
 
   useEffect(() => {
-    if (!api || !activeBotId) {
+    if (!api || !activeTarget) {
       setMessages([]);
       return;
     }
     let cancelled = false;
     setLoadingMessages(true);
     setError(null);
-    void api.messages
-      .list(activeBotId)
+    const expectedTarget = targetKey(activeTarget);
+    const loading =
+      activeTarget.kind === "bot"
+        ? api.messages.list(activeTarget.id)
+        : api.groups.messages.list(activeTarget.id);
+    void loading
       .then((next) => {
-        if (!cancelled && activeBotIdRef.current === activeBotId) setMessages(next);
+        if (!cancelled && targetKey(activeTargetRef.current) === expectedTarget) {
+          setMessages(next);
+        }
       })
       .catch((cause) => {
         if (cancelled) return;
@@ -227,7 +259,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     return () => {
       cancelled = true;
     };
-  }, [activeBotId, api, messageReload]);
+  }, [activeTarget, api, messageReload]);
 
   useEffect(() => {
     if (!api) return;
@@ -248,6 +280,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     if (!api) return;
     const stopStart = api.runs.onStarted((run: DesktopLocalRunStarted) => {
       activeRunId.current = run.runId;
+      setLiveBotId(run.botId);
       setRunning(true);
       setLiveText("");
       setLiveStatus("Thinking");
@@ -280,7 +313,11 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
 
   async function loadWorkspace() {
     if (!api) return;
-    const [nextSettings, listedBots] = await Promise.all([api.settings.get(), api.bots.list()]);
+    const [nextSettings, listedBots, listedGroups] = await Promise.all([
+      api.settings.get(),
+      api.bots.list(),
+      api.groups.list(),
+    ]);
     let nextBots = listedBots;
     if (nextBots.length === 0) {
       const created = await api.bots.create({
@@ -292,9 +329,18 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     }
     setSettings(nextSettings);
     setBots(nextBots);
-    setActiveBotId((current) =>
-      current && nextBots.some((bot) => bot.id === current) ? current : nextBots[0]!.id,
-    );
+    setGroups(listedGroups);
+    setActiveTarget((current) => {
+      if (current?.kind === "bot" && nextBots.some((bot) => bot.id === current.id)) {
+        return current;
+      }
+      if (current?.kind === "group" && listedGroups.some((group) => group.id === current.id)) {
+        return current;
+      }
+      if (nextBots[0]) return { kind: "bot", id: nextBots[0].id };
+      if (listedGroups[0]) return { kind: "group", id: listedGroups[0].id };
+      return null;
+    });
   }
 
   async function afterSignIn() {
@@ -309,21 +355,33 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   }
 
   async function sendText(text: string): Promise<boolean> {
-    if (!api || !activeBotId) return false;
+    if (!api || !activeTarget) return false;
+    const target = activeTarget;
+    const expectedTarget = targetKey(target);
     stopped.current = false;
     setError(null);
     setPendingText(text);
     setRunning(true);
+    setLiveBotId(target.kind === "bot" ? target.id : null);
     setLiveText("");
     setLiveStatus("Thinking");
     try {
-      await api.messages.send(activeBotId, text);
-      const next = await api.messages.list(activeBotId);
-      if (activeBotIdRef.current === activeBotId) setMessages(next);
+      if (target.kind === "bot") await api.messages.send(target.id, text);
+      else await api.groups.messages.send(target.id, text);
+      const next =
+        target.kind === "bot"
+          ? await api.messages.list(target.id)
+          : await api.groups.messages.list(target.id);
+      if (targetKey(activeTargetRef.current) === expectedTarget) setMessages(next);
       return true;
     } catch (cause) {
-      const nextMessages = await api.messages.list(activeBotId).catch(() => null);
-      if (nextMessages && activeBotIdRef.current === activeBotId) setMessages(nextMessages);
+      const nextMessages = await (target.kind === "bot"
+        ? api.messages.list(target.id)
+        : api.groups.messages.list(target.id)
+      ).catch(() => null);
+      if (nextMessages && targetKey(activeTargetRef.current) === expectedTarget) {
+        setMessages(nextMessages);
+      }
       if (!stopped.current) {
         const presented = presentError(localErrorMessage(cause));
         setError({
@@ -334,6 +392,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
       return false;
     } finally {
       activeRunId.current = null;
+      setLiveBotId(null);
       setRunning(false);
       setPendingText("");
       setLiveText("");
@@ -342,11 +401,12 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   }
 
   async function stop() {
-    if (!api || !activeRunId.current) return;
+    if (!api || !activeTarget) return;
     stopped.current = true;
     setLiveStatus("Stopping");
     try {
-      await api.runs.cancel(activeRunId.current);
+      if (activeTarget.kind === "group") await api.groups.cancel(activeTarget.id);
+      else if (activeRunId.current) await api.runs.cancel(activeRunId.current);
     } catch (cause) {
       setError(presentError(localErrorMessage(cause)));
     }
@@ -360,11 +420,29 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
       const created = await api.bots.create({ name: newBotName.trim(), color });
       setBots((current) => [...current, created]);
       setNewBotName("");
-      setActiveBotId(created.id);
+      setActiveTarget({ kind: "bot", id: created.id });
     } catch (cause) {
       setError(presentError(localErrorMessage(cause)));
     } finally {
       setCreating(false);
+    }
+  }
+
+  function handleGroupSaved(group: LocalGroup) {
+    setGroups((current) => {
+      const existing = current.some((item) => item.id === group.id);
+      return existing
+        ? current.map((item) => (item.id === group.id ? group : item))
+        : [group, ...current];
+    });
+    setActiveTarget({ kind: "group", id: group.id });
+    setEditingGroupId(null);
+  }
+
+  function handleGroupDeleted(groupId: string) {
+    setGroups((current) => current.filter((group) => group.id !== groupId));
+    if (activeTarget?.kind === "group" && activeTarget.id === groupId) {
+      setActiveTarget(bots[0] ? { kind: "bot", id: bots[0].id } : null);
     }
   }
 
@@ -373,8 +451,9 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     await api.auth.logout().catch(() => undefined);
     setAuth((current) => (current ? { ...current, signedIn: false } : current));
     setBots([]);
+    setGroups([]);
     setMessages([]);
-    setActiveBotId(null);
+    setActiveTarget(null);
   }
 
   if (loading && !auth) {
@@ -424,13 +503,14 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     );
   }
 
-  const optimisticMessage: LocalMessage | null =
-    pendingText && activeBot
+  const optimisticMessage: LocalMessage | LocalGroupMessage | null =
+    pendingText && activeTarget
       ? {
           id: "local-optimistic",
           threadId: "",
           sequence: Number.MAX_SAFE_INTEGER,
           role: "user",
+          ...(activeTarget.kind === "group" ? { botId: null } : {}),
           blocks: [{ kind: "text", text: pendingText }],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -481,24 +561,84 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                 <Plus size={13} />
               </Button>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-1.5 w-full justify-start text-muted-foreground"
+              disabled={bots.length < 2}
+              title={bots.length < 2 ? "Create at least two bots first" : undefined}
+              onClick={() => {
+                setEditingGroupId(null);
+                setGroupDialogOpen(true);
+              }}
+            >
+              <Users size={13} />
+              New group
+            </Button>
           </div>
 
           <nav
             className="rk-scroll mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-3"
             aria-label="Bots"
           >
-            {bots.map((bot) => (
+            {groups.length > 0 ? (
+              <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                Groups
+              </p>
+            ) : null}
+            {groups.map((group) => (
               <button
-                key={bot.id}
+                key={group.id}
                 type="button"
-                aria-current={bot.id === activeBotId ? "page" : undefined}
+                aria-current={
+                  activeTarget?.kind === "group" && activeTarget.id === group.id
+                    ? "page"
+                    : undefined
+                }
                 className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 ${
-                  bot.id === activeBotId
+                  activeTarget?.kind === "group" && activeTarget.id === group.id
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "hover:bg-sidebar-accent/55"
                 }`}
                 onClick={() => {
-                  setActiveBotId(bot.id);
+                  setActiveTarget({ kind: "group", id: group.id });
+                  setError(null);
+                }}
+              >
+                <GroupAvatar
+                  members={group.members.map((member) => ({
+                    name: member.name,
+                    color: member.color,
+                    botId: member.id,
+                  }))}
+                  size={30}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium">{group.name}</span>
+                  <span className="block truncate text-[10.5px] text-muted-foreground">
+                    {group.members.length} bots
+                  </span>
+                </span>
+              </button>
+            ))}
+            <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              Chats
+            </p>
+            {bots.map((bot) => (
+              <button
+                key={bot.id}
+                type="button"
+                aria-current={
+                  activeTarget?.kind === "bot" && activeTarget.id === bot.id ? "page" : undefined
+                }
+                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                  activeTarget?.kind === "bot" && activeTarget.id === bot.id
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "hover:bg-sidebar-accent/55"
+                }`}
+                onClick={() => {
+                  setActiveTarget({ kind: "bot", id: bot.id });
                   setError(null);
                 }}
               >
@@ -506,7 +646,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                   color={bot.color}
                   identity={bot.id}
                   size={30}
-                  status={running && bot.id === activeBotId ? "running" : undefined}
+                  status={running && bot.id === liveBotId ? "running" : undefined}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium">{bot.name}</span>
@@ -535,7 +675,17 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
         <main className="flex min-h-0 min-w-0 flex-col">
           <header className="flex min-h-[74px] items-center justify-between gap-4 border-b border-border px-5 py-3">
             <div className="flex min-w-0 items-center gap-3">
-              {activeBot ? (
+              {activeGroup ? (
+                <GroupAvatar
+                  members={activeGroup.members.map((member) => ({
+                    name: member.name,
+                    color: member.color,
+                    botId: member.id,
+                    status: running && member.id === liveBotId ? "running" : undefined,
+                  }))}
+                  size={38}
+                />
+              ) : activeBot ? (
                 <BotAvatar
                   color={activeBot.color}
                   identity={activeBot.id}
@@ -544,11 +694,13 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                 />
               ) : null}
               <div className="min-w-0">
-                <h2 className="truncate text-[18px] font-semibold tracking-tight">
-                  {activeBot?.name ?? "Local chat"}
-                </h2>
+                <h2 className="truncate text-[18px] font-semibold tracking-tight">{activeName}</h2>
                 <p className="truncate text-[11.5px] text-muted-foreground">
-                  {running ? liveStatus || "Working" : activeBot?.description || "Local assistant"}
+                  {running
+                    ? liveStatus || "Working"
+                    : activeGroup
+                      ? `${activeGroup.members.length} bots · Shared group thread`
+                      : activeBot?.description || "Local assistant"}
                 </p>
               </div>
             </div>
@@ -558,7 +710,14 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Settings"
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => {
+                  if (activeGroup) {
+                    setEditingGroupId(activeGroup.id);
+                    setGroupDialogOpen(true);
+                  } else {
+                    setSettingsOpen(true);
+                  }
+                }}
               >
                 <Settings size={15} />
               </Button>
@@ -586,7 +745,17 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                 </div>
               ) : messages.length === 0 && !optimisticMessage && !running ? (
                 <div className="m-auto max-w-md text-center">
-                  {activeBot ? (
+                  {activeGroup ? (
+                    <GroupAvatar
+                      members={activeGroup.members.map((member) => ({
+                        name: member.name,
+                        color: member.color,
+                        botId: member.id,
+                      }))}
+                      size={62}
+                      className="mx-auto"
+                    />
+                  ) : activeBot ? (
                     <BotAvatar
                       color={activeBot.color}
                       identity={activeBot.id}
@@ -595,38 +764,48 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                     />
                   ) : null}
                   <h2 className="mt-4 text-[22px] font-semibold tracking-tight">
-                    Chat with {activeBot?.name ?? "your assistant"}
+                    {activeGroup
+                      ? `Start ${activeGroup.name}`
+                      : `Chat with ${activeBot?.name ?? "your assistant"}`}
                   </h2>
                   <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
-                    Ask a question, run a local tool, or work in your signed-in browser.
+                    {activeGroup
+                      ? "Mention one or several members, or send a message to wake the first bot."
+                      : "Ask a question, run a local tool, or work in your signed-in browser."}
                   </p>
                 </div>
               ) : (
-                messages.map((message) =>
-                  activeBot ? (
+                messages.map((message) => {
+                  const botId = "botId" in message ? message.botId : (activeBot?.id ?? null);
+                  return (
                     <LocalMessageView
                       key={message.id}
                       message={message}
-                      bot={activeBot}
-                      bots={bots}
+                      bot={bots.find((bot) => bot.id === botId)}
+                      bots={activeMembers}
                     />
-                  ) : null,
-                )
+                  );
+                })
               )}
-              {optimisticMessage && activeBot ? (
-                <LocalMessageView message={optimisticMessage} bot={activeBot} bots={bots} />
+              {optimisticMessage ? (
+                <LocalMessageView
+                  message={optimisticMessage}
+                  bot={activeBot ?? undefined}
+                  bots={activeMembers}
+                />
               ) : null}
-              {running && activeBot ? (
-                <LocalLiveMessage bot={activeBot} text={liveText} status={liveStatus} />
+              {running ? (
+                <LocalLiveMessage bot={liveBot ?? undefined} text={liveText} status={liveStatus} />
               ) : null}
             </div>
           </div>
 
           {error ? <ErrorBanner error={error} clear={() => setError(null)} /> : null}
-          {activeBot ? (
+          {activeTarget ? (
             <LocalComposer
-              bots={bots}
-              activeBotName={activeBot.name}
+              bots={activeMembers}
+              activeBotName={activeName}
+              includeEveryone={Boolean(activeGroup)}
               running={running}
               enterToSend={settings.sendWithEnter}
               onSend={sendText}
@@ -651,6 +830,18 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
           }}
         />
       ) : null}
+      <LocalGroupDialog
+        open={groupDialogOpen}
+        onOpenChange={(next) => {
+          setGroupDialogOpen(next);
+          if (!next) setEditingGroupId(null);
+        }}
+        api={api}
+        bots={bots}
+        group={editingGroup ?? undefined}
+        onSaved={handleGroupSaved}
+        onDeleted={handleGroupDeleted}
+      />
     </div>
   );
 }

@@ -1,8 +1,15 @@
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { BotAvatar } from "@rakazo/ui-web";
-import { AlertTriangle, Check, LoaderCircle, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, LoaderCircle, Wrench } from "lucide-react";
 import { MentionText } from "./MentionText";
-import { type LocalBot, type LocalMessage, messageBlocks, messageText } from "./types";
+import {
+  type LocalBot,
+  type LocalGroupMessage,
+  type LocalMessage,
+  type LocalMessageBlock,
+  messageBlocks,
+  messageText,
+} from "./types";
 
 function timeLabel(value: string) {
   const date = new Date(value);
@@ -18,8 +25,8 @@ export function LocalMessageView({
   bot,
   bots,
 }: {
-  message: LocalMessage;
-  bot: LocalBot;
+  message: LocalMessage | LocalGroupMessage;
+  bot?: LocalBot;
   bots: readonly LocalBot[];
 }) {
   const blocks = messageBlocks(message);
@@ -32,6 +39,14 @@ export function LocalMessageView({
     (block): block is { kind: "tool_call"; name: string } =>
       block.kind === "tool_call" && typeof block.name === "string",
   );
+  const handoffs = blocks.filter(
+    (block): block is Extract<LocalMessageBlock, { kind: "handoff" }> =>
+      block.kind === "handoff" &&
+      typeof block.fromBotId === "string" &&
+      typeof block.toBotId === "string" &&
+      typeof block.text === "string" &&
+      typeof block.hop === "number",
+  );
   const user = message.role === "user";
 
   return (
@@ -39,14 +54,16 @@ export function LocalMessageView({
       className={`group flex w-full gap-3 ${user ? "justify-end" : "justify-start"}`}
       data-message-role={message.role}
     >
-      {!user ? <BotAvatar color={bot.color} identity={bot.id} size={30} /> : null}
+      {!user && bot ? <BotAvatar color={bot.color} identity={bot.id} size={30} /> : null}
       <div className={`min-w-0 ${user ? "max-w-[78%]" : "max-w-[min(760px,84%)]"}`}>
         <div
           className={`mb-1.5 flex items-center gap-2 text-[12px] ${
             user ? "justify-end" : "justify-start"
           }`}
         >
-          <span className="font-medium text-foreground/80">{user ? "You" : bot.name}</span>
+          <span className="font-medium text-foreground/80">
+            {user ? "You" : (bot?.name ?? "Bot")}
+          </span>
           <time className="text-muted-foreground" dateTime={message.createdAt}>
             {timeLabel(message.createdAt)}
           </time>
@@ -89,6 +106,29 @@ export function LocalMessageView({
           </details>
         ) : null}
 
+        {handoffs.map((handoff, index) => {
+          const from = bots.find((candidate) => candidate.id === handoff.fromBotId);
+          const to = bots.find((candidate) => candidate.id === handoff.toBotId);
+          return (
+            <div
+              key={`handoff:${index}`}
+              className="mt-2 rounded-xl border border-border bg-muted/45 px-3 py-2.5"
+            >
+              <div className="flex items-center gap-2 text-[12.5px] font-medium">
+                <span>{from?.name ?? "Bot"}</span>
+                <ArrowRight size={13} className="text-muted-foreground" aria-hidden="true" />
+                <span>{to?.name ?? "Bot"}</span>
+                <span className="ml-auto text-[10.5px] font-normal text-muted-foreground">
+                  hop {handoff.hop}
+                </span>
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-5 text-muted-foreground">
+                {handoff.text}
+              </p>
+            </div>
+          );
+        })}
+
         {errors.map((error, index) => {
           const stopped = error.message === "Run stopped.";
           return (
@@ -126,16 +166,16 @@ export function LocalLiveMessage({
   text,
   status,
 }: {
-  bot: LocalBot;
+  bot?: LocalBot;
   text: string;
   status: string;
 }) {
   return (
     <article className="flex w-full justify-start gap-3" data-message-role="live">
-      <BotAvatar color={bot.color} identity={bot.id} size={30} status="running" />
+      {bot ? <BotAvatar color={bot.color} identity={bot.id} size={30} status="running" /> : null}
       <div className="min-w-0 max-w-[min(760px,84%)]">
         <div className="mb-1.5 flex items-center gap-2 text-[12px]">
-          <span className="font-medium text-foreground/80">{bot.name}</span>
+          <span className="font-medium text-foreground/80">{bot?.name ?? "Bot"}</span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
             {status || "Working"}

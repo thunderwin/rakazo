@@ -24,10 +24,13 @@ Current implementation:
 - `run_subagent` through the existing Pi nested-agent loop
 - persistent `message_bot` delegation with a bounded bot chain and local
   request/reply records
+- local 2–10 bot group chats with shared threads, mentions, persisted
+  `handoff_to_bot` events, cycle prevention, and a six-hop limit
+- browser extension tools backed by a loopback Chrome/Edge bridge
 - live run events and cancellation in the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-Group chats and `handoff_to_bot`, app launch, browser bridging, memory,
-routines, and tool-run persistence are still separate migration work.
+App launch, memory, routines, and tool-run persistence are still separate
+migration work.

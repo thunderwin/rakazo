@@ -966,6 +966,9 @@ importers:
       '@rakazo/browser-protocol':
         specifier: workspace:*
         version: link:../browser-protocol
+      '@rakazo/core':
+        specifier: workspace:*
+        version: link:../core
       '@rakazo/local-db':
         specifier: workspace:*
         version: link:../local-db

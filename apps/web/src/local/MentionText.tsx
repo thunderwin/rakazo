@@ -11,7 +11,7 @@ export function MentionText({ text, bots }: { text: string; bots: readonly Local
     .map((bot) => bot.name.trim())
     .filter(Boolean)
     .sort((left, right) => right.length - left.length);
-  if (names.length === 0) return text;
+  if (!names.some((name) => name.toLocaleLowerCase() === "everyone")) names.push("everyone");
 
   const byName = new Map(bots.map((bot) => [bot.name.trim().toLocaleLowerCase(), bot]));
   const pattern = new RegExp(
@@ -26,13 +26,13 @@ export function MentionText({ text, bots }: { text: string; bots: readonly Local
     const token = match[2] ?? "";
     const name = token.slice(1);
     const bot = byName.get(name.toLocaleLowerCase());
-    if (!bot) continue;
+    if (!bot && name.toLocaleLowerCase() !== "everyone") continue;
     if (index > cursor) nodes.push(text.slice(cursor, index));
     if (prefix) nodes.push(prefix);
-    const color = resolvePersonaColorDef(bot.id, bot.color).hex;
+    const color = bot ? resolvePersonaColorDef(bot.id, bot.color).hex : "#85858A";
     nodes.push(
       <span
-        key={`${index}:${bot.id}`}
+        key={`${index}:${bot?.id ?? "everyone"}`}
         className="mx-0.5 inline-flex items-baseline rounded-full border px-1.5 py-0.5 text-[0.92em] font-medium"
         style={{
           borderColor: `color-mix(in srgb, ${color} 45%, var(--border))`,

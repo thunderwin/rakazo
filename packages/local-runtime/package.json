@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@rakazo/browser-protocol": "workspace:*",
+    "@rakazo/core": "workspace:*",
     "@rakazo/local-db": "workspace:*"
   },
   "devDependencies": {

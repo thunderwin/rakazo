@@ -6,6 +6,7 @@ import {
   openLocalDatabase,
 } from "@rakazo/local-db";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
+import { LocalGroupRuntime } from "./group-runtime.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
 import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
@@ -26,11 +27,21 @@ export interface LocalRuntimeServiceOptions {
 export class LocalRuntimeService {
   readonly db: LocalDatabase;
   readonly runtime: LocalRuntime;
+  private readonly groups: LocalGroupRuntime;
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
     this.runtime = new LocalRuntime({
       store: new SqliteConversationStore(this.db),
+      engine: options.engine,
+      tools: options.tools,
+      resolveModel: options.resolveModel,
+      onRunStart: options.onRunStart,
+      onEvent: options.onEvent,
+      onRunEnd: options.onRunEnd,
+    });
+    this.groups = new LocalGroupRuntime({
+      db: this.db,
       engine: options.engine,
       tools: options.tools,
       resolveModel: options.resolveModel,
@@ -53,6 +64,37 @@ export class LocalRuntimeService {
     if (!bot) return [];
     const thread = this.db.threads.getForBot(bot.id);
     return thread ? this.db.messages.list(thread.id) : [];
+  }
+
+  listGroups() {
+    return this.groups.listGroups();
+  }
+
+  createGroup(input: { name: string; description?: string; color?: string; botIds: string[] }) {
+    return this.groups.createGroup(input);
+  }
+
+  updateGroup(
+    groupId: string,
+    input: { name?: string; description?: string; color?: string; botIds?: string[] },
+  ) {
+    return this.groups.updateGroup(groupId, input);
+  }
+
+  removeGroup(groupId: string) {
+    return this.groups.removeGroup(groupId);
+  }
+
+  listGroupMessages(groupId: string) {
+    return this.groups.listMessages(groupId);
+  }
+
+  sendGroupMessage(groupId: string, text: string, options: LocalAgentRunContext = {}) {
+    return this.groups.sendMessage(groupId, text, options);
+  }
+
+  cancelGroup(groupId: string) {
+    return this.groups.cancel(groupId);
   }
 
   sendMessage(

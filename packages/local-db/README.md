@@ -21,4 +21,5 @@ The package uses `better-sqlite3` with WAL mode, foreign keys, a busy timeout, a
 versioned migrations. One local runtime process should own the write connection;
 renderers should use IPC instead of opening the database directly.
 
-Current schema: bots, threads, messages, settings, routines, and migrations.
+Current schema: bots, threads, messages, group chats/members/threads/messages,
+settings, routines, and migrations.

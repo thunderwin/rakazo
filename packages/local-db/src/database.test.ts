@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 2,
+      count: 3,
     });
     second.close();
   });
@@ -119,6 +119,34 @@ describe("local database", () => {
     expect(db.messages.list(thread.id, { limit: 0 }).map((message) => message.sequence)).toEqual([
       3,
     ]);
+    db.close();
+  });
+
+  it("stores group membership and one ordered group thread", async () => {
+    const db = openLocalDatabase(":memory:");
+    const first = db.bots.create({ name: "Researcher" });
+    const second = db.bots.create({ name: "Writer" });
+    const group = db.groups.create({
+      name: "Launch",
+      botIds: [first.id, second.id],
+    });
+    const thread = db.groupThreads.getOrCreate(group.id, group.name);
+    db.groupMessages.append({
+      threadId: thread.id,
+      role: "user",
+      blocks: [{ kind: "text", text: "Start" }],
+    });
+    db.groupMessages.append({
+      threadId: thread.id,
+      role: "bot",
+      botId: second.id,
+      blocks: [{ kind: "text", text: "Done" }],
+    });
+
+    expect(group.members.map((member) => member.name)).toEqual(["Researcher", "Writer"]);
+    expect(db.groupThreads.getOrCreate(group.id).id).toBe(thread.id);
+    expect(db.groupMessages.list(thread.id).map((message) => message.sequence)).toEqual([1, 2]);
+    expect(db.groupMessages.list(thread.id)[1]?.botId).toBe(second.id);
     db.close();
   });
 

@@ -64,6 +64,17 @@ function bridge(): RakazoDesktopLocal {
       ]),
       send: vi.fn(),
     },
+    groups: {
+      list: vi.fn(async () => []),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      messages: {
+        list: vi.fn(async () => []),
+        send: vi.fn(),
+      },
+      cancel: vi.fn(),
+    },
     runs: {
       cancel: vi.fn(),
       onStarted: vi.fn(() => () => undefined),
@@ -161,4 +172,89 @@ it("shows an actionable error banner and keeps the composer available for retry"
   await vi.waitFor(() => expect(host.textContent).toContain("Model quota exhausted"));
   expect(host.textContent).toContain("Retry");
   expect((textarea as HTMLTextAreaElement).value).toBe("Try again");
+});
+
+it("renders a group thread, bot-authored messages, and handoff events", async () => {
+  const api = bridge();
+  const writer = {
+    ...bot,
+    id: "bot-2",
+    name: "Writer",
+    description: "Turns notes into copy",
+    color: "orange",
+  };
+  const group = {
+    id: "group-1",
+    name: "Launch team",
+    description: "Research and writing",
+    color: "violet",
+    members: [bot, writer],
+    createdAt: "2026-10-20T00:00:00.000Z",
+    updatedAt: "2026-10-20T00:00:00.000Z",
+  };
+  api.bots.list = vi.fn(async () => [bot, writer]);
+  api.groups.list = vi.fn(async () => [group]);
+  api.groups.messages.list = vi.fn(async () => [
+    {
+      id: "group-message-1",
+      threadId: "group-thread",
+      sequence: 1,
+      role: "user" as const,
+      botId: null,
+      blocks: [{ kind: "text", text: "Prepare the launch notes" }],
+      createdAt: "2026-10-20T12:00:00.000Z",
+      updatedAt: "2026-10-20T12:00:00.000Z",
+    },
+    {
+      id: "group-message-2",
+      threadId: "group-thread",
+      sequence: 2,
+      role: "bot" as const,
+      botId: bot.id,
+      blocks: [
+        {
+          kind: "handoff",
+          fromBotId: bot.id,
+          toBotId: writer.id,
+          text: "Write the final draft.",
+          hop: 1,
+        },
+      ],
+      createdAt: "2026-10-20T12:01:00.000Z",
+      updatedAt: "2026-10-20T12:01:00.000Z",
+    },
+    {
+      id: "group-message-3",
+      threadId: "group-thread",
+      sequence: 3,
+      role: "bot" as const,
+      botId: writer.id,
+      blocks: [{ kind: "text", text: "**Draft ready**" }],
+      createdAt: "2026-10-20T12:02:00.000Z",
+      updatedAt: "2026-10-20T12:02:00.000Z",
+    },
+  ]);
+
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    [...host.querySelectorAll("button")]
+      .find((button) => button.textContent?.includes("Launch team"))
+      ?.click();
+  });
+  await vi.waitFor(() => expect(host.textContent).toContain("Draft ready"));
+  expect(host.textContent).toContain("Researcher");
+  expect(host.textContent).toContain("Writer");
+  expect(host.textContent).toContain("Write the final draft.");
+  expect(host.textContent).toContain("hop 1");
+  const textarea = host.querySelector("textarea")!;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    setter?.call(textarea, "@ev");
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(host.querySelector('[role="listbox"]')?.textContent).toContain("everyone");
 });

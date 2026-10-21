@@ -45,6 +45,7 @@ describe("desktop preload bridge", () => {
       "bots",
       "browser",
       "diagnostics",
+      "groups",
       "messages",
       "runs",
       "settings",
@@ -76,6 +77,13 @@ describe("desktop preload bridge", () => {
     await bridge.local?.bots.update("bot-1", { name: "Chief" });
     await bridge.local?.messages.list("bot-1");
     await bridge.local?.messages.send("bot-1", "Hello");
+    await bridge.local?.groups.list();
+    await bridge.local?.groups.create({ name: "Team", botIds: ["bot-1", "bot-2"] });
+    await bridge.local?.groups.update("group-1", { name: "Team" });
+    await bridge.local?.groups.remove("group-1");
+    await bridge.local?.groups.messages.list("group-1");
+    await bridge.local?.groups.messages.send("group-1", "Hello team");
+    await bridge.local?.groups.cancel("group-1");
     await bridge.local?.runs.cancel("run-1");
     await bridge.local?.settings.get();
     await bridge.local?.settings.update({ theme: "light" });
@@ -103,6 +111,13 @@ describe("desktop preload bridge", () => {
       "desktop.local.bots.update",
       "desktop.local.messages.list",
       "desktop.local.messages.send",
+      "desktop.local.groups.list",
+      "desktop.local.groups.create",
+      "desktop.local.groups.update",
+      "desktop.local.groups.remove",
+      "desktop.local.groups.messages.list",
+      "desktop.local.groups.messages.send",
+      "desktop.local.groups.cancel",
       "desktop.local.runs.cancel",
       "desktop.local.settings.get",
       "desktop.local.settings.update",

@@ -1082,6 +1082,23 @@ function optionalLocalString(value: unknown, label: string, maxLength: number): 
   return value;
 }
 
+function localStringArray(
+  value: unknown,
+  label: string,
+  minLength: number,
+  maxLength: number,
+): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length < minLength ||
+    value.length > maxLength ||
+    value.some((entry) => typeof entry !== "string" || entry.trim() === "")
+  ) {
+    throw new Error(`${label} must contain ${minLength} to ${maxLength} entries`);
+  }
+  return [...new Set(value.map((entry) => (entry as string).trim()))];
+}
+
 function installLocalIpc() {
   if (localIpcInstalled) return;
   localIpcInstalled = true;
@@ -1196,6 +1213,67 @@ function installLocalIpc() {
       localString(botId, "Bot id", 200),
       localString(text, "Message", 100_000),
     );
+  });
+  ipcMain.handle("desktop.local.groups.list", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listGroups();
+  });
+  ipcMain.handle("desktop.local.groups.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Group input");
+    const botIds = localStringArray(value.botIds, "Group members", 2, 10);
+    if (botIds.length < 2) throw new Error("A group needs 2 to 10 bots");
+    return requireLocalRuntime().createGroup({
+      name: localString(value.name, "Group name", 120),
+      description: optionalLocalString(value.description, "Group description", 2_000),
+      color: optionalLocalString(value.color, "Group color", 40),
+      botIds,
+    });
+  });
+  ipcMain.handle("desktop.local.groups.update", (event, groupId: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    const id = localString(groupId, "Group id", 200);
+    const value = localRecord(input, "Group input");
+    const updated = requireLocalRuntime().updateGroup(id, {
+      ...(value.name === undefined ? {} : { name: localString(value.name, "Group name", 120) }),
+      ...(value.description === undefined
+        ? {}
+        : {
+            description: optionalLocalString(value.description, "Group description", 2_000) ?? "",
+          }),
+      ...(value.color === undefined
+        ? {}
+        : { color: optionalLocalString(value.color, "Group color", 40) ?? "violet" }),
+      ...(value.botIds === undefined
+        ? {}
+        : { botIds: localStringArray(value.botIds, "Group members", 2, 10) }),
+    });
+    if (!updated) throw new Error("Group not found");
+    return updated;
+  });
+  ipcMain.handle("desktop.local.groups.remove", (event, groupId: unknown) => {
+    requireLocalWindow(event);
+    if (!requireLocalRuntime().removeGroup(localString(groupId, "Group id", 200))) {
+      throw new Error("Group not found");
+    }
+  });
+  ipcMain.handle("desktop.local.groups.messages.list", (event, groupId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listGroupMessages(localString(groupId, "Group id", 200));
+  });
+  ipcMain.handle(
+    "desktop.local.groups.messages.send",
+    async (event, groupId: unknown, text: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().sendGroupMessage(
+        localString(groupId, "Group id", 200),
+        localString(text, "Message", 100_000),
+      );
+    },
+  );
+  ipcMain.handle("desktop.local.groups.cancel", async (event, groupId: unknown) => {
+    requireLocalWindow(event);
+    await requireLocalRuntime().cancelGroup(localString(groupId, "Group id", 200));
   });
   ipcMain.handle("desktop.local.runs.cancel", async (event, runId: unknown) => {
     requireLocalWindow(event);

@@ -18,6 +18,7 @@ function trailingMention(value: string): string | null {
 export function LocalComposer({
   bots,
   activeBotName,
+  includeEveryone = false,
   running,
   enterToSend,
   onSend,
@@ -25,6 +26,7 @@ export function LocalComposer({
 }: {
   bots: readonly LocalBot[];
   activeBotName: string;
+  includeEveryone?: boolean;
   running: boolean;
   enterToSend: boolean;
   onSend: (text: string) => Promise<boolean>;
@@ -48,9 +50,10 @@ export function LocalComposer({
             groups: [],
             routines: [],
             connectors: [],
+            includeEveryone,
             limit: 7,
           }),
-    [bots, mentionQuery],
+    [bots, includeEveryone, mentionQuery],
   );
   const activeIndex = clampMentionHighlightIndex(highlight, options.length);
   const pickerOpen = options.length > 0;
@@ -182,7 +185,13 @@ export function LocalComposer({
                 onMouseMove={() => setHighlight(index)}
                 onClick={() => insertMention(mention)}
               >
-                {bot ? <BotAvatar color={bot.color} identity={bot.id} size={24} /> : null}
+                {bot ? (
+                  <BotAvatar color={bot.color} identity={bot.id} size={24} />
+                ) : (
+                  <span className="grid size-6 place-items-center rounded-full bg-accent text-[10px]">
+                    @
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px]">@{mention.name}</span>
                   <span className="block truncate text-[11.5px] text-muted-foreground">
@@ -205,7 +214,13 @@ export function LocalComposer({
                   key={mentionChipKey(mention)}
                   className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-accent px-2 py-1 text-[12.5px]"
                 >
-                  {bot ? <BotAvatar color={bot.color} identity={bot.id} size={16} /> : null}
+                  {bot ? (
+                    <BotAvatar color={bot.color} identity={bot.id} size={16} />
+                  ) : (
+                    <span className="grid size-4 place-items-center rounded-full bg-background/70 text-[9px]">
+                      @
+                    </span>
+                  )}
                   <span className="truncate">{mention.name}</span>
                   <button
                     type="button"

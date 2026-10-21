@@ -14,6 +14,11 @@ export {
 } from "./browser-tools.js";
 export { createFileTools } from "./file-tools.js";
 export {
+  type GroupRunResult,
+  type GroupSendResult,
+  LocalGroupRuntime,
+} from "./group-runtime.js";
+export {
   createMessageBotTool,
   type DeliverPeerBotMessage,
   type PeerBotMessageRequest,

@@ -63,6 +63,27 @@ export interface DesktopLocalMessage {
   updatedAt: string;
 }
 
+export interface DesktopLocalGroup {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  members: DesktopLocalBot[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopGroupMessage {
+  id: string;
+  threadId: string;
+  sequence: number;
+  role: "user" | "bot" | "system";
+  botId: string | null;
+  blocks: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -149,6 +170,42 @@ export interface RakazoDesktopLocal {
         arguments: Record<string, unknown>;
       }>;
     }>;
+  };
+  groups: {
+    list: () => Promise<DesktopLocalGroup[]>;
+    create: (input: {
+      name: string;
+      description?: string;
+      color?: string;
+      botIds: string[];
+    }) => Promise<DesktopLocalGroup>;
+    update: (
+      groupId: string,
+      input: {
+        name?: string;
+        description?: string;
+        color?: string;
+        botIds?: string[];
+      },
+    ) => Promise<DesktopLocalGroup>;
+    remove: (groupId: string) => Promise<void>;
+    messages: {
+      list: (groupId: string) => Promise<DesktopGroupMessage[]>;
+      send: (
+        groupId: string,
+        text: string,
+      ) => Promise<{
+        thread: { id: string; groupId: string; title: string };
+        userMessage: DesktopGroupMessage;
+        runs: Array<{
+          runId: string;
+          botId: string;
+          text: string;
+          failed: boolean;
+        }>;
+      }>;
+    };
+    cancel: (groupId: string) => Promise<void>;
   };
   runs: {
     cancel: (runId: string) => Promise<void>;

@@ -1,5 +1,7 @@
 import type {
+  DesktopGroupMessage,
   DesktopLocalBot,
+  DesktopLocalGroup,
   DesktopLocalMessage,
   DesktopLocalRunEvent,
   DesktopLocalUserSettings,
@@ -8,7 +10,9 @@ import type {
 
 export type LocalBridge = RakazoDesktopLocal;
 export type LocalBot = DesktopLocalBot;
+export type LocalGroup = DesktopLocalGroup;
 export type LocalMessage = DesktopLocalMessage;
+export type LocalGroupMessage = DesktopGroupMessage;
 export type LocalSettings = DesktopLocalUserSettings;
 export type LocalRunEvent = DesktopLocalRunEvent;
 
@@ -21,16 +25,23 @@ export type LocalMessageBlock =
       name: string;
       arguments?: Record<string, unknown>;
     }
+  | {
+      kind: "handoff";
+      fromBotId: string;
+      toBotId: string;
+      text: string;
+      hop: number;
+    }
   | { kind: string; [key: string]: unknown };
 
-export function messageBlocks(message: LocalMessage): LocalMessageBlock[] {
+export function messageBlocks(message: { blocks: unknown[] }): LocalMessageBlock[] {
   return message.blocks.filter(
     (block): block is LocalMessageBlock =>
       typeof block === "object" && block !== null && !Array.isArray(block) && "kind" in block,
   );
 }
 
-export function messageText(message: LocalMessage): string {
+export function messageText(message: { blocks: unknown[] }): string {
   return messageBlocks(message)
     .filter(
       (block): block is { kind: "text"; text: string } =>

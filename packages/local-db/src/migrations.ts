@@ -90,6 +90,54 @@ const MIGRATIONS: Migration[] = [
         ON peer_messages(to_bot_id, created_at);
     `,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE chat_groups (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        color TEXT NOT NULL DEFAULT 'violet',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE group_members (
+        group_id TEXT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (group_id, bot_id),
+        UNIQUE (group_id, position)
+      );
+
+      CREATE INDEX group_members_bot_id ON group_members(bot_id);
+
+      CREATE TABLE group_threads (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL UNIQUE REFERENCES chat_groups(id) ON DELETE CASCADE,
+        title TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE group_messages (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES group_threads(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('user', 'bot', 'system')),
+        bot_id TEXT REFERENCES bots(id) ON DELETE SET NULL,
+        blocks TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (thread_id, sequence)
+      );
+
+      CREATE INDEX group_messages_thread_sequence
+        ON group_messages(thread_id, sequence);
+      CREATE INDEX group_messages_bot_id ON group_messages(bot_id);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {
