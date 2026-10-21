@@ -3,6 +3,8 @@ name: desktop-internal
 # Unsigned internal QA packages. This workflow intentionally does not publish a
 # GitHub Release and does not require an Apple Developer account or notarization.
 on:
+  push:
+    branches: [feat/browser-extension]
   workflow_dispatch:
 
 permissions:
