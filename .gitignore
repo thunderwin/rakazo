@@ -14,6 +14,7 @@ playwright-report
 .env
 .env.local
 .env.*.local
+TEST_ACCOUNTS.local.md
 data
 apps/**/data
 .tmp

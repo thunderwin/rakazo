@@ -688,6 +688,7 @@ export async function createApp(
       return session?.user
         ? {
             userId: session.user.id,
+            email: session.user.email,
             activeOrganizationId: sessionRow?.activeOrganizationId ?? null,
           }
         : null;

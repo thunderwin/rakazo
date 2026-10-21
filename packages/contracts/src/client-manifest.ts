@@ -28,11 +28,43 @@ export const ClientKnowledgePresetSchema = z.object({
   content: z.string().min(1).max(500_000),
 });
 
+const ClientSkillScriptSchema = z
+  .object({
+    path: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .regex(
+        /^(?!\/)(?!(?:.*\/)?\.\.?(?:\/|$))[A-Za-z0-9._/-]+\.(?:js|mjs|cjs|py|sh)$/,
+        "Script path must be a safe relative script path",
+      ),
+    content: z.string().max(200_000),
+    runtime: z.enum(["node", "python3", "sh"]).nullable().default(null),
+    timeoutSeconds: z.number().int().min(1).max(120).default(60),
+    network: z.boolean().default(false),
+  })
+  .superRefine((script, context) => {
+    const inferred = /\.(?:js|mjs|cjs)$/i.test(script.path)
+      ? "node"
+      : /\.py$/i.test(script.path)
+        ? "python3"
+        : "sh";
+    if (script.runtime !== null && script.runtime !== inferred) {
+      context.addIssue({
+        code: "custom",
+        path: ["runtime"],
+        message: `Runtime ${script.runtime} does not match ${script.path}`,
+      });
+    }
+  });
+
 export const ClientSkillPresetSchema = z.object({
   key: ClientKey,
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().min(1).max(2_000),
   content: z.string().min(1).max(100_000),
+  scripts: z.array(ClientSkillScriptSchema).max(20).default([]),
 });
 
 export const ClientRoutinePresetSchema = z.object({

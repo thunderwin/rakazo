@@ -100,12 +100,24 @@ export async function clientManifestForUser(
   });
 }
 
-export async function isPlatformAdmin(prisma: PrismaClient, userId: string): Promise<boolean> {
+export async function isPlatformAdmin(
+  prisma: PrismaClient,
+  userId: string,
+  email?: string | null,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<boolean> {
   const settings = await prisma.deploymentSettings.findUnique({
     where: { id: "default" },
     select: { ownerUserId: true },
   });
-  return settings?.ownerUserId === userId;
+  if (settings?.ownerUserId === userId) return true;
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (!normalizedEmail) return false;
+  return (env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(normalizedEmail);
 }
 
 async function membershipRole(

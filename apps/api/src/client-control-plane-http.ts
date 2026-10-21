@@ -1,8 +1,9 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { ClientManifestEnvelope } from "@rakazo/contracts";
 import { ClientManifestContentSchema } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import type { Hono } from "hono";
-import { adminControlPlanePage } from "./admin-control-plane-page.js";
 import {
   addOrganizationMember,
   adminClientManifest,
@@ -19,8 +20,35 @@ import {
   removeOrganizationMember,
 } from "./client-control-plane.js";
 
+const ADMIN_DIST_ROOT = path.resolve(import.meta.dirname, "../../admin/dist");
+
+function adminContentType(file: string): string {
+  const extension = path.extname(file);
+  if (extension === ".js") return "text/javascript; charset=utf-8";
+  if (extension === ".css") return "text/css; charset=utf-8";
+  if (extension === ".html") return "text/html; charset=utf-8";
+  if (extension === ".svg") return "image/svg+xml";
+  if (extension === ".png") return "image/png";
+  if (extension === ".woff2") return "font/woff2";
+  return "application/octet-stream";
+}
+
+async function adminAsset(requestPath: string): Promise<string | null> {
+  const relative =
+    requestPath === "/admin" || requestPath === "/admin/"
+      ? "index.html"
+      : requestPath.replace(/^\/admin\/?/, "");
+  const decoded = decodeURIComponent(relative);
+  const file = path.resolve(ADMIN_DIST_ROOT, decoded);
+  if (file !== ADMIN_DIST_ROOT && !file.startsWith(`${ADMIN_DIST_ROOT}${path.sep}`)) {
+    return null;
+  }
+  return file;
+}
+
 export interface ControlPlaneSessionUser {
   userId: string;
+  email?: string | null;
   activeOrganizationId: string | null;
 }
 
@@ -73,7 +101,32 @@ export function mountClientControlPlane(
   app.get("/admin", (c) => {
     c.header("x-frame-options", "DENY");
     c.header("cache-control", "no-store");
-    return c.html(adminControlPlanePage());
+    return readFile(path.join(ADMIN_DIST_ROOT, "index.html"))
+      .then((body) => c.html(body.toString("utf8")))
+      .catch(() =>
+        c.html(
+          "<!doctype html><meta charset=utf-8><title>Admin not built</title><p>请先运行 <code>pnpm --filter @rakazo/admin build</code>。</p>",
+          503,
+        ),
+      );
+  });
+  app.get("/admin/*", async (c) => {
+    const file = await adminAsset(c.req.path);
+    if (!file) return c.notFound();
+    try {
+      const body = await readFile(file);
+      return new Response(new Uint8Array(body), {
+        headers: {
+          "cache-control": file.endsWith("index.html")
+            ? "no-store"
+            : "public, max-age=31536000, immutable",
+          "content-type": adminContentType(file),
+          "x-content-type-options": "nosniff",
+        },
+      });
+    } catch {
+      return c.notFound();
+    }
   });
   app.use("/v1/admin/control/*", async (c, next) => {
     const origin = c.req.header("origin");
@@ -111,7 +164,7 @@ export function mountClientControlPlane(
     const user = await requireUser(c.req.raw);
     if (user instanceof Response) return user;
     try {
-      const platformAdmin = await isPlatformAdmin(options.prisma, user.userId);
+      const platformAdmin = await isPlatformAdmin(options.prisma, user.userId, user.email);
       return c.json({
         userId: user.userId,
         platformAdmin,
@@ -138,7 +191,7 @@ export function mountClientControlPlane(
       return c.json(
         await createControlPlaneOrganization(options.prisma, {
           userId: user.userId,
-          platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+          platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
           name,
           slug,
           ...(body.ownerEmail === undefined ? {} : { ownerEmail: email(body.ownerEmail) }),
@@ -161,7 +214,7 @@ export function mountClientControlPlane(
       return c.json(
         await publishClientManifest(options.prisma, {
           userId: user.userId,
-          platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+          platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
           organizationId: c.req.param("organizationId"),
           content: content.data,
           ...(options.signManifest ? { signer: options.signManifest } : {}),
@@ -179,7 +232,7 @@ export function mountClientControlPlane(
       return c.json({
         manifest: await adminClientManifest(options.prisma, {
           userId: user.userId,
-          platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+          platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
           organizationId: c.req.param("organizationId"),
         }),
       });
@@ -195,7 +248,7 @@ export function mountClientControlPlane(
       return c.json({
         members: await listOrganizationMembers(options.prisma, {
           userId: user.userId,
-          platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+          platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
           organizationId: c.req.param("organizationId"),
         }),
       });
@@ -216,7 +269,7 @@ export function mountClientControlPlane(
       return c.json(
         await addOrganizationMember(options.prisma, {
           userId: user.userId,
-          platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+          platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
           organizationId: c.req.param("organizationId"),
           email: email(body.email),
           role,
@@ -234,7 +287,7 @@ export function mountClientControlPlane(
     try {
       await removeOrganizationMember(options.prisma, {
         userId: user.userId,
-        platformAdmin: await isPlatformAdmin(options.prisma, user.userId),
+        platformAdmin: await isPlatformAdmin(options.prisma, user.userId, user.email),
         organizationId: c.req.param("organizationId"),
         targetUserId: c.req.param("targetUserId"),
       });

@@ -7,6 +7,7 @@ WORKDIR /app
 # a lockfile change reuses whatever was already downloaded.
 COPY --chmod=755 package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY --chmod=755 patches patches
+COPY --chmod=755 apps/admin/package.json apps/admin/
 COPY --chmod=755 apps/api/package.json apps/api/
 COPY --chmod=755 apps/desktop/package.json apps/desktop/
 COPY --chmod=755 apps/mobile/package.json apps/mobile/
@@ -32,6 +33,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lo
 # leave the copied tree unreadable to USER node at runtime.
 COPY --chmod=755 . .
 RUN pnpm --filter @rakazo/db generate
+RUN pnpm --filter @rakazo/admin build
 RUN RAKAZO_ALLOW_DEV_SECRETS=1 pnpm --filter @rakazo/web build
 RUN install -d -m 750 -o node -g node /data /app/apps/web/node_modules/.vite-temp
 ARG GIT_SHA

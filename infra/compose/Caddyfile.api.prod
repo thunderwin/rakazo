@@ -1,0 +1,77 @@
+(deploy_retry) {
+	lb_try_duration 10s
+	lb_try_interval 250ms
+}
+
+{$RAKAZO_HOST:api.example.com} {
+	tls {
+		# Cloudflare terminates public TLS, so origin certificate renewal must use
+		# HTTP-01 through the proxied port 80 listener.
+		issuer acme {
+			disable_tlsalpn_challenge
+		}
+	}
+
+	encode zstd gzip
+
+	@hsts not host localhost 127.0.0.1
+	header @hsts Strict-Transport-Security "max-age=31536000"
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+	}
+
+	handle /health {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle /api/* {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle /rpc/* {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle /v1/* {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			flush_interval -1
+		}
+	}
+
+	handle /admin {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle /admin/* {
+		reverse_proxy api:3100 {
+			import deploy_retry
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		respond "ericBot API" 404
+	}
+}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   clientManifestForUser,
   hasAdminRole,
+  isPlatformAdmin,
   publishClientManifest,
 } from "./client-control-plane.js";
 import { mountClientControlPlane } from "./client-control-plane-http.js";
@@ -23,6 +24,25 @@ describe("client control plane", () => {
     expect(hasAdminRole("member, admin")).toBe(true);
     expect(hasAdminRole("owner")).toBe(true);
     expect(hasAdminRole("member")).toBe(false);
+  });
+
+  it("allows configured development platform-admin emails without replacing the owner", async () => {
+    const prisma = {
+      deploymentSettings: {
+        findUnique: vi.fn(async () => ({ ownerUserId: "owner-1" })),
+      },
+    };
+    await expect(isPlatformAdmin(prisma as never, "owner-1")).resolves.toBe(true);
+    await expect(
+      isPlatformAdmin(prisma as never, "test-1", "platform-admin@ericbot.test", {
+        PLATFORM_ADMIN_EMAILS: "other@example.test, PLATFORM-ADMIN@ERICBOT.TEST",
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      isPlatformAdmin(prisma as never, "test-2", "member@ericbot.test", {
+        PLATFORM_ADMIN_EMAILS: "platform-admin@ericbot.test",
+      }),
+    ).resolves.toBe(false);
   });
 
   it("returns the one published organization manifest for a user", async () => {
