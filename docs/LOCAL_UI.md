@@ -17,6 +17,11 @@ apps/web/src/local-main.tsx
 `apps/web/dist-local`，桌面构建再复制到 `apps/desktop/dist/local-web`。Electron 只加载
 这份打包资源，聊天不再依赖服务器 Web UI。
 
+首次启动默认直接进入本地界面，不显示“这台电脑 / Existing instance”的服务器选择页。
+开发态默认连接 `http://127.0.0.1:3100`；生产构建必须通过受控的
+`RAKAZO_SERVER_URL` 配置账号和模型网关。只有已保存旧服务器配置，或显式设置
+`RAKAZO_LEGACY_SETUP=1` 时，才显示旧版 Existing instance 设置页。
+
 ## 2. 复用的原版 UI 能力
 
 - `@rakazo/ui-web` 的 `BotAvatar`、Button、Input、Textarea 和 Dialog。
@@ -131,8 +136,8 @@ pnpm --filter @rakazo/desktop build
 ```
 
 当前 Electron 开发命令会先完成一次本地 UI 构建，再启动桌面窗口；修改 renderer
-源码后需要重新执行 `RAKAZO_LOCAL_UI=1 pnpm --filter @rakazo/desktop dev`。语言切换
-属于运行时状态，不需要重启窗口。
+源码后需要重新执行 `pnpm --filter @rakazo/desktop dev`。语言切换属于运行时状态，
+不需要重启窗口。
 
 组件测试覆盖 mention 选择与发送、BotAvatar/Markdown 渲染、模型额度错误、Retry
 保留输入、群聊与 handoff 展示、Memory/Routine/附件展示、本地 Artifact Library 与

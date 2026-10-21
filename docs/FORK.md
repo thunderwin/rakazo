@@ -219,8 +219,12 @@ local-first 改造完成后，客户端开发应尽量不依赖服务器业务�
 本地窗口预览：
 
 ```bash
-RAKAZO_LOCAL_UI=1 pnpm --filter @rakazo/desktop dev
+pnpm --filter @rakazo/desktop dev
 ```
+
+本地界面是默认启动路径。开发态默认账号/模型服务器为 `http://127.0.0.1:3100`。旧版
+“This computer / Existing instance”设置页只在已有旧配置或
+`RAKAZO_LEGACY_SETUP=1` 时出现。
 
 构建并测试浏览器扩展：
 
@@ -237,7 +241,6 @@ pnpm --filter @rakazo/web build:local
 接真实服务器登录：
 
 ```bash
-RAKAZO_LOCAL_UI=1 \
 RAKAZO_SERVER_URL=https://your-api.example.com \
 pnpm --filter @rakazo/desktop dev
 ```
@@ -249,7 +252,6 @@ pnpm --filter @rakazo/desktop dev
 开发时如果要接模型网关：
 
 ```bash
-RAKAZO_LOCAL_UI=1 \
 RAKAZO_MODEL_GATEWAY_URL=https://your-api.example.com \
 RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-only-token \
 pnpm --filter @rakazo/desktop dev
@@ -267,7 +269,6 @@ pnpm dev:gateway
 另一个终端：
 
 ```bash
-RAKAZO_LOCAL_UI=1 \
 RAKAZO_MODEL_GATEWAY_URL=http://127.0.0.1:8787 \
 RAKAZO_DEV_MODEL_GATEWAY_TOKEN=dev-token \
 pnpm --filter @rakazo/desktop dev
