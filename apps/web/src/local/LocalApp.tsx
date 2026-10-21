@@ -23,9 +23,7 @@ import {
   Bot,
   Brain,
   CalendarClock,
-  ClipboardList,
   Clock3,
-  Files,
   Globe2,
   LogOut,
   Plus,
@@ -59,7 +57,6 @@ import {
   LocalSecretPromptDialog,
   LocalSecretsDialog,
 } from "./LocalSecretsDialog";
-import { LocalArtifactsPage, LocalBoardPage } from "./work-adapters";
 import {
   type LocalBot,
   type LocalBridge,
@@ -277,8 +274,6 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
     useState<DesktopLocalChoiceRequest | null>(null);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
-  const [boardOpen, setBoardOpen] = useState(false);
-  const [artifactsOpen, setArtifactsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [memoryScope, setMemoryScope] = useState<"bot" | "user">("bot");
@@ -500,7 +495,6 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
   }, [liveText, liveStatus, messages, pendingText, running]);
 
   useEffect(() => {
-    if (boardOpen || artifactsOpen) return;
     function onKey(event: KeyboardEvent) {
       if (!isCommandPaletteHotkey(event)) return;
       event.preventDefault();
@@ -508,7 +502,7 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [artifactsOpen, boardOpen]);
+  }, []);
 
   async function loadWorkspace() {
     if (!api) return;
@@ -738,31 +732,6 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
           serverUrl={auth.serverUrl}
           onSignedIn={afterSignIn}
         />
-      </div>
-    );
-  }
-
-  if (boardOpen) {
-    return (
-      <div className="flex h-full flex-col bg-background">
-        <WindowBar />
-        <div className="min-h-0 flex-1">
-          <LocalBoardPage api={api} onBack={() => setBoardOpen(false)} />
-        </div>
-      </div>
-    );
-  }
-
-  if (artifactsOpen) {
-    return (
-      <div className="flex h-full flex-col bg-background">
-        <WindowBar />
-        <div className="min-h-0 flex-1">
-          <LocalArtifactsPage
-            api={api}
-            onBack={() => setArtifactsOpen(false)}
-          />
-        </div>
       </div>
     );
   }
@@ -1010,32 +979,6 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
                     </p>
                   ) : null}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full justify-start"
-                  aria-label={t`Board`}
-                  onClick={() => {
-                    setAccountMenuOpen(false);
-                    setBoardOpen(true);
-                  }}
-                >
-                  <ClipboardList size={14} />
-                  <Trans>Board</Trans>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full justify-start"
-                  aria-label={t`Artifacts`}
-                  onClick={() => {
-                    setAccountMenuOpen(false);
-                    setArtifactsOpen(true);
-                  }}
-                >
-                  <Files size={14} />
-                  <Trans>Artifacts</Trans>
-                </Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -1288,10 +1231,7 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
             setMemoryScope("user");
             setMemoryOpen(true);
           }}
-          onOpenArtifacts={() => {
-            setAppSettingsOpen(false);
-            setArtifactsOpen(true);
-          }}
+          onOpenWorkspace={() => api.workspace.open()}
           onSaved={setSettings}
         />
       ) : null}

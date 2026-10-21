@@ -6,7 +6,11 @@ import type {
   TicketStatus,
 } from "@rakazo/local-db";
 import type { LocalAgentTool } from "./agent.js";
-import type { ApproveLocalTool, LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
+import type {
+  ApproveLocalTool,
+  LocalToolExecutionRequest,
+  LocalToolProvider,
+} from "./tools.js";
 
 const workTools: LocalAgentTool[] = [
   {
@@ -80,7 +84,8 @@ const workTools: LocalAgentTool[] = [
     name: "board_tickets",
     readOnly: true,
     requiresApproval: false,
-    description: "List local tickets, optionally filtered by status or owner bot.",
+    description:
+      "List local tickets, optionally filtered by status or owner bot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -122,7 +127,8 @@ const workTools: LocalAgentTool[] = [
   {
     name: "ticket_update",
     requiresApproval: false,
-    description: "Update a ticket's title, description, priority, status, or owner.",
+    description:
+      "Update a ticket's title, description, priority, status, or owner.",
     inputSchema: {
       type: "object",
       properties: {
@@ -153,8 +159,19 @@ const workTools: LocalAgentTool[] = [
 const workWriteToolNames = new Set(
   workTools.filter((tool) => !tool.readOnly).map((tool) => tool.name),
 );
+const ticketToolNames = new Set([
+  "board_tickets",
+  "ticket_get",
+  "ticket_create",
+  "ticket_update",
+  "ticket_comment",
+]);
 
-function requiredString(args: Record<string, unknown>, key: string, max = 20_000): string {
+function requiredString(
+  args: Record<string, unknown>,
+  key: string,
+  max = 20_000,
+): string {
   const value = typeof args[key] === "string" ? args[key].trim() : "";
   if (!value || value.length > max) throw new Error(`${key} is invalid`);
   return value;
@@ -179,14 +196,20 @@ export class LocalWorkToolProvider implements LocalToolProvider {
     private readonly tools: LocalToolProvider,
     private readonly db: LocalDatabase,
     private readonly approve: ApproveLocalTool = () => false,
+    private readonly enableTickets = false,
   ) {}
 
   async definitionsFor(bot: Bot): Promise<LocalAgentTool[]> {
     const inherited = await this.tools.definitionsFor(bot);
     const disabled = new Set(bot.disabledBuiltinTools);
+    const availableWorkTools = this.enableTickets
+      ? workTools
+      : workTools.filter((tool) => !ticketToolNames.has(tool.name));
     this.currentTools = [
-      ...inherited.filter((tool) => !workTools.some((item) => item.name === tool.name)),
-      ...workTools.filter((tool) => !disabled.has(tool.name)),
+      ...inherited.filter(
+        (tool) => !workTools.some((item) => item.name === tool.name),
+      ),
+      ...availableWorkTools.filter((tool) => !disabled.has(tool.name)),
     ];
     return this.currentTools;
   }
@@ -195,8 +218,14 @@ export class LocalWorkToolProvider implements LocalToolProvider {
     if (!workTools.some((tool) => tool.name === request.name)) {
       return this.tools.execute(request);
     }
+    if (!this.enableTickets && ticketToolNames.has(request.name)) {
+      throw new Error(`Tool ${request.name} is not available`);
+    }
     if (!request.botId) throw new Error(`${request.name} requires a bot`);
-    if (workWriteToolNames.has(request.name) && !(await this.approve(request))) {
+    if (
+      workWriteToolNames.has(request.name) &&
+      !(await this.approve(request))
+    ) {
       throw new Error(`Tool ${request.name} was not approved`);
     }
     const args = request.args;
@@ -215,55 +244,82 @@ export class LocalWorkToolProvider implements LocalToolProvider {
     }
     if (request.name === "scratchpad_list") {
       return {
-        items: this.db.work.listScratchpad(request.botId, args.includeDone === true),
+        items: this.db.work.listScratchpad(
+          request.botId,
+          args.includeDone === true,
+        ),
       };
     }
     if (request.name === "scratchpad_add") {
       return this.db.work.addScratchpad({
         botId: request.botId,
         title: requiredString(args, "title", 500),
-        ...(args.status === undefined ? {} : { status: args.status as ScratchpadStatus }),
+        ...(args.status === undefined
+          ? {}
+          : { status: args.status as ScratchpadStatus }),
         ...(optionalString(args, "notes", 20_000) === undefined
           ? {}
           : { notes: optionalString(args, "notes", 20_000)! }),
       });
     }
     if (request.name === "scratchpad_update") {
-      return this.db.work.updateScratchpad(requiredString(args, "itemId", 200), request.botId, {
-        ...(optionalString(args, "title", 500) === undefined
-          ? {}
-          : { title: optionalString(args, "title", 500)! }),
-        ...(args.status === undefined ? {} : { status: args.status as ScratchpadStatus }),
-        ...(optionalString(args, "notes", 20_000) === undefined
-          ? {}
-          : { notes: optionalString(args, "notes", 20_000)! }),
-      });
+      return this.db.work.updateScratchpad(
+        requiredString(args, "itemId", 200),
+        request.botId,
+        {
+          ...(optionalString(args, "title", 500) === undefined
+            ? {}
+            : { title: optionalString(args, "title", 500)! }),
+          ...(args.status === undefined
+            ? {}
+            : { status: args.status as ScratchpadStatus }),
+          ...(optionalString(args, "notes", 20_000) === undefined
+            ? {}
+            : { notes: optionalString(args, "notes", 20_000)! }),
+        },
+      );
     }
     if (request.name === "scratchpad_complete") {
       return {
         ok: Boolean(
-          this.db.work.updateScratchpad(requiredString(args, "itemId", 200), request.botId, {
-            status: "done",
-          }),
+          this.db.work.updateScratchpad(
+            requiredString(args, "itemId", 200),
+            request.botId,
+            {
+              status: "done",
+            },
+          ),
         ),
       };
     }
     if (request.name === "scratchpad_remove") {
       return {
-        removed: this.db.work.removeScratchpad(requiredString(args, "itemId", 200), request.botId),
+        removed: this.db.work.removeScratchpad(
+          requiredString(args, "itemId", 200),
+          request.botId,
+        ),
       };
     }
     if (request.name === "board_tickets") {
       const cursor = optionalString(args, "cursor", 200);
       const beforeSequence = cursor ? Number(parseInt(cursor, 10)) : undefined;
       const tickets = this.db.work.listTickets({
-        ...(args.status === undefined ? {} : { status: args.status as TicketStatus }),
-        ...(args.ownerBotId === undefined ? {} : { ownerBotId: String(args.ownerBotId) }),
-        ...(beforeSequence && Number.isInteger(beforeSequence) ? { beforeSequence } : {}),
+        ...(args.status === undefined
+          ? {}
+          : { status: args.status as TicketStatus }),
+        ...(args.ownerBotId === undefined
+          ? {}
+          : { ownerBotId: String(args.ownerBotId) }),
+        ...(beforeSequence && Number.isInteger(beforeSequence)
+          ? { beforeSequence }
+          : {}),
       });
       return {
         tickets,
-        nextCursor: tickets.length === 50 ? String(tickets[tickets.length - 1]!.sequence) : null,
+        nextCursor:
+          tickets.length === 50
+            ? String(tickets[tickets.length - 1]!.sequence)
+            : null,
       };
     }
     if (request.name === "ticket_get") {
@@ -280,8 +336,12 @@ export class LocalWorkToolProvider implements LocalToolProvider {
         ...(optionalString(args, "description", 20_000) === undefined
           ? {}
           : { description: optionalString(args, "description", 20_000)! }),
-        ...(args.priority === undefined ? {} : { priority: args.priority as TicketPriority }),
-        ...(args.ownerBotId === undefined ? {} : { ownerBotId: String(args.ownerBotId) }),
+        ...(args.priority === undefined
+          ? {}
+          : { priority: args.priority as TicketPriority }),
+        ...(args.ownerBotId === undefined
+          ? {}
+          : { ownerBotId: String(args.ownerBotId) }),
       });
     }
     if (request.name === "ticket_update") {
@@ -292,9 +352,15 @@ export class LocalWorkToolProvider implements LocalToolProvider {
         ...(optionalString(args, "description", 20_000) === undefined
           ? {}
           : { description: optionalString(args, "description", 20_000)! }),
-        ...(args.priority === undefined ? {} : { priority: args.priority as TicketPriority }),
-        ...(args.status === undefined ? {} : { status: args.status as TicketStatus }),
-        ...(args.ownerBotId === undefined ? {} : { ownerBotId: String(args.ownerBotId) }),
+        ...(args.priority === undefined
+          ? {}
+          : { priority: args.priority as TicketPriority }),
+        ...(args.status === undefined
+          ? {}
+          : { status: args.status as TicketStatus }),
+        ...(args.ownerBotId === undefined
+          ? {}
+          : { ownerBotId: String(args.ownerBotId) }),
       });
     }
     return this.db.work.addComment(

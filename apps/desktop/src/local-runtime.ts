@@ -68,13 +68,17 @@ export interface DesktopLocalRuntimeOptions {
     signal?: AbortSignal,
   ) => Promise<string | null>;
   computerProvider?: LocalComputerProvider | false;
+  enableTicketTools?: boolean;
 }
 
 /** The desktop process owns one SQLite database under its userData directory. */
 export async function createDesktopLocalRuntime(
   options: DesktopLocalRuntimeOptions,
 ): Promise<LocalRuntimeService> {
-  const account = await prepareLocalAccountData(options.userDataDir, options.accountId);
+  const account = await prepareLocalAccountData(
+    options.userDataDir,
+    options.accountId,
+  );
   let service: LocalRuntimeService | undefined;
   const web = new KeylessHttpWebProvider();
   const media = createMediaGenerationProvider();
@@ -104,7 +108,9 @@ export async function createDesktopLocalRuntime(
     } else {
       if (!config.endpoint) throw new Error("MCP endpoint is required");
       const endpoint = new URL(config.endpoint);
-      const loopback = ["127.0.0.1", "::1", "localhost"].includes(endpoint.hostname);
+      const loopback = ["127.0.0.1", "::1", "localhost"].includes(
+        endpoint.hostname,
+      );
       const headers = {
         ...config.headers,
         ...(config.secret ? { Authorization: `Bearer ${config.secret}` } : {}),
@@ -171,7 +177,9 @@ export async function createDesktopLocalRuntime(
     input: { name: string; mimeType: string; content: Uint8Array },
   ) => {
     if (!service) throw new Error("Local runtime is not ready");
-    const group = request.threadId ? service.db.groupThreads.get(request.threadId) : null;
+    const group = request.threadId
+      ? service.db.groupThreads.get(request.threadId)
+      : null;
     if (group) {
       return service.attachments.createBytes({
         groupId: group.groupId,
@@ -202,8 +210,11 @@ export async function createDesktopLocalRuntime(
         ? createBrowserCompatibilityTools({
             host: options.browserHost,
             resolveLoginSecret: async ({ botId, name, field, origin }) => {
-              if (!service?.secrets) throw new Error("Credential storage is unavailable");
-              return (await service.secrets.revealLogin(botId, name, field, origin)).value;
+              if (!service?.secrets)
+                throw new Error("Credential storage is unavailable");
+              return (
+                await service.secrets.revealLogin(botId, name, field, origin)
+              ).value;
             },
           })
         : []),
@@ -231,7 +242,10 @@ export async function createDesktopLocalRuntime(
         return service.runSkill({
           botId: request.botId,
           name: typeof request.args.name === "string" ? request.args.name : "",
-          entrypoint: typeof request.args.entrypoint === "string" ? request.args.entrypoint : "",
+          entrypoint:
+            typeof request.args.entrypoint === "string"
+              ? request.args.entrypoint
+              : "",
           args: request.args.args,
           ...(request.signal ? { signal: request.signal } : {}),
         });
@@ -247,18 +261,26 @@ export async function createDesktopLocalRuntime(
         },
         takeover: async (reason, signal) => {
           if (!service) throw new Error("Local runtime is not ready");
-          const answer = await service.askUser(reason, ["I've completed it", "Cancel"], signal);
+          const answer = await service.askUser(
+            reason,
+            ["I've completed it", "Cancel"],
+            signal,
+          );
           return answer === "I've completed it";
         },
       }),
       createLocalInstructionProposalTool(async (request) => {
         if (!service) throw new Error("Local runtime is not ready");
-        if (!request.botId) throw new Error("Instruction updates require a bot");
+        if (!request.botId)
+          throw new Error("Instruction updates require a bot");
         return service.proposeInstructions({
           botId: request.botId,
           instructions:
-            typeof request.args.instructions === "string" ? request.args.instructions : "",
-          reason: typeof request.args.reason === "string" ? request.args.reason : "",
+            typeof request.args.instructions === "string"
+              ? request.args.instructions
+              : "",
+          reason:
+            typeof request.args.reason === "string" ? request.args.reason : "",
           ...(typeof request.args.expected_version === "number"
             ? { expectedVersion: request.args.expected_version }
             : {}),
@@ -270,7 +292,8 @@ export async function createDesktopLocalRuntime(
             forget: async (botId, name) => ({
               removed: await service!.removeSecret(botId, name),
             }),
-            request: async (botId, args, signal) => service!.requestSecret(botId, args, signal),
+            request: async (botId, args, signal) =>
+              service!.requestSecret(botId, args, signal),
             requestFromUser: async (botId, args, signal) =>
               service!.requestSecretFromUser(botId, args, signal),
           })
@@ -329,7 +352,11 @@ export async function createDesktopLocalRuntime(
         workspaceDir: account.workspaceDir,
         renderPng: async (spec, data) => {
           const { JSDOM } = await import("jsdom");
-          const svg = renderPlotSpecToSvg(spec, data, new JSDOM("").window.document);
+          const svg = renderPlotSpecToSvg(
+            spec,
+            data,
+            new JSDOM("").window.document,
+          );
           return plotSvgToPng(svg);
         },
         createArtifact,
@@ -349,7 +376,9 @@ export async function createDesktopLocalRuntime(
                   },
                 );
                 if (output.mimeType !== "image/png") {
-                  throw new Error("Image provider returned an unsupported format");
+                  throw new Error(
+                    "Image provider returned an unsupported format",
+                  );
                 }
                 return { bytes: output.bytes, mimeType: "image/png" as const };
               },
@@ -374,9 +403,14 @@ export async function createDesktopLocalRuntime(
                 );
                 if (job.status !== "completed") return job;
                 if (job.output.mimeType !== "video/mp4") {
-                  throw new Error("Video provider returned an unsupported format");
+                  throw new Error(
+                    "Video provider returned an unsupported format",
+                  );
                 }
-                return { ...job, output: { ...job.output, mimeType: "video/mp4" as const } };
+                return {
+                  ...job,
+                  output: { ...job.output, mimeType: "video/mp4" as const },
+                };
               },
               poll: async (id, signal) => {
                 const job = await media.pollVideo(id, {
@@ -388,13 +422,19 @@ export async function createDesktopLocalRuntime(
                 });
                 if (job.status !== "completed") return job;
                 if (job.output.mimeType !== "video/mp4") {
-                  throw new Error("Video provider returned an unsupported format");
+                  throw new Error(
+                    "Video provider returned an unsupported format",
+                  );
                 }
-                return { ...job, output: { ...job.output, mimeType: "video/mp4" as const } };
+                return {
+                  ...job,
+                  output: { ...job.output, mimeType: "video/mp4" as const },
+                };
               },
               jobs: {
                 create(request, provider) {
-                  if (!service?.db) throw new Error("Local runtime is not ready");
+                  if (!service?.db)
+                    throw new Error("Local runtime is not ready");
                   if (!request.botId || !request.runId) {
                     throw new Error("Video generation needs a bot and run");
                   }
@@ -412,7 +452,10 @@ export async function createDesktopLocalRuntime(
                 },
                 findForExecution(request) {
                   if (!service?.db || !request.runId) return null;
-                  return service.db.mediaJobs.findByExecution(request.runId, request.executionId);
+                  return service.db.mediaJobs.findByExecution(
+                    request.runId,
+                    request.executionId,
+                  );
                 },
                 get(request, id) {
                   if (!service?.db || !request.botId) return null;
@@ -421,10 +464,14 @@ export async function createDesktopLocalRuntime(
                 },
                 countForRun(request) {
                   if (!service?.db || !request.runId) return 0;
-                  return service.db.mediaJobs.countForRun(request.runId, "video");
+                  return service.db.mediaJobs.countForRun(
+                    request.runId,
+                    "video",
+                  );
                 },
                 update(id, input) {
-                  if (!service?.db) throw new Error("Local runtime is not ready");
+                  if (!service?.db)
+                    throw new Error("Local runtime is not ready");
                   service.db.mediaJobs.update(id, input);
                 },
               },
@@ -441,12 +488,18 @@ export async function createDesktopLocalRuntime(
     engine: options.engine ?? new PiLocalAgentEngine(),
     tools,
     approveTool: options.approveTool,
+    enableTicketTools: options.enableTicketTools === true,
     resolveModel: options.resolveModel,
     ...(options.secretVault ? { secretVault: options.secretVault } : {}),
     secretHttp,
-    ...(options.promptForSecret ? { promptForSecret: options.promptForSecret } : {}),
-    allowPrivateHttpSecretOrigins: options.allowPrivateHttpSecretOrigins === true,
-    ...(options.promptForUserChoice ? { promptForUserChoice: options.promptForUserChoice } : {}),
+    ...(options.promptForSecret
+      ? { promptForSecret: options.promptForSecret }
+      : {}),
+    allowPrivateHttpSecretOrigins:
+      options.allowPrivateHttpSecretOrigins === true,
+    ...(options.promptForUserChoice
+      ? { promptForUserChoice: options.promptForUserChoice }
+      : {}),
     ...(options.secretVault ? { mcpConnector: connectMcp } : {}),
     onRunStart: options.onRunStart,
     onEvent: options.onEvent,
@@ -464,7 +517,9 @@ export function defaultLocalModel(input: {
 }): LocalAgentModel {
   const thinkingLevel =
     input.bot.thinkingLevel &&
-    ["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(input.bot.thinkingLevel)
+    ["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(
+      input.bot.thinkingLevel,
+    )
       ? (input.bot.thinkingLevel as LocalAgentModel["thinkingLevel"])
       : undefined;
   return {

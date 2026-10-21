@@ -445,6 +445,9 @@ export interface RakazoDesktopLocal {
       input: Partial<DesktopLocalUserSettings>,
     ) => Promise<DesktopLocalUserSettings>;
   };
+  workspace: {
+    open: () => Promise<void>;
+  };
   browser: {
     status: () => Promise<DesktopBrowserBridgeStatus>;
     startPairing: () => Promise<DesktopBrowserPairingOffer>;

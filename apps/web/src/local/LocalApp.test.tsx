@@ -108,6 +108,9 @@ function bridge(): RakazoDesktopLocal {
       })),
       update: vi.fn(),
     },
+    workspace: {
+      open: vi.fn(),
+    },
     browser: {
       status: vi.fn(async () => ({
         available: true,
@@ -242,8 +245,9 @@ it("renders the original bot identity, mentions, and Markdown message content", 
 });
 
 it("keeps chat settings and app settings in separate dialogs", async () => {
+  const api = bridge();
   root = createRoot(host);
-  await act(async () => root?.render(<LocalApp bridge={bridge()} />));
+  await act(async () => root?.render(<LocalApp bridge={api} />));
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -299,12 +303,19 @@ it("keeps chat settings and app settings in separate dialogs", async () => {
   expect(appSettings?.textContent).toContain("Browser");
   expect(appSettings?.textContent).toContain("Knowledge and skills");
   expect(appSettings?.textContent).toContain("Shared memory");
+  expect(appSettings?.textContent).toContain("Open workspace");
+  expect(appSettings?.textContent).not.toContain("Artifacts");
   expect(appSettings?.textContent).not.toContain("Sign out");
   expect(appSettings?.textContent).not.toContain("Bot model");
   expect(host.querySelector('button[aria-label="Sign out"]')).toBeNull();
   expect(
     host.querySelector('button[aria-label="Knowledge and skills"]'),
   ).toBeNull();
+  const openWorkspace = [
+    ...document.querySelectorAll<HTMLButtonElement>("button"),
+  ].find((button) => button.textContent?.trim() === "Open workspace");
+  await act(async () => openWorkspace?.click());
+  expect(api.workspace.open).toHaveBeenCalled();
 });
 
 it("enables fleet management from chat settings", async () => {
@@ -352,7 +363,7 @@ it("enables fleet management from chat settings", async () => {
   );
 });
 
-it("opens the local artifact library and ticket board through the shared screens", async () => {
+it("keeps the retired board and file library out of global navigation", async () => {
   const api = bridge();
   root = createRoot(host);
   await act(async () => root?.render(<LocalApp bridge={api} />));
@@ -374,40 +385,10 @@ it("opens the local artifact library and ticket board through the shared screens
       document.querySelector('[data-slot="popover-content"]'),
     ).not.toBeNull(),
   );
-  await act(async () => {
-    (
-      document.querySelector(
-        '[data-slot="popover-content"] button[aria-label="Artifacts"]',
-      ) as HTMLButtonElement
-    ).click();
-  });
-  await vi.waitFor(() => expect(api.artifacts.list).toHaveBeenCalled());
-  expect(host.textContent).toContain("Artifacts");
-
-  await act(async () => {
-    (
-      host.querySelector('button[aria-label="Back"]') as HTMLButtonElement
-    ).click();
-  });
-  await act(async () => {
-    (
-      host.querySelector('button[aria-label="Account"]') as HTMLButtonElement
-    ).click();
-  });
-  await vi.waitFor(() =>
-    expect(
-      document.querySelector('[data-slot="popover-content"]'),
-    ).not.toBeNull(),
-  );
-  await act(async () => {
-    (
-      document.querySelector(
-        '[data-slot="popover-content"] button[aria-label="Board"]',
-      ) as HTMLButtonElement
-    ).click();
-  });
-  await vi.waitFor(() => expect(api.tickets.list).toHaveBeenCalled());
-  expect(host.textContent).toContain("Board");
+  const menu = document.querySelector('[data-slot="popover-content"]');
+  expect(menu?.querySelector('button[aria-label="Artifacts"]')).toBeNull();
+  expect(menu?.querySelector('button[aria-label="Board"]')).toBeNull();
+  expect(menu?.querySelector('button[aria-label="Activity"]')).not.toBeNull();
 });
 
 it("opens the shared command palette with local bots", async () => {

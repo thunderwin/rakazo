@@ -27,10 +27,23 @@ describe("local work tools", () => {
   it("tracks scratchpad work and local tickets", async () => {
     const db = openLocalDatabase(":memory:");
     const created = db.bots.create({ name: "Operator" });
-    const provider = new LocalWorkToolProvider(new LocalToolRegistry([]), db, () => true);
-    const definitions = await provider.definitionsFor({ ...bot, id: created.id });
+    const provider = new LocalWorkToolProvider(
+      new LocalToolRegistry([]),
+      db,
+      () => true,
+      true,
+    );
+    const definitions = await provider.definitionsFor({
+      ...bot,
+      id: created.id,
+    });
     expect(definitions.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining(["task_catalog", "scratchpad_add", "ticket_create", "ticket_comment"]),
+      expect.arrayContaining([
+        "task_catalog",
+        "scratchpad_add",
+        "ticket_create",
+        "ticket_comment",
+      ]),
     );
     const item = (await provider.execute({
       botId: created.id,
@@ -74,12 +87,53 @@ describe("local work tools", () => {
     db.close();
   });
 
+  it("keeps ticket tools out of the default model surface", async () => {
+    const db = openLocalDatabase(":memory:");
+    const created = db.bots.create({ name: "Operator" });
+    const provider = new LocalWorkToolProvider(
+      new LocalToolRegistry([]),
+      db,
+      () => true,
+    );
+    const names = (
+      await provider.definitionsFor({ ...bot, id: created.id })
+    ).map((tool) => tool.name);
+    expect(names).toEqual(
+      expect.arrayContaining(["task_catalog", "scratchpad_add"]),
+    );
+    expect(names).not.toEqual(
+      expect.arrayContaining([
+        "board_tickets",
+        "ticket_get",
+        "ticket_create",
+        "ticket_update",
+        "ticket_comment",
+      ]),
+    );
+    await expect(
+      provider.execute({
+        botId: created.id,
+        name: "ticket_create",
+        args: { title: "Should stay hidden" },
+        executionId: "ticket-hidden",
+      }),
+    ).rejects.toThrow("is not available");
+    db.close();
+  });
+
   it("requires approval to remove scratchpad work", async () => {
     const db = openLocalDatabase(":memory:");
     const created = db.bots.create({ name: "Operator" });
-    const item = db.work.addScratchpad({ botId: created.id, title: "Temporary" });
+    const item = db.work.addScratchpad({
+      botId: created.id,
+      title: "Temporary",
+    });
     const approve = vi.fn(() => false);
-    const provider = new LocalWorkToolProvider(new LocalToolRegistry([]), db, approve);
+    const provider = new LocalWorkToolProvider(
+      new LocalToolRegistry([]),
+      db,
+      approve,
+    );
     await expect(
       provider.execute({
         botId: created.id,

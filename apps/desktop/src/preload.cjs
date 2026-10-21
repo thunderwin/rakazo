@@ -97,6 +97,9 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       update: (input) =>
         ipcRenderer.invoke("desktop.local.settings.update", input),
     },
+    workspace: {
+      open: () => ipcRenderer.invoke("desktop.local.workspace.open"),
+    },
     browser: {
       status: () => ipcRenderer.invoke("desktop.local.browser.status"),
       startPairing: () =>

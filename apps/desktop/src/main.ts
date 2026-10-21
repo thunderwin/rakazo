@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ATTACHMENT_MAX_BASE64_LENGTH,
@@ -1128,6 +1128,7 @@ async function startLocalRuntime(accountId: string): Promise<void> {
     openFile: (target) => shell.openPath(target),
     openUrl: (url) => shell.openExternal(url),
     launchApp: launchLocalApplication,
+    enableTicketTools: process.env.RAKAZO_ENABLE_TICKET_TOOLS === "1",
     approveTool: async ({ name, runId, args }) => {
       const browserWrite = browserWriteTools.has(name);
       const browserBorrow = name === "browser_borrow_tab";
@@ -1913,6 +1914,13 @@ function installLocalIpc() {
               null,
           }),
     });
+  });
+  ipcMain.handle("desktop.local.workspace.open", async (event) => {
+    requireLocalWindow(event);
+    const workspacePath = requireLocalRuntime().getWorkspacePath();
+    await mkdir(workspacePath, { recursive: true });
+    const error = await shell.openPath(workspacePath);
+    if (error) throw new Error(error);
   });
   ipcMain.handle("desktop.local.browser.status", (event) => {
     requireLocalWindow(event);

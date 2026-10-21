@@ -14,7 +14,7 @@ import {
   Brain,
   Copy,
   ExternalLink,
-  Files,
+  FolderOpen,
   LibraryBig,
   LoaderCircle,
   Unplug,
@@ -34,7 +34,7 @@ export function LocalAppSettingsDialog({
   settings,
   onOpenKnowledgeSkills,
   onOpenSharedMemory,
-  onOpenArtifacts,
+  onOpenWorkspace,
   onSaved,
 }: {
   open: boolean;
@@ -43,7 +43,7 @@ export function LocalAppSettingsDialog({
   settings: LocalSettings;
   onOpenKnowledgeSkills: () => void;
   onOpenSharedMemory: () => void;
-  onOpenArtifacts: () => void;
+  onOpenWorkspace: () => Promise<void>;
   onSaved: (settings: LocalSettings) => void;
 }) {
   const { t } = useLingui();
@@ -304,10 +304,10 @@ export function LocalAppSettingsDialog({
               type="button"
               variant="outline"
               size="sm"
-              onClick={onOpenArtifacts}
+              onClick={() => void onOpenWorkspace()}
             >
-              <Files size={14} />
-              <Trans>Artifacts</Trans>
+              <FolderOpen size={14} />
+              <Trans>Open workspace</Trans>
             </Button>
           </div>
         </section>

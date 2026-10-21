@@ -81,6 +81,7 @@ export interface LocalRuntimeServiceOptions {
   ) => Promise<string | null>;
   mcpConnector?: ConnectLocalMcp;
   approveTool?: ApproveLocalTool;
+  enableTicketTools?: boolean;
 }
 
 /** Owns the local DB and runtime for one desktop process. */
@@ -153,6 +154,7 @@ export class LocalRuntimeService {
       withMcp,
       this.db,
       options.approveTool ?? (() => false),
+      options.enableTicketTools === true,
     );
     const tools = new LocalToolPolicyProvider(
       new RecordingToolProvider(provider, this.db.runs),
@@ -919,6 +921,10 @@ export class LocalRuntimeService {
 
   getUserSettings(): LocalUserSettings {
     return parseLocalUserSettings(this.db.settings.get("local.user-settings"));
+  }
+
+  getWorkspacePath(): string {
+    return this.workspaceDir;
   }
 
   updateUserSettings(input: Partial<LocalUserSettings>): LocalUserSettings {

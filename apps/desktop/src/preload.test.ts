@@ -71,6 +71,7 @@ describe("desktop preload bridge", () => {
       "settings",
       "skills",
       "tickets",
+      "workspace",
     ]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
@@ -117,6 +118,7 @@ describe("desktop preload bridge", () => {
     await bridge.local?.runs.cancel("run-1");
     await bridge.local?.settings.get();
     await bridge.local?.settings.update({ theme: "light" });
+    await bridge.local?.workspace.open();
     await bridge.local?.browser.status();
     await bridge.local?.browser.startPairing();
     await bridge.local?.browser.revoke();
@@ -204,6 +206,7 @@ describe("desktop preload bridge", () => {
       "desktop.local.runs.cancel",
       "desktop.local.settings.get",
       "desktop.local.settings.update",
+      "desktop.local.workspace.open",
       "desktop.local.browser.status",
       "desktop.local.browser.startPairing",
       "desktop.local.browser.revoke",
