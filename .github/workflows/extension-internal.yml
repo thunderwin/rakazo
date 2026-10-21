@@ -36,7 +36,7 @@ jobs:
       - run: pnpm --filter @rakazo/browser-extension check
       - run: pnpm --filter @rakazo/browser-extension test
       - run: pnpm --filter @rakazo/browser-extension exec playwright install --with-deps chromium
-      - run: pnpm --filter @rakazo/browser-extension test:e2e
+      - run: xvfb-run -a pnpm --filter @rakazo/browser-extension test:e2e
       - run: pnpm --filter @rakazo/browser-extension run build:store
 
       - name: Archive installable extension
