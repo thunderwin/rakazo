@@ -1371,6 +1371,43 @@ function installLocalIpc() {
     }
     return requireLocalRuntime().listActivity((limit as number | undefined) ?? 50);
   });
+  ipcMain.handle("desktop.local.memory.list", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = input === undefined ? {} : localRecord(input, "Memory filter");
+    if (value.scope !== undefined && value.scope !== "bot" && value.scope !== "user") {
+      throw new Error("Memory scope is invalid");
+    }
+    return requireLocalRuntime().listMemory({
+      ...(value.scope === undefined ? {} : { scope: value.scope }),
+      ...(value.botId === undefined ? {} : { botId: localString(value.botId, "Bot id", 200) }),
+    });
+  });
+  ipcMain.handle(
+    "desktop.local.memory.update",
+    (event, documentId: unknown, content: unknown, expectedRevision: unknown) => {
+      requireLocalWindow(event);
+      if (typeof content !== "string" || content.length > 100_000) {
+        throw new Error("Memory content is invalid");
+      }
+      if (
+        expectedRevision !== undefined &&
+        (!Number.isInteger(expectedRevision) || (expectedRevision as number) < 1)
+      ) {
+        throw new Error("Memory revision is invalid");
+      }
+      return requireLocalRuntime().updateMemory(
+        localString(documentId, "Memory id", 200),
+        content,
+        expectedRevision as number | undefined,
+      );
+    },
+  );
+  ipcMain.handle("desktop.local.memory.remove", (event, documentId: unknown) => {
+    requireLocalWindow(event);
+    if (!requireLocalRuntime().removeMemory(localString(documentId, "Memory id", 200))) {
+      throw new Error("Memory document not found");
+    }
+  });
 }
 
 async function openLocalMode(userDataDir: string) {

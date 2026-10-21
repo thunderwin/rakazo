@@ -6,6 +6,7 @@ import { BotRepository } from "./repositories/bots.js";
 import { GroupMessageRepository } from "./repositories/group-messages.js";
 import { GroupThreadRepository } from "./repositories/group-threads.js";
 import { GroupRepository } from "./repositories/groups.js";
+import { MemoryRepository } from "./repositories/memory.js";
 import { MessageRepository } from "./repositories/messages.js";
 import { PeerMessageRepository } from "./repositories/peer-messages.js";
 import { RunRepository } from "./repositories/runs.js";
@@ -25,6 +26,7 @@ export class LocalDatabase {
   readonly groupMessages: GroupMessageRepository;
   readonly threads: ThreadRepository;
   readonly messages: MessageRepository;
+  readonly memory: MemoryRepository;
   readonly peerMessages: PeerMessageRepository;
   readonly runs: RunRepository;
   readonly settings: SettingsRepository;
@@ -45,6 +47,7 @@ export class LocalDatabase {
     this.groupMessages = new GroupMessageRepository(this.sqlite);
     this.threads = new ThreadRepository(this.sqlite);
     this.messages = new MessageRepository(this.sqlite);
+    this.memory = new MemoryRepository(this.sqlite);
     this.peerMessages = new PeerMessageRepository(this.sqlite);
     this.runs = new RunRepository(this.sqlite);
     this.settings = new SettingsRepository(this.sqlite);

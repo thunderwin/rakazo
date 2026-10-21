@@ -4,6 +4,10 @@ export { BotRepository } from "./repositories/bots.js";
 export { GroupMessageRepository } from "./repositories/group-messages.js";
 export { GroupThreadRepository } from "./repositories/group-threads.js";
 export { GroupRepository } from "./repositories/groups.js";
+export {
+  MemoryRepository,
+  MemoryRevisionConflictError,
+} from "./repositories/memory.js";
 export { MessageRepository } from "./repositories/messages.js";
 export { type PeerMessage, PeerMessageRepository } from "./repositories/peer-messages.js";
 export { RunRepository } from "./repositories/runs.js";
@@ -13,6 +17,7 @@ export type {
   AppendGroupMessageInput,
   AppendMessageInput,
   Bot,
+  CommitMemoryInput,
   CreateBotInput,
   CreateGroupInput,
   GroupMember,
@@ -22,6 +27,8 @@ export type {
   LocalActivityRun,
   LocalGroup,
   LocalGroupWithMembers,
+  LocalMemoryDocument,
+  LocalMemoryScope,
   LocalMessage,
   LocalRunKind,
   LocalRunRecord,

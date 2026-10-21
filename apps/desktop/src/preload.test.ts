@@ -47,6 +47,7 @@ describe("desktop preload bridge", () => {
       "browser",
       "diagnostics",
       "groups",
+      "memory",
       "messages",
       "runs",
       "settings",
@@ -93,6 +94,9 @@ describe("desktop preload bridge", () => {
     await bridge.local?.browser.revoke();
     await bridge.local?.diagnostics.copy();
     await bridge.local?.activity.list(20);
+    await bridge.local?.memory.list({ botId: "bot-1", scope: "bot" });
+    await bridge.local?.memory.update("memory-1", "fact", 1);
+    await bridge.local?.memory.remove("memory-1");
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -128,6 +132,9 @@ describe("desktop preload bridge", () => {
       "desktop.local.browser.revoke",
       "desktop.local.diagnostics.copy",
       "desktop.local.activity.list",
+      "desktop.local.memory.list",
+      "desktop.local.memory.update",
+      "desktop.local.memory.remove",
     ]);
   });
 

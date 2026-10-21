@@ -14,6 +14,9 @@ export interface LocalRuntimeOptions {
   store: LocalConversationStore;
   engine: LocalAgentEngine;
   tools: LocalToolProvider;
+  memory?: {
+    contextFor(botId: string): string | undefined;
+  };
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: (run: {
     runId: string;
@@ -77,6 +80,7 @@ export class LocalRuntime {
   private readonly store: LocalConversationStore;
   private readonly engine: LocalAgentEngine;
   private readonly tools: LocalToolProvider;
+  private readonly memory: LocalRuntimeOptions["memory"];
   private readonly resolveModel: LocalRuntimeOptions["resolveModel"];
   private readonly onRunStart: LocalRuntimeOptions["onRunStart"];
   private readonly onEvent: LocalRuntimeOptions["onEvent"];
@@ -88,6 +92,7 @@ export class LocalRuntime {
     this.store = options.store;
     this.engine = options.engine;
     this.tools = options.tools;
+    this.memory = options.memory;
     this.resolveModel = options.resolveModel;
     this.onRunStart = options.onRunStart;
     this.onEvent = options.onEvent;
@@ -113,6 +118,7 @@ export class LocalRuntime {
       .listMessages(thread.id, { limit: 100 })
       .map(toAgentMessage)
       .filter((message) => message.content.length > 0);
+    const memoryContext = this.memory?.contextFor(bot.id);
     const userMessage = this.store.appendMessage({
       threadId: thread.id,
       role: "user",
@@ -150,7 +156,9 @@ export class LocalRuntime {
               runId,
               sourceMessageId: userMessage.id,
               prompt: content,
-              instructions: bot.instructions,
+              instructions: [bot.instructions.trim(), memoryContext]
+                .filter((instruction): instruction is string => Boolean(instruction))
+                .join("\n\n"),
               history,
               tools: toolDefinitions,
               model,
@@ -158,6 +166,7 @@ export class LocalRuntime {
                 this.tools.execute({
                   botId: bot.id,
                   runId,
+                  threadId: thread.id,
                   name,
                   args,
                   executionId,

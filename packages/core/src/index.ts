@@ -31,6 +31,7 @@ export * from "./http-response.js";
 export * from "./instruction-diff.js";
 export * from "./markdown-plain.js";
 export * from "./mcp.js";
+export * from "./memory.js";
 export * from "./message-pages.js";
 export * from "./message-reactions.js";
 export * from "./message-replies.js";

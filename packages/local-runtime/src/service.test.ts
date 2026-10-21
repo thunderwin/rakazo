@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { LocalAgentEngine } from "./agent.js";
+import type { LocalAgentEngine, LocalAgentRunRequest } from "./agent.js";
 import { LocalRuntimeService } from "./service.js";
 import { type LocalTool, LocalToolRegistry } from "./tools.js";
 
@@ -221,6 +221,92 @@ describe("local runtime service", () => {
         ],
       }),
     );
+    service.close();
+  });
+
+  it("persists private and shared memory and injects it into direct runs", async () => {
+    const requests: LocalAgentRunRequest[] = [];
+    let calls = 0;
+    const memoryEngine: LocalAgentEngine = {
+      async *run(request) {
+        requests.push(request);
+        calls += 1;
+        if (calls === 1) {
+          await request.executeTool(
+            "remember",
+            { content: "Prefers primary sources." },
+            "memory-bot",
+          );
+          await request.executeTool(
+            "save_shared_memory",
+            { path: "TEAM.md", content: "Use the shared launch date." },
+            "memory-shared",
+          );
+        }
+        yield { type: "text", text: `reply ${calls}` };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: memoryEngine,
+      tools,
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Researcher", instructions: "Verify sources." });
+
+    await service.sendMessage(bot.id, "Remember these.");
+
+    expect(service.listMemory({ scope: "bot", botId: bot.id })).toEqual([
+      expect.objectContaining({
+        path: "MEMORY.md",
+        content: "Prefers primary sources.\n",
+        revision: 1,
+      }),
+    ]);
+    expect(service.listMemory({ scope: "user" })).toEqual([
+      expect.objectContaining({
+        path: "TEAM.md",
+        content: "Use the shared launch date.",
+        revision: 1,
+      }),
+    ]);
+
+    await service.sendMessage(bot.id, "What do you know?");
+
+    expect(requests[1]?.instructions).toContain("Verify sources.");
+    expect(requests[1]?.instructions).toContain("bot: MEMORY.md");
+    expect(requests[1]?.instructions).toContain("Prefers primary sources.");
+    expect(requests[1]?.instructions).toContain("user: TEAM.md");
+    expect(requests[1]?.instructions).toContain("Use the shared launch date.");
+    service.close();
+  });
+
+  it("does not expose private memory tools in group chats", async () => {
+    let groupTools: string[] = [];
+    const groupEngine: LocalAgentEngine = {
+      async *run(request) {
+        groupTools = request.tools.map((tool) => tool.name);
+        yield { type: "text", text: "ok" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: groupEngine,
+      tools,
+      resolveModel,
+    });
+    const first = service.createBot({ name: "Researcher" });
+    const second = service.createBot({ name: "Writer" });
+    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+
+    await service.sendGroupMessage(group.id, "Prepare the draft");
+
+    expect(groupTools).not.toContain("remember");
+    expect(groupTools).not.toContain("save_shared_memory");
     service.close();
   });
 

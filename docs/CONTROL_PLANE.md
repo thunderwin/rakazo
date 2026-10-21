@@ -225,9 +225,11 @@ GET /v1/client/manifest
 
 ### Bot/用户私有 Memory
 
-- 客户端 SQLite 保存。
-- 默认不上传。
-- 可导出。
+> 状态：个人版已实现，核实日期 2026-10-21。企业共享部分尚未实现。
+
+- 客户端 SQLite 保存 `bot` 和账号级 `user` 文档，并保留完整 revision 历史。
+- 默认不上传；bot 与共享文档可分别导出 Markdown。
+- 直聊注入 32 KiB 上限的背景上下文；群聊不暴露私有 Memory 工具。
 - 只有明确操作才晋升到企业 Memory。
 
 ## 8. Routines
@@ -321,6 +323,6 @@ GET /v1/client/manifest
 4. 企业 Bot 模板、群预设、Skills 和 Knowledge 分配。
 5. 本地群聊和 `handoff_to_bot`。
 6. Routines 服务器定义和客户端调度。
-7. Memory 分层。
+7. Memory 分层：个人本地 Memory 已实现；企业共享 Memory 和晋升流程待实现。
 8. 工具运行记录、活动历史和诊断 bundle。
 9. 私有附件、预置附件。

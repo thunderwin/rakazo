@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { openLocalDatabase } from "./index.js";
+import { MemoryRevisionConflictError, openLocalDatabase } from "./index.js";
 
 const directories: string[] = [];
 
@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 4,
+      count: 5,
     });
     second.close();
   });
@@ -147,6 +147,58 @@ describe("local database", () => {
     expect(db.groupThreads.getOrCreate(group.id).id).toBe(thread.id);
     expect(db.groupMessages.list(thread.id).map((message) => message.sequence)).toEqual([1, 2]);
     expect(db.groupMessages.list(thread.id)[1]?.botId).toBe(second.id);
+    db.close();
+  });
+
+  it("versions bot and shared memory and rejects stale writes", () => {
+    const db = openLocalDatabase(":memory:");
+    const bot = db.bots.create({ name: "Researcher" });
+    const botMemory = db.memory.commit({
+      scope: "bot",
+      botId: bot.id,
+      path: "MEMORY.md",
+      content: "Prefers primary sources.\n",
+      expectedRevision: 0,
+      sourceRunId: "run-1",
+    });
+    const updated = db.memory.commit({
+      scope: "bot",
+      botId: bot.id,
+      path: "MEMORY.md",
+      content: "Prefers primary sources.\nWorks in Berlin.\n",
+      expectedRevision: botMemory.revision,
+      sourceRunId: "run-2",
+    });
+    const shared = db.memory.commit({
+      scope: "user",
+      path: "TEAM.md",
+      content: "Use the shared launch date.\n",
+      expectedRevision: 0,
+    });
+
+    expect(updated).toMatchObject({ revision: 2, botId: bot.id });
+    expect(shared).toMatchObject({ revision: 1, botId: null });
+    expect(
+      db.memory.list({ scope: "bot", botId: bot.id }).map((document) => document.path),
+    ).toEqual(["MEMORY.md"]);
+    expect(db.memory.list({ scope: "user" }).map((document) => document.path)).toEqual(["TEAM.md"]);
+    expect(() =>
+      db.memory.commit({
+        scope: "bot",
+        botId: bot.id,
+        path: "MEMORY.md",
+        content: "stale",
+        expectedRevision: 1,
+      }),
+    ).toThrow(MemoryRevisionConflictError);
+    expect(
+      db.sqlite
+        .prepare("SELECT COUNT(*) AS count FROM memory_revisions WHERE document_id = ?")
+        .get(botMemory.id),
+    ).toEqual({ count: 2 });
+
+    expect(db.memory.remove(shared.id)).toBe(true);
+    expect(db.memory.get(shared.id)).toBeNull();
     db.close();
   });
 

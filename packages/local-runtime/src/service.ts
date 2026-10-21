@@ -8,6 +8,7 @@ import {
 import { RecordingToolProvider } from "./activity-tools.js";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
 import { LocalGroupRuntime } from "./group-runtime.js";
+import { LocalMemory, LocalMemoryToolProvider } from "./memory.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
 import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
@@ -28,11 +29,16 @@ export interface LocalRuntimeServiceOptions {
 export class LocalRuntimeService {
   readonly db: LocalDatabase;
   readonly runtime: LocalRuntime;
+  readonly memory: LocalMemory;
   private readonly groups: LocalGroupRuntime;
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
-    const tools = new RecordingToolProvider(options.tools, this.db.runs);
+    this.memory = new LocalMemory(this.db.memory);
+    const tools = new RecordingToolProvider(
+      new LocalMemoryToolProvider(options.tools, this.memory),
+      this.db.runs,
+    );
     const onRunStart = async (run: {
       runId: string;
       botId: string;
@@ -70,6 +76,7 @@ export class LocalRuntimeService {
       store: new SqliteConversationStore(this.db),
       engine: options.engine,
       tools,
+      memory: this.memory,
       resolveModel: options.resolveModel,
       onRunStart,
       onEvent: options.onEvent,
@@ -134,6 +141,18 @@ export class LocalRuntimeService {
 
   listActivity(limit = 30) {
     return this.db.runs.listRecent(limit);
+  }
+
+  listMemory(input: { scope?: "bot" | "user"; botId?: string } = {}) {
+    return this.memory.list(input);
+  }
+
+  updateMemory(documentId: string, content: string, expectedRevision?: number) {
+    return this.memory.update(documentId, content, expectedRevision);
+  }
+
+  removeMemory(documentId: string) {
+    return this.memory.remove(documentId);
   }
 
   sendMessage(

@@ -4,6 +4,7 @@ import type { LocalAgentTool } from "./agent.js";
 export interface LocalToolExecutionRequest {
   botId?: string;
   runId?: string;
+  threadId?: string;
   name: string;
   args: Record<string, unknown>;
   executionId: string;

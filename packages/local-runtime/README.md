@@ -29,8 +29,11 @@ Current implementation:
 - browser extension tools backed by a loopback Chrome/Edge bridge
 - live run events and cancellation in the desktop IPC bridge
 - local run/tool activity records exposed through the desktop IPC bridge
+- versioned bot and account-scoped memory stored in SQLite, with `remember` and
+  `save_shared_memory`; direct chats receive a bounded memory context and group
+  chats do not expose private memory tools
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-App launch, memory, and routines are still separate migration work.
+App launch and routines are still separate migration work.

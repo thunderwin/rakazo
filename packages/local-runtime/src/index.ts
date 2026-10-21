@@ -20,6 +20,11 @@ export {
   LocalGroupRuntime,
 } from "./group-runtime.js";
 export {
+  LocalMemory,
+  LocalMemoryToolProvider,
+  PRIVATE_MEMORY_TOOL_NAMES,
+} from "./memory.js";
+export {
   createMessageBotTool,
   type DeliverPeerBotMessage,
   type PeerBotMessageRequest,

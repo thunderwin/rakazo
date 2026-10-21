@@ -101,6 +101,11 @@ function bridge(): RakazoDesktopLocal {
     },
     diagnostics: { copy: vi.fn() },
     activity: { list: vi.fn(async () => []) },
+    memory: {
+      list: vi.fn(async () => []),
+      update: vi.fn(),
+      remove: vi.fn(),
+    },
   };
 }
 
@@ -301,4 +306,53 @@ it("shows recent run and tool activity locally", async () => {
   await vi.waitFor(() => expect(document.body.textContent).toContain("browser_observe"));
   expect(document.body.textContent).toContain("1 tool");
   expect(document.body.textContent).toContain("completed");
+});
+
+it("opens local bot memory and saves a revision", async () => {
+  const api = bridge();
+  const memoryDocument = {
+    id: "memory-1",
+    scope: "bot" as const,
+    botId: bot.id,
+    path: "MEMORY.md",
+    content: "Prefers primary sources.\n",
+    revision: 1,
+    createdAt: "2026-10-20T12:00:00.000Z",
+    updatedAt: "2026-10-20T12:00:00.000Z",
+  };
+  api.memory.list = vi.fn(async (input) => (input?.scope === "user" ? [] : [memoryDocument]));
+  api.memory.update = vi.fn(async (_id, content) => ({
+    ...memoryDocument,
+    content,
+    revision: 2,
+  }));
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    (host.querySelector('button[aria-label="Memory"]') as HTMLButtonElement).click();
+  });
+  await vi.waitFor(() => expect(document.body.textContent).toContain("MEMORY.md"));
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.includes("MEMORY.md"))
+      ?.click();
+  });
+  const textarea = document.body.querySelector(
+    'textarea[aria-label="MEMORY.md"]',
+  ) as HTMLTextAreaElement;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    setter?.call(textarea, "Updated fact.\n");
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.trim() === "Save")
+      ?.click();
+  });
+
+  expect(api.memory.update).toHaveBeenCalledWith("memory-1", "Updated fact.\n", 1);
 });

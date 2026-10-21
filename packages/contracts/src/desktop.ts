@@ -111,6 +111,17 @@ export interface DesktopActivityRun {
   tools: DesktopActivityTool[];
 }
 
+export interface DesktopLocalMemoryDocument {
+  id: string;
+  scope: "bot" | "user";
+  botId: string | null;
+  path: string;
+  content: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -253,6 +264,18 @@ export interface RakazoDesktopLocal {
   };
   activity: {
     list: (limit?: number) => Promise<DesktopActivityRun[]>;
+  };
+  memory: {
+    list: (input?: {
+      botId?: string;
+      scope?: "bot" | "user";
+    }) => Promise<DesktopLocalMemoryDocument[]>;
+    update: (
+      documentId: string,
+      content: string,
+      expectedRevision?: number,
+    ) => Promise<DesktopLocalMemoryDocument>;
+    remove: (documentId: string) => Promise<void>;
   };
 }
 

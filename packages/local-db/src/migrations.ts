@@ -176,6 +176,41 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX tool_runs_started_at ON tool_runs(started_at DESC);
     `,
   },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE memory_documents (
+        id TEXT PRIMARY KEY,
+        scope TEXT NOT NULL CHECK (scope IN ('bot', 'user')),
+        bot_id TEXT REFERENCES bots(id) ON DELETE CASCADE,
+        path TEXT NOT NULL,
+        content TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        CHECK (
+          (scope = 'bot' AND bot_id IS NOT NULL) OR
+          (scope = 'user' AND bot_id IS NULL)
+        )
+      );
+
+      CREATE UNIQUE INDEX memory_documents_scope_bot_path
+        ON memory_documents(scope, COALESCE(bot_id, ''), path);
+      CREATE INDEX memory_documents_scope_updated
+        ON memory_documents(scope, updated_at DESC);
+
+      CREATE TABLE memory_revisions (
+        id TEXT PRIMARY KEY,
+        document_id TEXT NOT NULL REFERENCES memory_documents(id) ON DELETE CASCADE,
+        revision INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        source_run_id TEXT,
+        source_thread_id TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE (document_id, revision)
+      );
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

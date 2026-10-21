@@ -84,6 +84,12 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     activity: {
       list: (limit) => ipcRenderer.invoke("desktop.local.activity.list", limit),
     },
+    memory: {
+      list: (input) => ipcRenderer.invoke("desktop.local.memory.list", input),
+      update: (documentId, content, expectedRevision) =>
+        ipcRenderer.invoke("desktop.local.memory.update", documentId, content, expectedRevision),
+      remove: (documentId) => ipcRenderer.invoke("desktop.local.memory.remove", documentId),
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),

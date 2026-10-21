@@ -160,3 +160,26 @@ export interface LocalToolRunRecord {
 export interface LocalActivityRun extends LocalRunRecord {
   tools: LocalToolRunRecord[];
 }
+
+export type LocalMemoryScope = "bot" | "user";
+
+export interface LocalMemoryDocument {
+  id: string;
+  scope: LocalMemoryScope;
+  botId: string | null;
+  path: string;
+  content: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommitMemoryInput {
+  scope: LocalMemoryScope;
+  botId?: string;
+  path: string;
+  content: string;
+  expectedRevision?: number;
+  sourceRunId?: string;
+  sourceThreadId?: string;
+}

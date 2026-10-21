@@ -1,12 +1,24 @@
 import type { DesktopBrowserBridgeStatus, DesktopLocalRunStarted } from "@rakazo/contracts";
 import { GROK_COLOR_LIST } from "@rakazo/core";
 import { BotAvatar, Button, GroupAvatar, Skeleton } from "@rakazo/ui-web";
-import { AlertTriangle, Bot, Clock3, Globe2, LogOut, Plus, Settings, Users, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Bot,
+  Brain,
+  Clock3,
+  Globe2,
+  LogOut,
+  Plus,
+  Settings,
+  Users,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LocalActivityDialog } from "./LocalActivityDialog";
 import { LocalAuthScreen } from "./LocalAuthScreen";
 import { LocalComposer } from "./LocalComposer";
 import { LocalGroupDialog } from "./LocalGroupDialog";
+import { LocalMemoryDialog } from "./LocalMemoryDialog";
 import { LocalLiveMessage, LocalMessageView } from "./LocalMessageView";
 import { LocalSettingsDialog } from "./LocalSettings";
 import {
@@ -155,6 +167,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newBotName, setNewBotName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -707,6 +720,17 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
+              {activeBot ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Memory"
+                  onClick={() => setMemoryOpen(true)}
+                >
+                  <Brain size={15} />
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -862,6 +886,14 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
           groupId ? groups.find((group) => group.id === groupId)?.name : undefined
         }
       />
+      {activeBot ? (
+        <LocalMemoryDialog
+          open={memoryOpen}
+          onOpenChange={setMemoryOpen}
+          api={api}
+          bot={activeBot}
+        />
+      ) : null}
     </div>
   );
 }

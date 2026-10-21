@@ -148,7 +148,8 @@ docs/                        架构、V1 范围、fork 说明
 - 本地库和 workspace 按 Rakazo userId 放在
   `local/accounts/<sha256(userId)>/`；登录前不打开任何账号数据库，退出或切换账号时
   先取消活动 run。
-- 存储 bot、thread、message、memory、routine、settings 和工具记录。
+- 存储 bot、thread、message、bot/账号 Memory、routine、settings 和工具记录。
+- Memory 文档和 revision 已实现；routine repository 和本地调度仍待完成。
 - 升级时执行迁移；失败保留备份。
 - 提供导出/导入；V1 不做云端同步。
 - 敏感字段和备份加密。
