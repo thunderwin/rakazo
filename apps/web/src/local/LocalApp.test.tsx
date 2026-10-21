@@ -100,6 +100,7 @@ function bridge(): RakazoDesktopLocal {
       revoke: vi.fn(),
     },
     diagnostics: { copy: vi.fn() },
+    activity: { list: vi.fn(async () => []) },
   };
 }
 
@@ -257,4 +258,47 @@ it("renders a group thread, bot-authored messages, and handoff events", async ()
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   });
   expect(host.querySelector('[role="listbox"]')?.textContent).toContain("everyone");
+});
+
+it("shows recent run and tool activity locally", async () => {
+  const api = bridge();
+  api.activity.list = vi.fn(async () => [
+    {
+      id: "run-1",
+      kind: "direct" as const,
+      botId: bot.id,
+      groupId: null,
+      threadId: "thread-1",
+      status: "completed" as const,
+      error: null,
+      startedAt: "2026-10-20T12:00:00.000Z",
+      endedAt: "2026-10-20T12:00:02.000Z",
+      tools: [
+        {
+          id: "run-1:tool-1",
+          runId: "run-1",
+          executionId: "tool-1",
+          botId: bot.id,
+          toolName: "browser_observe",
+          arguments: { max_elements: 20 },
+          result: { elements: 3 },
+          status: "completed" as const,
+          error: null,
+          startedAt: "2026-10-20T12:00:00.500Z",
+          endedAt: "2026-10-20T12:00:01.000Z",
+        },
+      ],
+    },
+  ]);
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    (host.querySelector('button[aria-label="Activity"]') as HTMLButtonElement).click();
+  });
+  await vi.waitFor(() => expect(document.body.textContent).toContain("browser_observe"));
+  expect(document.body.textContent).toContain("1 tool");
+  expect(document.body.textContent).toContain("completed");
 });

@@ -1,3 +1,4 @@
+export { RecordingToolProvider } from "./activity-tools.js";
 export type {
   LocalAgentEngine,
   LocalAgentEvent,

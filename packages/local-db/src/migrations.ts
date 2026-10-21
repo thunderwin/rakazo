@@ -138,6 +138,44 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX group_messages_bot_id ON group_messages(bot_id);
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE runs (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL CHECK (kind IN ('direct', 'group')),
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        group_id TEXT REFERENCES chat_groups(id) ON DELETE SET NULL,
+        thread_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'stopped')),
+        error TEXT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT
+      );
+
+      CREATE INDEX runs_started_at ON runs(started_at DESC);
+      CREATE INDEX runs_bot_started ON runs(bot_id, started_at DESC);
+      CREATE INDEX runs_group_started ON runs(group_id, started_at DESC);
+
+      CREATE TABLE tool_runs (
+        id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+        execution_id TEXT NOT NULL,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        tool_name TEXT NOT NULL,
+        arguments_json TEXT NOT NULL,
+        result_json TEXT,
+        status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+        error TEXT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        UNIQUE (run_id, execution_id)
+      );
+
+      CREATE INDEX tool_runs_run_started ON tool_runs(run_id, started_at);
+      CREATE INDEX tool_runs_started_at ON tool_runs(started_at DESC);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

@@ -5,6 +5,7 @@ import {
   type LocalDatabase,
   openLocalDatabase,
 } from "@rakazo/local-db";
+import { RecordingToolProvider } from "./activity-tools.js";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
 import { LocalGroupRuntime } from "./group-runtime.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
@@ -31,23 +32,57 @@ export class LocalRuntimeService {
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
+    const tools = new RecordingToolProvider(options.tools, this.db.runs);
+    const onRunStart = async (run: {
+      runId: string;
+      botId: string;
+      threadId: string;
+      userMessageId: string;
+    }) => {
+      const groupThread = this.db.groupThreads.get(run.threadId);
+      this.db.runs.start({
+        id: run.runId,
+        kind: groupThread ? "group" : "direct",
+        botId: run.botId,
+        threadId: run.threadId,
+        ...(groupThread ? { groupId: groupThread.groupId } : {}),
+      });
+      try {
+        await options.onRunStart?.(run);
+      } catch (error) {
+        this.db.runs.finish(
+          run.runId,
+          "failed",
+          error instanceof Error ? error.message : String(error),
+        );
+        throw error;
+      }
+    };
+    const onRunEnd = async (run: {
+      runId: string;
+      status: "completed" | "failed" | "stopped";
+      error: string | null;
+    }) => {
+      this.db.runs.finish(run.runId, run.status, run.error);
+      await options.onRunEnd?.(run);
+    };
     this.runtime = new LocalRuntime({
       store: new SqliteConversationStore(this.db),
       engine: options.engine,
-      tools: options.tools,
+      tools,
       resolveModel: options.resolveModel,
-      onRunStart: options.onRunStart,
+      onRunStart,
       onEvent: options.onEvent,
-      onRunEnd: options.onRunEnd,
+      onRunEnd,
     });
     this.groups = new LocalGroupRuntime({
       db: this.db,
       engine: options.engine,
-      tools: options.tools,
+      tools,
       resolveModel: options.resolveModel,
-      onRunStart: options.onRunStart,
+      onRunStart,
       onEvent: options.onEvent,
-      onRunEnd: options.onRunEnd,
+      onRunEnd,
     });
   }
 
@@ -95,6 +130,10 @@ export class LocalRuntimeService {
 
   cancelGroup(groupId: string) {
     return this.groups.cancel(groupId);
+  }
+
+  listActivity(limit = 30) {
+    return this.db.runs.listRecent(limit);
   }
 
   sendMessage(

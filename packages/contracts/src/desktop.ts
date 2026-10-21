@@ -84,6 +84,33 @@ export interface DesktopGroupMessage {
   updatedAt: string;
 }
 
+export interface DesktopActivityTool {
+  id: string;
+  runId: string;
+  executionId: string;
+  botId: string;
+  toolName: string;
+  arguments: unknown;
+  result: unknown;
+  status: "running" | "completed" | "failed";
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface DesktopActivityRun {
+  id: string;
+  kind: "direct" | "group";
+  botId: string;
+  groupId: string | null;
+  threadId: string;
+  status: "running" | "completed" | "failed" | "stopped";
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  tools: DesktopActivityTool[];
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -223,6 +250,9 @@ export interface RakazoDesktopLocal {
   };
   diagnostics: {
     copy: () => Promise<void>;
+  };
+  activity: {
+    list: (limit?: number) => Promise<DesktopActivityRun[]>;
   };
 }
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { LocalAgentEngine } from "./agent.js";
 import { LocalRuntimeService } from "./service.js";
-import { LocalToolRegistry } from "./tools.js";
+import { type LocalTool, LocalToolRegistry } from "./tools.js";
 
 const directories: string[] = [];
 
@@ -114,6 +114,113 @@ describe("local runtime service", () => {
         status: "completed",
       }),
     ]);
+    service.close();
+  });
+
+  it("records run and tool activity locally", async () => {
+    const probe: LocalTool = {
+      definition: {
+        name: "probe",
+        description: "Probe",
+        inputSchema: { type: "object" },
+      },
+      execute: async ({ args }) => ({ echoed: args.value }),
+    };
+    const activityEngine: LocalAgentEngine = {
+      async *run(request) {
+        yield {
+          type: "tool",
+          name: "probe",
+          args: { value: "hello" },
+          executionId: "tool-1",
+        };
+        await request.executeTool("probe", { value: "hello" }, "tool-1");
+        yield { type: "text", text: "done" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: activityEngine,
+      tools: new LocalToolRegistry([probe], () => true),
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Researcher" });
+
+    await service.sendMessage(bot.id, "Use the probe");
+
+    expect(service.listActivity()).toEqual([
+      expect.objectContaining({
+        kind: "direct",
+        botId: bot.id,
+        status: "completed",
+        tools: [
+          expect.objectContaining({
+            executionId: "tool-1",
+            toolName: "probe",
+            status: "completed",
+            arguments: { value: "hello" },
+            result: { echoed: "hello" },
+          }),
+        ],
+      }),
+    ]);
+    service.close();
+  });
+
+  it("records group handoffs as tool activity", async () => {
+    let firstBotId = "";
+    const handoffEngine: LocalAgentEngine = {
+      async *run(request) {
+        if (request.botId === firstBotId) {
+          yield {
+            type: "tool",
+            name: "handoff_to_bot",
+            args: { confirm_name: "Writer", message: "Draft it" },
+            executionId: "handoff-tool",
+          };
+          await request.executeTool(
+            "handoff_to_bot",
+            { confirm_name: "Writer", message: "Draft it" },
+            "handoff-tool",
+          );
+        } else {
+          yield { type: "text", text: "Drafted" };
+        }
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: handoffEngine,
+      tools,
+      resolveModel,
+    });
+    const first = service.createBot({ name: "Researcher" });
+    const second = service.createBot({ name: "Writer" });
+    firstBotId = first.id;
+    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+
+    await service.sendGroupMessage(group.id, "Prepare the draft");
+    const handoffRun = service
+      .listActivity()
+      .find((activity) => activity.botId === first.id && activity.kind === "group");
+
+    expect(handoffRun).toEqual(
+      expect.objectContaining({
+        groupId: group.id,
+        status: "completed",
+        tools: [
+          expect.objectContaining({
+            toolName: "handoff_to_bot",
+            status: "completed",
+            result: expect.objectContaining({ ok: true }),
+          }),
+        ],
+      }),
+    );
     service.close();
   });
 

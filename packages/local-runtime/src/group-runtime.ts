@@ -300,53 +300,16 @@ export class LocalGroupRuntime {
           model,
           executeTool: async (name, args, executionId) => {
             if (name === "handoff_to_bot") {
-              const targetId =
-                typeof args.bot_id === "string"
-                  ? args.bot_id.trim()
-                  : group.members.find(
-                      (member) =>
-                        typeof args.confirm_name === "string" &&
-                        member.name.toLowerCase() === args.confirm_name.trim().toLowerCase(),
-                    )?.id;
-              const message = typeof args.message === "string" ? args.message.trim() : "";
-              if (!targetId) throw new Error("handoff target is required");
-              if (targetId === bot.id) throw new Error("A bot cannot hand off to itself");
-              if (item.fromBotId === targetId) {
-                throw new Error("Do not hand the stage back to its previous owner");
-              }
-              if (!group.members.some((member) => member.id === targetId)) {
-                throw new Error("Handoff target is not a group member");
-              }
-              const chain = [...item.chain, bot.id];
-              if (chain.includes(targetId)) throw new Error("Group handoff cycle detected");
-              if (!message) throw new Error("handoff message is required");
-              const hop = nextBotMessageHop(item.hop);
-              if (botMessageHopExhausted(hop)) throw new Error("Group handoff limit reached");
-              const handoffMessage = this.options.db.groupMessages.append({
-                threadId: thread.id,
-                role: "bot",
-                botId: bot.id,
-                blocks: [
-                  {
-                    kind: "handoff",
-                    fromBotId: bot.id,
-                    toBotId: targetId,
-                    text: message,
-                    hop,
-                  },
-                ],
+              return this.executeHandoff({
+                group,
+                thread,
+                runId,
+                bot,
+                item,
+                args,
+                executionId,
+                handoffs,
               });
-              handoffs.push({
-                botId: targetId,
-                message,
-                messageId: handoffMessage.id,
-                hop,
-                chain,
-              });
-              return {
-                ok: true,
-                note: "Handoff recorded. Finish this turn; the next bot will run automatically.",
-              };
             }
             return this.options.tools.execute({
               botId: bot.id,
@@ -433,5 +396,81 @@ export class LocalGroupRuntime {
           ? [{ id: message.id, createdAt: message.createdAt, role: "system", content: text }]
           : [];
       });
+  }
+
+  private executeHandoff(input: {
+    group: LocalGroupWithMembers;
+    thread: GroupThread;
+    runId: string;
+    bot: Bot;
+    item: GroupWorkItem;
+    args: Record<string, unknown>;
+    executionId: string;
+    handoffs: QueuedHandoff[];
+  }) {
+    const { group, thread, runId, bot, item, args, executionId, handoffs } = input;
+    const recordActivity = this.options.db.runs.get(runId) !== null;
+    if (recordActivity) {
+      this.options.db.runs.startTool({
+        runId,
+        executionId,
+        botId: bot.id,
+        toolName: "handoff_to_bot",
+        arguments: toJson(args),
+      });
+    }
+    try {
+      const targetId =
+        typeof args.bot_id === "string"
+          ? args.bot_id.trim()
+          : group.members.find(
+              (member) =>
+                typeof args.confirm_name === "string" &&
+                member.name.toLowerCase() === args.confirm_name.trim().toLowerCase(),
+            )?.id;
+      const message = typeof args.message === "string" ? args.message.trim() : "";
+      if (!targetId) throw new Error("handoff target is required");
+      if (targetId === bot.id) throw new Error("A bot cannot hand off to itself");
+      if (item.fromBotId === targetId) {
+        throw new Error("Do not hand the stage back to its previous owner");
+      }
+      if (!group.members.some((member) => member.id === targetId)) {
+        throw new Error("Handoff target is not a group member");
+      }
+      const chain = [...item.chain, bot.id];
+      if (chain.includes(targetId)) throw new Error("Group handoff cycle detected");
+      if (!message) throw new Error("handoff message is required");
+      const hop = nextBotMessageHop(item.hop);
+      if (botMessageHopExhausted(hop)) throw new Error("Group handoff limit reached");
+      const handoffMessage = this.options.db.groupMessages.append({
+        threadId: thread.id,
+        role: "bot",
+        botId: bot.id,
+        blocks: [{ kind: "handoff", fromBotId: bot.id, toBotId: targetId, text: message, hop }],
+      });
+      handoffs.push({
+        botId: targetId,
+        message,
+        messageId: handoffMessage.id,
+        hop,
+        chain,
+      });
+      const result = {
+        ok: true,
+        note: "Handoff recorded. Finish this turn; the next bot will run automatically.",
+      };
+      if (recordActivity) this.options.db.runs.finishTool(runId, executionId, toJson(result));
+      return result;
+    } catch (error) {
+      if (recordActivity) {
+        this.options.db.runs.finishTool(
+          runId,
+          executionId,
+          null,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      throw error;
+    }
   }
 }

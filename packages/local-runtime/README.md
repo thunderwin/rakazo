@@ -28,9 +28,9 @@ Current implementation:
   `handoff_to_bot` events, cycle prevention, and a six-hop limit
 - browser extension tools backed by a loopback Chrome/Edge bridge
 - live run events and cancellation in the desktop IPC bridge
+- local run/tool activity records exposed through the desktop IPC bridge
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-App launch, memory, routines, and tool-run persistence are still separate
-migration work.
+App launch, memory, and routines are still separate migration work.

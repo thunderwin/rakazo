@@ -81,6 +81,9 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     diagnostics: {
       copy: () => ipcRenderer.invoke("desktop.local.diagnostics.copy"),
     },
+    activity: {
+      list: (limit) => ipcRenderer.invoke("desktop.local.activity.list", limit),
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),

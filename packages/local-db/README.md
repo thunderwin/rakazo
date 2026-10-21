@@ -22,4 +22,4 @@ versioned migrations. One local runtime process should own the write connection;
 renderers should use IPC instead of opening the database directly.
 
 Current schema: bots, threads, messages, group chats/members/threads/messages,
-settings, routines, and migrations.
+runs, tool runs, settings, routines, and migrations.

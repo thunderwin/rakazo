@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 3,
+      count: 4,
     });
     second.close();
   });

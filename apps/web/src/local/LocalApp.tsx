@@ -1,8 +1,9 @@
 import type { DesktopBrowserBridgeStatus, DesktopLocalRunStarted } from "@rakazo/contracts";
 import { GROK_COLOR_LIST } from "@rakazo/core";
 import { BotAvatar, Button, GroupAvatar, Skeleton } from "@rakazo/ui-web";
-import { AlertTriangle, Bot, Globe2, LogOut, Plus, Settings, Users, X } from "lucide-react";
+import { AlertTriangle, Bot, Clock3, Globe2, LogOut, Plus, Settings, Users, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LocalActivityDialog } from "./LocalActivityDialog";
 import { LocalAuthScreen } from "./LocalAuthScreen";
 import { LocalComposer } from "./LocalComposer";
 import { LocalGroupDialog } from "./LocalGroupDialog";
@@ -153,6 +154,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newBotName, setNewBotName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -709,6 +711,15 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                 type="button"
                 variant="ghost"
                 size="icon-sm"
+                aria-label="Activity"
+                onClick={() => setActivityOpen(true)}
+              >
+                <Clock3 size={15} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Settings"
                 onClick={() => {
                   if (activeGroup) {
@@ -841,6 +852,15 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
         group={editingGroup ?? undefined}
         onSaved={handleGroupSaved}
         onDeleted={handleGroupDeleted}
+      />
+      <LocalActivityDialog
+        open={activityOpen}
+        onOpenChange={setActivityOpen}
+        api={api}
+        botName={(botId) => bots.find((bot) => bot.id === botId)?.name ?? "Bot"}
+        groupName={(groupId) =>
+          groupId ? groups.find((group) => group.id === groupId)?.name : undefined
+        }
       />
     </div>
   );

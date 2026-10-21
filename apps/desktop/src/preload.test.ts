@@ -41,6 +41,7 @@ describe("desktop preload bridge", () => {
       "window",
     ]);
     expect(Object.keys(bridge.local!).sort()).toEqual([
+      "activity",
       "auth",
       "bots",
       "browser",
@@ -91,6 +92,7 @@ describe("desktop preload bridge", () => {
     await bridge.local?.browser.startPairing();
     await bridge.local?.browser.revoke();
     await bridge.local?.diagnostics.copy();
+    await bridge.local?.activity.list(20);
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -125,6 +127,7 @@ describe("desktop preload bridge", () => {
       "desktop.local.browser.startPairing",
       "desktop.local.browser.revoke",
       "desktop.local.diagnostics.copy",
+      "desktop.local.activity.list",
     ]);
   });
 

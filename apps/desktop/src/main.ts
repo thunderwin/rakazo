@@ -1361,6 +1361,16 @@ function installLocalIpc() {
       ),
     );
   });
+  ipcMain.handle("desktop.local.activity.list", (event, limit: unknown) => {
+    requireLocalWindow(event);
+    if (
+      limit !== undefined &&
+      (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 200)
+    ) {
+      throw new Error("Activity limit must be between 1 and 200");
+    }
+    return requireLocalRuntime().listActivity((limit as number | undefined) ?? 50);
+  });
 }
 
 async function openLocalMode(userDataDir: string) {

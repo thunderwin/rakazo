@@ -126,3 +126,37 @@ export interface AppendGroupMessageInput {
   botId?: string | null;
   blocks: JsonValue[];
 }
+
+export type LocalRunKind = "direct" | "group";
+export type LocalRunStatus = "running" | "completed" | "failed" | "stopped";
+export type LocalToolRunStatus = "running" | "completed" | "failed";
+
+export interface LocalRunRecord {
+  id: string;
+  kind: LocalRunKind;
+  botId: string;
+  groupId: string | null;
+  threadId: string;
+  status: LocalRunStatus;
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface LocalToolRunRecord {
+  id: string;
+  runId: string;
+  executionId: string;
+  botId: string;
+  toolName: string;
+  arguments: JsonValue;
+  result: JsonValue | null;
+  status: LocalToolRunStatus;
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface LocalActivityRun extends LocalRunRecord {
+  tools: LocalToolRunRecord[];
+}

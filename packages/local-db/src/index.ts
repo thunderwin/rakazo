@@ -6,6 +6,7 @@ export { GroupThreadRepository } from "./repositories/group-threads.js";
 export { GroupRepository } from "./repositories/groups.js";
 export { MessageRepository } from "./repositories/messages.js";
 export { type PeerMessage, PeerMessageRepository } from "./repositories/peer-messages.js";
+export { RunRepository } from "./repositories/runs.js";
 export { SettingsRepository } from "./repositories/settings.js";
 export { ThreadRepository } from "./repositories/threads.js";
 export type {
@@ -18,9 +19,15 @@ export type {
   GroupMessage,
   GroupThread,
   JsonValue,
+  LocalActivityRun,
   LocalGroup,
   LocalGroupWithMembers,
   LocalMessage,
+  LocalRunKind,
+  LocalRunRecord,
+  LocalRunStatus,
+  LocalToolRunRecord,
+  LocalToolRunStatus,
   MessageRole,
   Routine,
   Thread,
