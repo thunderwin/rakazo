@@ -173,6 +173,28 @@ export interface DesktopLocalArtifactWithContent extends DesktopLocalArtifact {
   contentBase64: string;
 }
 
+export interface DesktopLocalKnowledgeDocument {
+  id: string;
+  title: string;
+  content: string;
+  source: "local" | "managed";
+  packageId: string | null;
+  version: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalSkill {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  source: "user" | "builtin" | "managed";
+  readOnly: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -350,6 +372,32 @@ export interface RakazoDesktopLocal {
       contentBase64: string;
     }) => Promise<DesktopLocalArtifact>;
     read: (artifactId: string) => Promise<DesktopLocalArtifactWithContent | null>;
+  };
+  knowledge: {
+    list: () => Promise<DesktopLocalKnowledgeDocument[]>;
+    create: (input: { title: string; content: string }) => Promise<DesktopLocalKnowledgeDocument>;
+    update: (
+      documentId: string,
+      input: { title?: string; content?: string },
+    ) => Promise<DesktopLocalKnowledgeDocument>;
+    remove: (documentId: string) => Promise<void>;
+  };
+  skills: {
+    list: () => Promise<DesktopLocalSkill[]>;
+    create: (input: {
+      name: string;
+      description: string;
+      body: string;
+    }) => Promise<DesktopLocalSkill>;
+    update: (
+      name: string,
+      input: {
+        newName?: string;
+        description?: string;
+        body?: string;
+      },
+    ) => Promise<DesktopLocalSkill>;
+    remove: (name: string) => Promise<void>;
   };
 }
 

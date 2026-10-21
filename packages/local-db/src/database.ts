@@ -7,12 +7,14 @@ import { BotRepository } from "./repositories/bots.js";
 import { GroupMessageRepository } from "./repositories/group-messages.js";
 import { GroupThreadRepository } from "./repositories/group-threads.js";
 import { GroupRepository } from "./repositories/groups.js";
+import { KnowledgeRepository } from "./repositories/knowledge.js";
 import { MemoryRepository } from "./repositories/memory.js";
 import { MessageRepository } from "./repositories/messages.js";
 import { PeerMessageRepository } from "./repositories/peer-messages.js";
 import { RoutineRepository } from "./repositories/routines.js";
 import { RunRepository } from "./repositories/runs.js";
 import { SettingsRepository } from "./repositories/settings.js";
+import { SkillRepository } from "./repositories/skills.js";
 import { ThreadRepository } from "./repositories/threads.js";
 
 export interface OpenLocalDatabaseOptions {
@@ -27,6 +29,7 @@ export class LocalDatabase {
   readonly groups: GroupRepository;
   readonly groupThreads: GroupThreadRepository;
   readonly groupMessages: GroupMessageRepository;
+  readonly knowledge: KnowledgeRepository;
   readonly threads: ThreadRepository;
   readonly messages: MessageRepository;
   readonly memory: MemoryRepository;
@@ -34,6 +37,7 @@ export class LocalDatabase {
   readonly runs: RunRepository;
   readonly routines: RoutineRepository;
   readonly settings: SettingsRepository;
+  readonly skills: SkillRepository;
 
   constructor(options: OpenLocalDatabaseOptions) {
     if (options.file !== ":memory:") {
@@ -50,6 +54,7 @@ export class LocalDatabase {
     this.groups = new GroupRepository(this.sqlite);
     this.groupThreads = new GroupThreadRepository(this.sqlite);
     this.groupMessages = new GroupMessageRepository(this.sqlite);
+    this.knowledge = new KnowledgeRepository(this.sqlite);
     this.threads = new ThreadRepository(this.sqlite);
     this.messages = new MessageRepository(this.sqlite);
     this.memory = new MemoryRepository(this.sqlite);
@@ -57,6 +62,7 @@ export class LocalDatabase {
     this.runs = new RunRepository(this.sqlite);
     this.routines = new RoutineRepository(this.sqlite);
     this.settings = new SettingsRepository(this.sqlite);
+    this.skills = new SkillRepository(this.sqlite);
   }
 
   async backupTo(destination: string): Promise<void> {

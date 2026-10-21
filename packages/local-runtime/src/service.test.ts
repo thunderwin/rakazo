@@ -461,6 +461,55 @@ describe("local runtime service", () => {
     service.close();
   });
 
+  it("injects skills and exposes local knowledge search tools", async () => {
+    const observed: LocalAgentRunRequest[] = [];
+    let searchResult: unknown;
+    const knowledgeEngine: LocalAgentEngine = {
+      async *run(request) {
+        observed.push(request);
+        searchResult = await request.executeTool(
+          "knowledge_search",
+          { query: "rollback" },
+          "knowledge-tool",
+        );
+        yield { type: "text", text: "Checked" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: knowledgeEngine,
+      tools,
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Operator" });
+    service.createKnowledge({
+      title: "Release checklist",
+      content: "Verify rollback and release notes.",
+    });
+    service.createSkill({
+      name: "Release review",
+      description: "Review a release",
+      body: "1. Read the checklist.\n2. Verify rollback.",
+    });
+
+    await service.sendMessage(bot.id, "/Release review\nUse the checklist");
+
+    expect(observed[0]?.prompt).toContain("2. Verify rollback.");
+    expect(observed[0]?.prompt).toContain("Use the checklist");
+    expect(observed[0]?.instructions).toContain("- Release review:");
+    expect(searchResult).toEqual({
+      results: [
+        expect.objectContaining({
+          title: "Release checklist",
+          snippet: expect.stringContaining("rollback"),
+        }),
+      ],
+    });
+    service.close();
+  });
+
   it("stops peer bot cycles", () => {
     const service = new LocalRuntimeService({
       databasePath: ":memory:",

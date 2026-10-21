@@ -262,6 +262,41 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX artifacts_group_id ON artifacts(group_id);
     `,
   },
+  {
+    version: 8,
+    sql: `
+      CREATE TABLE knowledge_documents (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('local', 'managed')),
+        package_id TEXT,
+        version INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX knowledge_documents_updated
+        ON knowledge_documents(updated_at DESC);
+
+      CREATE TABLE agent_skills (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('user', 'managed')),
+        package_id TEXT,
+        version INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE UNIQUE INDEX agent_skills_name
+        ON agent_skills(lower(name));
+      CREATE INDEX agent_skills_source_name
+        ON agent_skills(source, name);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

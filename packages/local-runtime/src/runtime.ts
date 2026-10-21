@@ -19,6 +19,10 @@ export interface LocalRuntimeOptions {
   memory?: {
     contextFor(botId: string): string | undefined;
   };
+  skills?: {
+    expandPrompt(prompt: string): string;
+    catalogInstruction(): string | undefined;
+  };
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: (run: {
     runId: string;
@@ -88,6 +92,7 @@ export class LocalRuntime {
   private readonly engine: LocalAgentEngine;
   private readonly tools: LocalToolProvider;
   private readonly memory: LocalRuntimeOptions["memory"];
+  private readonly skills: LocalRuntimeOptions["skills"];
   private readonly resolveModel: LocalRuntimeOptions["resolveModel"];
   private readonly onRunStart: LocalRuntimeOptions["onRunStart"];
   private readonly onEvent: LocalRuntimeOptions["onEvent"];
@@ -100,6 +105,7 @@ export class LocalRuntime {
     this.engine = options.engine;
     this.tools = options.tools;
     this.memory = options.memory;
+    this.skills = options.skills;
     this.resolveModel = options.resolveModel;
     this.onRunStart = options.onRunStart;
     this.onEvent = options.onEvent;
@@ -129,6 +135,8 @@ export class LocalRuntime {
       .map(toAgentMessage)
       .filter((message) => message.content.length > 0);
     const memoryContext = this.memory?.contextFor(bot.id);
+    const taskPrompt = promptTextForAttachments(content, [...attachments]);
+    const skillCatalog = this.skills?.catalogInstruction();
     const userMessage = this.store.appendMessage({
       threadId: thread.id,
       role: "user",
@@ -168,8 +176,8 @@ export class LocalRuntime {
               threadId: thread.id,
               runId,
               sourceMessageId: userMessage.id,
-              prompt: promptTextForAttachments(content, [...attachments]),
-              instructions: [bot.instructions.trim(), memoryContext]
+              prompt: this.skills?.expandPrompt(taskPrompt) ?? taskPrompt,
+              instructions: [bot.instructions.trim(), memoryContext, skillCatalog]
                 .filter((instruction): instruction is string => Boolean(instruction))
                 .join("\n\n"),
               history,

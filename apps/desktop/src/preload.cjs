@@ -105,6 +105,19 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       create: (input) => ipcRenderer.invoke("desktop.local.artifacts.create", input),
       read: (artifactId) => ipcRenderer.invoke("desktop.local.artifacts.read", artifactId),
     },
+    knowledge: {
+      list: () => ipcRenderer.invoke("desktop.local.knowledge.list"),
+      create: (input) => ipcRenderer.invoke("desktop.local.knowledge.create", input),
+      update: (documentId, input) =>
+        ipcRenderer.invoke("desktop.local.knowledge.update", documentId, input),
+      remove: (documentId) => ipcRenderer.invoke("desktop.local.knowledge.remove", documentId),
+    },
+    skills: {
+      list: () => ipcRenderer.invoke("desktop.local.skills.list"),
+      create: (input) => ipcRenderer.invoke("desktop.local.skills.create", input),
+      update: (name, input) => ipcRenderer.invoke("desktop.local.skills.update", name, input),
+      remove: (name) => ipcRenderer.invoke("desktop.local.skills.remove", name),
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),

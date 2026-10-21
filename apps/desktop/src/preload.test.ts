@@ -48,11 +48,13 @@ describe("desktop preload bridge", () => {
       "browser",
       "diagnostics",
       "groups",
+      "knowledge",
       "memory",
       "messages",
       "routines",
       "runs",
       "settings",
+      "skills",
     ]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
@@ -116,6 +118,18 @@ describe("desktop preload bridge", () => {
       contentBase64: "aGVsbG8=",
     });
     await bridge.local?.artifacts.read("artifact-1");
+    await bridge.local?.knowledge.list();
+    await bridge.local?.knowledge.create({ title: "Guide", content: "Steps" });
+    await bridge.local?.knowledge.update("knowledge-1", { content: "Updated" });
+    await bridge.local?.knowledge.remove("knowledge-1");
+    await bridge.local?.skills.list();
+    await bridge.local?.skills.create({
+      name: "Review",
+      description: "Review work",
+      body: "Check it.",
+    });
+    await bridge.local?.skills.update("Review", { description: "Review carefully" });
+    await bridge.local?.skills.remove("Review");
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -162,6 +176,14 @@ describe("desktop preload bridge", () => {
       "desktop.local.routines.history",
       "desktop.local.artifacts.create",
       "desktop.local.artifacts.read",
+      "desktop.local.knowledge.list",
+      "desktop.local.knowledge.create",
+      "desktop.local.knowledge.update",
+      "desktop.local.knowledge.remove",
+      "desktop.local.skills.list",
+      "desktop.local.skills.create",
+      "desktop.local.skills.update",
+      "desktop.local.skills.remove",
     ]);
   });
 

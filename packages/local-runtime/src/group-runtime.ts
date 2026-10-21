@@ -46,6 +46,10 @@ interface GroupRuntimeOptions {
   db: LocalDatabase;
   engine: LocalAgentEngine;
   tools: LocalToolProvider;
+  skills?: {
+    expandPrompt(prompt: string): string;
+    catalogInstruction(): string | undefined;
+  };
   resolveModel: (bot: Bot) => Promise<LocalAgentModel> | LocalAgentModel;
   onRunStart?: (run: {
     runId: string;
@@ -300,9 +304,10 @@ export class LocalGroupRuntime {
           threadId: thread.id,
           runId,
           sourceMessageId: item.sourceMessageId,
-          prompt: item.prompt,
+          prompt: this.options.skills?.expandPrompt(item.prompt) ?? item.prompt,
           instructions: [
             bot.instructions,
+            this.options.skills?.catalogInstruction(),
             renderGroupMembersContext(
               group.name,
               group.members.map((member) => ({

@@ -9,6 +9,7 @@ import { RecordingToolProvider } from "./activity-tools.js";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
 import { type LocalArtifactInput, LocalAttachmentStore } from "./attachments.js";
 import { LocalGroupRuntime } from "./group-runtime.js";
+import { LocalKnowledge, LocalKnowledgeToolProvider } from "./knowledge.js";
 import { LocalMemory, LocalMemoryToolProvider } from "./memory.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./routines.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
 import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
+import { LocalSkills, LocalSkillToolProvider } from "./skills.js";
 import { SqliteConversationStore } from "./store.js";
 import type { LocalToolProvider } from "./tools.js";
 
@@ -38,6 +40,8 @@ export class LocalRuntimeService {
   readonly runtime: LocalRuntime;
   readonly memory: LocalMemory;
   readonly attachments: LocalAttachmentStore;
+  readonly knowledge: LocalKnowledge;
+  readonly skills: LocalSkills;
   private readonly routines: LocalRoutineRuntime;
   private readonly groups: LocalGroupRuntime;
 
@@ -45,10 +49,18 @@ export class LocalRuntimeService {
     this.db = openLocalDatabase(options.databasePath);
     this.memory = new LocalMemory(this.db.memory);
     this.attachments = new LocalAttachmentStore(this.db.artifacts);
+    this.knowledge = new LocalKnowledge(this.db.knowledge);
+    this.skills = new LocalSkills(this.db.skills);
     const tools = new RecordingToolProvider(
-      new LocalRoutineToolProvider(
-        new LocalMemoryToolProvider(options.tools, this.memory),
-        () => this.routines,
+      new LocalKnowledgeToolProvider(
+        new LocalSkillToolProvider(
+          new LocalRoutineToolProvider(
+            new LocalMemoryToolProvider(options.tools, this.memory),
+            () => this.routines,
+          ),
+          this.skills,
+        ),
+        this.knowledge,
       ),
       this.db.runs,
     );
@@ -90,6 +102,7 @@ export class LocalRuntimeService {
       engine: options.engine,
       tools,
       memory: this.memory,
+      skills: this.skills,
       resolveModel: options.resolveModel,
       onRunStart,
       onEvent: options.onEvent,
@@ -99,6 +112,7 @@ export class LocalRuntimeService {
       db: this.db,
       engine: options.engine,
       tools,
+      skills: this.skills,
       resolveModel: options.resolveModel,
       onRunStart,
       onEvent: options.onEvent,
@@ -188,6 +202,41 @@ export class LocalRuntimeService {
 
   readArtifact(id: string) {
     return this.attachments.read(id);
+  }
+
+  listKnowledge() {
+    return this.knowledge.list();
+  }
+
+  createKnowledge(input: { title: string; content: string }) {
+    return this.knowledge.create(input);
+  }
+
+  updateKnowledge(id: string, input: { title?: string; content?: string }) {
+    return this.knowledge.update(id, input);
+  }
+
+  removeKnowledge(id: string) {
+    return this.knowledge.remove(id);
+  }
+
+  listSkills() {
+    return this.skills.list();
+  }
+
+  createSkill(input: { name?: string; description?: string; body?: string; content?: string }) {
+    return this.skills.create(input);
+  }
+
+  updateSkill(
+    name: string,
+    input: { newName?: string; description?: string; body?: string; content?: string },
+  ) {
+    return this.skills.update(name, input);
+  }
+
+  removeSkill(name: string) {
+    return this.skills.remove(name);
   }
 
   startRoutineScheduler() {

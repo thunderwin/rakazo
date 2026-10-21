@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Clock3,
   Globe2,
+  LibraryBig,
   LogOut,
   Plus,
   Settings,
@@ -20,6 +21,7 @@ import { LocalActivityDialog } from "./LocalActivityDialog";
 import { LocalAuthScreen } from "./LocalAuthScreen";
 import { type ComposerAttachment, LocalComposer } from "./LocalComposer";
 import { LocalGroupDialog } from "./LocalGroupDialog";
+import { LocalKnowledgeSkillsDialog } from "./LocalKnowledgeSkillsDialog";
 import { LocalMemoryDialog } from "./LocalMemoryDialog";
 import { LocalLiveMessage, LocalMessageView } from "./LocalMessageView";
 import { LocalRoutinesDialog } from "./LocalRoutinesDialog";
@@ -172,6 +174,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   const [activityOpen, setActivityOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [routinesOpen, setRoutinesOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newBotName, setNewBotName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -743,6 +746,15 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                     type="button"
                     variant="ghost"
                     size="icon-sm"
+                    aria-label="Knowledge and skills"
+                    onClick={() => setLibraryOpen(true)}
+                  >
+                    <LibraryBig size={15} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label="Routines"
                     onClick={() => setRoutinesOpen(true)}
                   >
@@ -927,6 +939,12 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
           <LocalRoutinesDialog
             open={routinesOpen}
             onOpenChange={setRoutinesOpen}
+            api={api}
+            bot={activeBot}
+          />
+          <LocalKnowledgeSkillsDialog
+            open={libraryOpen}
+            onOpenChange={setLibraryOpen}
             api={api}
             bot={activeBot}
           />

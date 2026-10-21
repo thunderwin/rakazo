@@ -188,6 +188,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 本地 Routines 支持 cron/interval/一次性 schedule、在线调度、补跑、运行历史和
   `schedule_create/list/cancel`。
 - 本地附件存 SQLite artifact；图片作为当前轮视觉输入，其他文件以类型/大小提示交给 Agent。
+- Knowledge 使用本地文档库和关键词检索；Skills 使用 `SKILL.md` catalog、强制引用和本地
+  user/managed 缓存。
 
 仍待迁移：fleet 管理、应用启动、桌面操作。服务器专属的团队、电脑、账号管理页面
 不会进入本地 renderer。
@@ -217,6 +219,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 group_messages、peer_messages、runs、tool_runs、memory_documents、memory_revisions、
 routine_runs、artifacts、settings 和 routines 表；repository 覆盖 bots、threads、
 messages、群聊、peer_messages、run/tool activity、Memory、Routines、附件和 settings。
+Knowledge document 与 Agent Skills 另有本地 repository；当前 schema 已包含
+`knowledge_documents` 和 `agent_skills`。
 
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
 审计；它不保存到服务器。
@@ -428,5 +432,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/MEMORY.md`：本地 bot/账号 Memory、工具、修订和隐私边界。
 - `docs/ROUTINES.md`：本地 routine 定义、调度、补跑和运行历史。
 - `docs/ATTACHMENTS.md`：本地附件存储、模型输入和交互边界。
+- `docs/KNOWLEDGE_SKILLS.md`：Knowledge 检索、Skills 格式、工具和分发边界。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

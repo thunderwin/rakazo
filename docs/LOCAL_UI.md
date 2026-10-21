@@ -72,6 +72,12 @@ apps/web/src/local-main.tsx
 - 直接聊天和群聊都可以只发送附件。
 - 消息中显示图片或文件卡片，并可从本地 artifact 下载。
 
+### Knowledge 和 Skills
+
+- Knowledge and skills 按钮打开同一个本地资源面板。
+- Knowledge 文档支持新建、编辑、删除；managed 文档只读。
+- Skills 展示 built-in、user、managed 来源；只有 user skill 可编辑。
+
 ## 4. 开发和验证
 
 ```bash

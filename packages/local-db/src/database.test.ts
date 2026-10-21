@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 7,
+      count: 8,
     });
     second.close();
   });
@@ -298,6 +298,46 @@ describe("local database", () => {
         content: new Uint8Array(),
       }),
     ).toThrow("empty");
+    db.close();
+  });
+
+  it("stores local knowledge documents and user skills", () => {
+    const db = openLocalDatabase(":memory:");
+    const knowledge = db.knowledge.create({
+      title: "Launch checklist",
+      content: "Verify the release notes.",
+    });
+    expect(
+      db.knowledge.update(knowledge.id, { content: "Verify notes and rollout." }),
+    ).toMatchObject({
+      title: "Launch checklist",
+      content: "Verify notes and rollout.",
+    });
+
+    const skill = db.skills.create({
+      name: "Release review",
+      description: "Review a release",
+      content: "---\nname: Release review\ndescription: Review a release\n---\n\nCheck it.",
+    });
+    const managed = db.skills.create({
+      name: "Managed policy",
+      description: "Organization policy",
+      content: "---\nname: Managed policy\ndescription: Organization policy\n---\n\nFollow it.",
+      source: "managed",
+    });
+    expect(db.skills.findByName("release REVIEW")?.id).toBe(skill.id);
+    expect(db.skills.update(managed.id, { description: "Changed" })).toBeNull();
+    expect(() =>
+      db.skills.create({
+        name: "release review",
+        description: "Duplicate",
+        content: "duplicate",
+      }),
+    ).toThrow();
+
+    expect(db.knowledge.remove(knowledge.id)).toBe(true);
+    expect(db.skills.remove(skill.id)).toBe(true);
+    expect(db.skills.remove(managed.id)).toBe(false);
     db.close();
   });
 

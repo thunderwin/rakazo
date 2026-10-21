@@ -5,6 +5,7 @@ export { BotRepository } from "./repositories/bots.js";
 export { GroupMessageRepository } from "./repositories/group-messages.js";
 export { GroupThreadRepository } from "./repositories/group-threads.js";
 export { GroupRepository } from "./repositories/groups.js";
+export { KnowledgeRepository } from "./repositories/knowledge.js";
 export {
   MemoryRepository,
   MemoryRevisionConflictError,
@@ -14,6 +15,7 @@ export { type PeerMessage, PeerMessageRepository } from "./repositories/peer-mes
 export { RoutineRepository } from "./repositories/routines.js";
 export { RunRepository } from "./repositories/runs.js";
 export { SettingsRepository } from "./repositories/settings.js";
+export { SkillRepository } from "./repositories/skills.js";
 export { ThreadRepository } from "./repositories/threads.js";
 export type {
   AppendGroupMessageInput,
@@ -31,14 +33,17 @@ export type {
   LocalArtifactWithContent,
   LocalGroup,
   LocalGroupWithMembers,
+  LocalKnowledgeDocument,
   LocalMemoryDocument,
   LocalMemoryScope,
   LocalMessage,
   LocalRunKind,
   LocalRunRecord,
   LocalRunStatus,
+  LocalSkill,
   LocalToolRunRecord,
   LocalToolRunStatus,
+  ManagedContentSource,
   MessageRole,
   Routine,
   RoutineRun,

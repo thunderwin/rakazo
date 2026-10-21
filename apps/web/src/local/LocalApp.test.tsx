@@ -118,6 +118,18 @@ function bridge(): RakazoDesktopLocal {
       create: vi.fn(),
       read: vi.fn(async () => null),
     },
+    knowledge: {
+      list: vi.fn(async () => []),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+    },
+    skills: {
+      list: vi.fn(async () => []),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+    },
   };
 }
 
@@ -448,4 +460,67 @@ it("renders an attachment block from the local artifact store", async () => {
   await act(async () => root?.render(<LocalApp bridge={api} />));
   await vi.waitFor(() => expect(host.textContent).toContain("notes.txt"));
   expect(host.querySelector('button[aria-label="Download notes.txt"]')).not.toBeNull();
+});
+
+it("opens local knowledge and skills with read-only built-ins", async () => {
+  const api = bridge();
+  const knowledge = {
+    id: "knowledge-1",
+    title: "Release checklist",
+    content: "Verify rollback.",
+    source: "local" as const,
+    packageId: null,
+    version: null,
+    createdAt: "2026-10-20T12:00:00.000Z",
+    updatedAt: "2026-10-20T12:00:00.000Z",
+  };
+  api.knowledge.list = vi.fn(async () => [knowledge]);
+  api.knowledge.update = vi.fn(async (_id, input) => ({ ...knowledge, ...input }));
+  api.skills.list = vi.fn(async () => [
+    {
+      id: "builtin:Interrogate",
+      name: "Interrogate",
+      description: "Review a change",
+      content: "---\nname: Interrogate\ndescription: Review a change\n---\n\nReview it.",
+      source: "builtin" as const,
+      readOnly: true,
+      createdAt: "1970-01-01T00:00:00.000Z",
+      updatedAt: "1970-01-01T00:00:00.000Z",
+    },
+  ]);
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    (host.querySelector('button[aria-label="Knowledge and skills"]') as HTMLButtonElement).click();
+  });
+  await vi.waitFor(() => expect(document.body.textContent).toContain("Release checklist"));
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.includes("Release checklist"))
+      ?.click();
+  });
+  const content = document.body.querySelector("#local-knowledge-content") as HTMLTextAreaElement;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    setter?.call(content, "Verify rollback and notes.");
+    content.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.trim() === "Save")
+      ?.click();
+  });
+  expect(api.knowledge.update).toHaveBeenCalledWith("knowledge-1", {
+    title: "Release checklist",
+    content: "Verify rollback and notes.",
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.trim() === "Skills")
+      ?.click();
+  });
+  await vi.waitFor(() => expect(document.body.textContent).toContain("Interrogate"));
 });

@@ -37,6 +37,8 @@ Current implementation:
   and `schedule_cancel`
 - local attachments stored as SQLite artifacts, with current-turn image input
   and bot/group ownership checks
+- local knowledge search/read plus `SKILL.md` catalogs, forced skill expansion,
+  user skill management, and read-only managed/builtin sources
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding

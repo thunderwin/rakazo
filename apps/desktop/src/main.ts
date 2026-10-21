@@ -1548,6 +1548,76 @@ function installLocalIpc() {
     requireLocalWindow(event);
     return requireLocalRuntime().readArtifact(localString(artifactId, "Attachment id", 200));
   });
+  ipcMain.handle("desktop.local.knowledge.list", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listKnowledge();
+  });
+  ipcMain.handle("desktop.local.knowledge.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Knowledge document");
+    return requireLocalRuntime().createKnowledge({
+      title: localString(value.title, "Knowledge title", 200).trim(),
+      content: localString(value.content, "Knowledge content", 500_000),
+    });
+  });
+  ipcMain.handle("desktop.local.knowledge.update", (event, documentId: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Knowledge document");
+    return requireLocalRuntime().updateKnowledge(localString(documentId, "Knowledge id", 200), {
+      ...(value.title === undefined
+        ? {}
+        : {
+            title: localString(value.title, "Knowledge title", 200).trim(),
+          }),
+      ...(value.content === undefined
+        ? {}
+        : {
+            content: localString(value.content, "Knowledge content", 500_000),
+          }),
+    });
+  });
+  ipcMain.handle("desktop.local.knowledge.remove", (event, documentId: unknown) => {
+    requireLocalWindow(event);
+    if (!requireLocalRuntime().removeKnowledge(localString(documentId, "Knowledge id", 200))) {
+      throw new Error("Knowledge document not found or read-only");
+    }
+  });
+  ipcMain.handle("desktop.local.skills.list", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listSkills();
+  });
+  ipcMain.handle("desktop.local.skills.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Skill");
+    return requireLocalRuntime().createSkill({
+      name: localString(value.name, "Skill name", 80).trim(),
+      description: localString(value.description, "Skill description", 2_000).trim(),
+      body: optionalLocalString(value.body, "Skill body", 100_000) ?? "",
+    });
+  });
+  ipcMain.handle("desktop.local.skills.update", (event, name: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Skill");
+    return requireLocalRuntime().updateSkill(localString(name, "Skill name", 80).trim(), {
+      ...(value.newName === undefined
+        ? {}
+        : { newName: localString(value.newName, "Skill name", 80).trim() }),
+      ...(value.description === undefined
+        ? {}
+        : {
+            description: localString(value.description, "Skill description", 2_000).trim(),
+          }),
+      ...(value.body === undefined
+        ? {}
+        : { body: optionalLocalString(value.body, "Skill body", 100_000) ?? "" }),
+    });
+  });
+  ipcMain.handle("desktop.local.skills.remove", (event, name: unknown) => {
+    requireLocalWindow(event);
+    if (!requireLocalRuntime().removeSkill(localString(name, "Skill name", 80).trim())) {
+      throw new Error("Skill not found");
+    }
+  });
 }
 
 async function openLocalMode(userDataDir: string) {

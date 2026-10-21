@@ -25,6 +25,11 @@ export {
   LocalGroupRuntime,
 } from "./group-runtime.js";
 export {
+  type KnowledgeSearchResult,
+  LocalKnowledge,
+  LocalKnowledgeToolProvider,
+} from "./knowledge.js";
+export {
   LocalMemory,
   LocalMemoryToolProvider,
   PRIVATE_MEMORY_TOOL_NAMES,
@@ -61,6 +66,12 @@ export {
   type ShellCommandResult,
   type ShellToolOptions,
 } from "./shell-tool.js";
+export {
+  type LocalSkillCatalog,
+  LocalSkills,
+  LocalSkillToolProvider,
+  type LocalSkillView,
+} from "./skills.js";
 export {
   type LocalConversationStore,
   SqliteConversationStore,

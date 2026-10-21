@@ -134,8 +134,7 @@ it("accepts a file attachment and can send it without text", async () => {
   const send = host.querySelector('button[aria-label="Send"]') as HTMLButtonElement;
   await act(async () => send.click());
 
-  expect(onSend).toHaveBeenCalledWith(
-    "",
-    [expect.objectContaining({ file, mimeType: "text/plain" })],
-  );
+  expect(onSend).toHaveBeenCalledWith("", [
+    expect.objectContaining({ file, mimeType: "text/plain" }),
+  ]);
 });

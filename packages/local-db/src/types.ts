@@ -108,6 +108,31 @@ export interface LocalArtifactWithContent extends LocalArtifact {
   content: Uint8Array;
 }
 
+export type ManagedContentSource = "local" | "managed";
+
+export interface LocalKnowledgeDocument {
+  id: string;
+  title: string;
+  content: string;
+  source: ManagedContentSource;
+  packageId: string | null;
+  version: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalSkill {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  source: "user" | "managed";
+  packageId: string | null;
+  version: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LocalGroup {
   id: string;
   name: string;
