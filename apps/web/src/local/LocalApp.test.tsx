@@ -360,9 +360,25 @@ it("opens the local artifact library and ticket board through the shared screens
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
+  expect(host.querySelector('button[aria-label="Artifacts"]')).toBeNull();
+  expect(host.querySelector('button[aria-label="Board"]')).toBeNull();
+  expect(host.querySelector('button[aria-label="Activity"]')).toBeNull();
+
   await act(async () => {
     (
-      host.querySelector('button[aria-label="Artifacts"]') as HTMLButtonElement
+      host.querySelector('button[aria-label="Account"]') as HTMLButtonElement
+    ).click();
+  });
+  await vi.waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="popover-content"]'),
+    ).not.toBeNull(),
+  );
+  await act(async () => {
+    (
+      document.querySelector(
+        '[data-slot="popover-content"] button[aria-label="Artifacts"]',
+      ) as HTMLButtonElement
     ).click();
   });
   await vi.waitFor(() => expect(api.artifacts.list).toHaveBeenCalled());
@@ -375,7 +391,19 @@ it("opens the local artifact library and ticket board through the shared screens
   });
   await act(async () => {
     (
-      host.querySelector('button[aria-label="Board"]') as HTMLButtonElement
+      host.querySelector('button[aria-label="Account"]') as HTMLButtonElement
+    ).click();
+  });
+  await vi.waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="popover-content"]'),
+    ).not.toBeNull(),
+  );
+  await act(async () => {
+    (
+      document.querySelector(
+        '[data-slot="popover-content"] button[aria-label="Board"]',
+      ) as HTMLButtonElement
     ).click();
   });
   await vi.waitFor(() => expect(api.tickets.list).toHaveBeenCalled());
@@ -589,7 +617,19 @@ it("shows recent run and tool activity locally", async () => {
   });
   await act(async () => {
     (
-      host.querySelector('button[aria-label="Activity"]') as HTMLButtonElement
+      host.querySelector('button[aria-label="Account"]') as HTMLButtonElement
+    ).click();
+  });
+  await vi.waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="popover-content"]'),
+    ).not.toBeNull(),
+  );
+  await act(async () => {
+    (
+      document.querySelector(
+        '[data-slot="popover-content"] button[aria-label="Activity"]',
+      ) as HTMLButtonElement
     ).click();
   });
   await vi.waitFor(() =>

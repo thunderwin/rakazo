@@ -75,6 +75,9 @@ export function localErrorMessage(error: unknown): string {
 export function localErrorText(message: string): string {
   const text = message.trim();
   const normalized = text.toLocaleLowerCase();
+  if (normalized.includes("choose a ticket owner before commenting")) {
+    return i18n._(msg`Choose a task owner before commenting.`);
+  }
   if (
     normalized.includes("model gateway is not configured") ||
     normalized.includes("local model gateway is not configured") ||

@@ -117,6 +117,37 @@ describe("lingui catalogs", () => {
     }
   });
 
+  it("translates the local task board", () => {
+    const catalog = readFileSync(
+      fileURLToPath(new URL("../locales/zh-CN/messages.po", import.meta.url)),
+      "utf8",
+    );
+    for (const message of [
+      "Board",
+      "New ticket",
+      "No tickets yet",
+      "Owner",
+      "Priority",
+      "Status",
+      "Comment",
+      "To do",
+      "In progress",
+      "In review",
+      "Blocked",
+      "Won't do",
+      "Normal",
+      "Urgent",
+    ]) {
+      const entry = catalog
+        .split("\n\n")
+        .find((block) => block.includes(`msgid ${JSON.stringify(message)}\n`));
+      const translated = entry?.split("msgstr ")[1];
+      expect(translated, message).toBeTruthy();
+      expect(translated, message).not.toBe('""');
+      expect(translated, message).not.toBe(JSON.stringify(message));
+    }
+  });
+
   beforeEach(() => {
     i18n.load("en", {});
     i18n.activate("en");

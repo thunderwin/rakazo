@@ -7,18 +7,22 @@ export interface LocalUserSettings {
 }
 
 export const DEFAULT_LOCAL_USER_SETTINGS: LocalUserSettings = {
-  theme: "system",
+  theme: "light",
   sendWithEnter: true,
   defaultModelId: null,
 };
 
-export function parseLocalUserSettings(value: JsonValue | null): LocalUserSettings {
+export function parseLocalUserSettings(
+  value: JsonValue | null,
+): LocalUserSettings {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return { ...DEFAULT_LOCAL_USER_SETTINGS };
   }
   return {
     theme:
-      value.theme === "light" || value.theme === "dark" || value.theme === "system"
+      value.theme === "light" ||
+      value.theme === "dark" ||
+      value.theme === "system"
         ? value.theme
         : DEFAULT_LOCAL_USER_SETTINGS.theme,
     sendWithEnter:

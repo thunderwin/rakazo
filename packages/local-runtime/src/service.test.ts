@@ -95,7 +95,7 @@ describe("local runtime service", () => {
       resolveModel,
     });
     expect(first.getUserSettings()).toEqual({
-      theme: "system",
+      theme: "light",
       sendWithEnter: true,
       defaultModelId: null,
     });

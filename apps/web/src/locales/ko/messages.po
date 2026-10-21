@@ -1247,6 +1247,10 @@ msgstr "Bot 선택…"
 msgid "Choose a new password"
 msgstr "새 비밀번호 선택"
 
+#: src/local/types.ts
+msgid "Choose a task owner before commenting."
+msgstr ""
+
 #: src/local/LocalChoicePromptDialog.tsx
 msgid "Choose an answer"
 msgstr ""

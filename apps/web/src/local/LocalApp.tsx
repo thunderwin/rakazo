@@ -103,7 +103,7 @@ function targetKey(target: LocalTarget | null): string | null {
 }
 
 const DEFAULT_SETTINGS: LocalSettings = {
-  theme: "system",
+  theme: "light",
   sendWithEnter: true,
   defaultModelId: null,
 };
@@ -1014,6 +1014,45 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
                   type="button"
                   variant="ghost"
                   className="w-full justify-start"
+                  aria-label={t`Board`}
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    setBoardOpen(true);
+                  }}
+                >
+                  <ClipboardList size={14} />
+                  <Trans>Board</Trans>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-start"
+                  aria-label={t`Artifacts`}
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    setArtifactsOpen(true);
+                  }}
+                >
+                  <Files size={14} />
+                  <Trans>Artifacts</Trans>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-start"
+                  aria-label={t`Activity`}
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    setActivityOpen(true);
+                  }}
+                >
+                  <Clock3 size={14} />
+                  <Trans>Activity</Trans>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-start"
                   aria-label={t`App settings`}
                   onClick={() => {
                     setAccountMenuOpen(false);
@@ -1121,33 +1160,6 @@ function LocalAppContent({ bridge }: { bridge?: LocalBridge }) {
                   </Button>
                 </>
               ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t`Artifacts`}
-                onClick={() => setArtifactsOpen(true)}
-              >
-                <Files size={15} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t`Board`}
-                onClick={() => setBoardOpen(true)}
-              >
-                <ClipboardList size={15} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t`Activity`}
-                onClick={() => setActivityOpen(true)}
-              >
-                <Clock3 size={15} />
-              </Button>
               <Button
                 type="button"
                 variant="ghost"
