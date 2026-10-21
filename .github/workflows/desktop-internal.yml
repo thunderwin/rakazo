@@ -1,0 +1,142 @@
+name: desktop-internal
+
+# Unsigned internal QA packages. This workflow intentionally does not publish a
+# GitHub Release and does not require an Apple Developer account or notarization.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-internal-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RAKAZO_ALLOW_DEV_SECRETS: "1"
+  RAKAZO_BUILD_SERVER_URL: ${{ vars.RAKAZO_SERVER_URL }}
+  RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY: ${{ vars.RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY }}
+
+jobs:
+  build:
+    name: Build unsigned macOS ${{ matrix.arch }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Require public client configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RAKAZO_BUILD_SERVER_URL"
+          test -n "$RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY"
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate database client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: postgres://rakazo:rakazo@127.0.0.1:5433/rakazo
+
+      - name: Build local renderer and Electron main process
+        run: |
+          pnpm --filter @rakazo/web build:local
+          pnpm --filter @rakazo/desktop build
+          node scripts/copy-static.mjs
+        working-directory: apps/desktop
+
+      - name: Generate legacy icon (no Xcode Icon Composer required)
+        shell: bash
+        run: |
+          set -euo pipefail
+          iconset="$RUNNER_TEMP/ericBot.iconset"
+          mkdir -p "$iconset"
+          source_image="$GITHUB_WORKSPACE/apps/desktop/assets/icon-macos.png"
+          while read -r size name; do
+            sips -z "$size" "$size" "$source_image" --out "$iconset/$name" >/dev/null
+          done <<'SIZES'
+          16 icon_16x16.png
+          32 icon_16x16@2x.png
+          32 icon_32x32.png
+          64 icon_32x32@2x.png
+          128 icon_128x128.png
+          256 icon_128x128@2x.png
+          256 icon_256x256.png
+          512 icon_256x256@2x.png
+          512 icon_512x512.png
+          SIZES
+          cp "$source_image" "$iconset/icon_512x512@2x.png"
+          iconutil -c icns "$iconset" -o "$RUNNER_TEMP/ericBot.icns"
+
+      - name: Package, ad-hoc sign, and archive
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          arch_dir="$ARCH"
+          if [[ "$ARCH" == "x64" ]]; then arch_dir="x64"; fi
+          CSC_IDENTITY_AUTO_DISCOVERY=false \
+            pnpm --filter @rakazo/desktop exec electron-builder \
+              --mac "--$ARCH" --dir --publish never \
+              -c.mac.icon="$RUNNER_TEMP/ericBot.icns" \
+              -c.forceCodeSigning=false \
+              -c.mac.identity=null \
+              -c.mac.notarize=false \
+              -c.npmRebuild=false
+
+          app="$(find apps/desktop/out -maxdepth 3 -type d -name 'ericBot.app' -print -quit)"
+          test -n "$app"
+          codesign --force --deep --sign - --timestamp=none "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+          version="$(node -p "require('./apps/desktop/package.json').version")"
+          bundle_name="ericBot-${version}-${ARCH}-unsigned"
+          mkdir -p "release/$bundle_name"
+          ditto "$app" "release/$bundle_name/ericBot.app"
+          cat > "release/$bundle_name/INSTALL.txt" <<'TEXT'
+          ericBot internal test build
+
+          This build is ad-hoc signed but not signed with an Apple Developer ID
+          and is not notarized by Apple.
+
+          1. Unzip and move ericBot.app to Applications.
+          2. In Finder, Control-click ericBot.app and choose Open.
+          3. If macOS still blocks it, open System Settings > Privacy & Security
+             and choose Open Anyway.
+          4. If macOS reports that the app is damaged after download, run:
+
+             xattr -dr com.apple.quarantine /Applications/ericBot.app
+
+          Only install this build on trusted test machines. Automatic updates are
+          not supported for this internal build.
+          TEXT
+
+          (
+            cd release
+            ditto -c -k --sequesterRsrc --keepParent \
+              "$bundle_name" "$bundle_name.zip"
+            shasum -a 256 "$bundle_name.zip" > "$bundle_name.sha256"
+          )
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ericbot-macos-${{ matrix.arch }}-unsigned
+          path: |
+            release/*.zip
+            release/*.sha256
+          if-no-files-found: error
+          retention-days: 14
