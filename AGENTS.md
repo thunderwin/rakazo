@@ -43,8 +43,11 @@ Product intent:
 - The client may ship a public server URL and brand assets. It must never ship
   an admin token, shared user credential, provider API key, database secret,
   encryption key, or sandbox supervisor token.
-- V1 is single-device. Do not add multi-device sync, teams, shared computers,
-  or mobile clients without a new documented decision.
+- V1 is single-device. Do not add multi-device sync, shared human chat channels,
+  shared computers, or mobile clients without a new documented decision.
+- The server control plane is multi-enterprise for membership, RBAC, assignments,
+  published templates, Knowledge, Skills, and routines. This does not imply shared
+  human chat messages or shared computers; those require a separate decision.
 - V1 ships as the desktop client only. Do not build or connect a separate web
   product unless a new decision expands the scope.
 - Branding lives in `brand/` and `packages/ui-tokens`; generated icons and CSS

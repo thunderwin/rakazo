@@ -14,8 +14,8 @@
 - 服务器只做账号、New API 映射、模型网关和监控；充值和额度由 New API 负责。
 - 模型网关是主要收入路径。
 
-V1 不做多设备、团队协作、团队电脑、移动端和本地模型。完整范围见
-`docs/V1.md`。
+V1 不做多设备、共享团队频道、团队电脑、移动端和本地模型；服务器可以管理企业、团队、
+角色和内容分配。完整范围见 `docs/V1.md`。
 
 客户端对外显示名为 `ericBot`，安装包标识为 `com.ericbot.desktop`。内部
 `@rakazo/*` 包名、API 契约、IPC 名和本地存储键暂时保留，以减少无意义的迁移和
@@ -94,6 +94,7 @@ docs/                        架构、V1 范围、fork 说明
 - OIDC/SSO（如启用）
 - `NEW_API_BASE_URL`、`NEW_API_ADMIN_TOKEN`、`NEW_API_ADMIN_USER_ID`、
   `NEW_API_DEFAULT_MODEL`
+- 多企业、团队、RBAC、管理员控制面和 Client Manifest 分发
 - 崩溃/监控上报
 
 ### 4.3 不要改的东西
