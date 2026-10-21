@@ -10,6 +10,12 @@ import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./
 import { LocalGroupRuntime } from "./group-runtime.js";
 import { LocalMemory, LocalMemoryToolProvider } from "./memory.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
+import {
+  type LocalRoutineInput,
+  LocalRoutineRuntime,
+  LocalRoutineToolProvider,
+  type LocalRoutineUpdate,
+} from "./routines.js";
 import { LocalRuntime, type SendMessageResult } from "./runtime.js";
 import { type LocalUserSettings, parseLocalUserSettings } from "./settings.js";
 import { SqliteConversationStore } from "./store.js";
@@ -30,13 +36,17 @@ export class LocalRuntimeService {
   readonly db: LocalDatabase;
   readonly runtime: LocalRuntime;
   readonly memory: LocalMemory;
+  private readonly routines: LocalRoutineRuntime;
   private readonly groups: LocalGroupRuntime;
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
     this.memory = new LocalMemory(this.db.memory);
     const tools = new RecordingToolProvider(
-      new LocalMemoryToolProvider(options.tools, this.memory),
+      new LocalRoutineToolProvider(
+        new LocalMemoryToolProvider(options.tools, this.memory),
+        () => this.routines,
+      ),
       this.db.runs,
     );
     const onRunStart = async (run: {
@@ -90,6 +100,10 @@ export class LocalRuntimeService {
       onRunStart,
       onEvent: options.onEvent,
       onRunEnd,
+    });
+    this.routines = new LocalRoutineRuntime({
+      db: this.db,
+      runtime: this.runtime,
     });
   }
 
@@ -155,6 +169,34 @@ export class LocalRuntimeService {
     return this.memory.remove(documentId);
   }
 
+  startRoutineScheduler() {
+    this.routines.start();
+  }
+
+  listRoutines(botId: string) {
+    return this.routines.list(botId);
+  }
+
+  createRoutine(botId: string, input: LocalRoutineInput) {
+    return this.routines.create(botId, input);
+  }
+
+  updateRoutine(routineId: string, input: LocalRoutineUpdate) {
+    return this.routines.update(routineId, input);
+  }
+
+  removeRoutine(routineId: string) {
+    return this.routines.remove(routineId);
+  }
+
+  runRoutineNow(routineId: string) {
+    return this.routines.runNow(routineId);
+  }
+
+  listRoutineRuns(routineId: string, limit?: number) {
+    return this.routines.history(routineId, limit);
+  }
+
   sendMessage(
     botId: string,
     text: string,
@@ -216,6 +258,7 @@ export class LocalRuntimeService {
   }
 
   close(): void {
+    this.routines.stop();
     this.db.close();
   }
 

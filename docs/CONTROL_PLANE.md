@@ -234,6 +234,8 @@ GET /v1/client/manifest
 
 ## 8. Routines
 
+> 状态：本地定义、调度和执行已实现，核实日期 2026-10-21。服务器定义与分发尚未实现。
+
 服务器保存定义和调度规则：
 
 - 所属企业。
@@ -249,6 +251,9 @@ GET /v1/client/manifest
 - 上报 run 元数据。
 
 客户端离线时不执行本地任务。第一版策略固定为“下次启动补跑最近一次”，以后再做用户可配置的跳过/补跑策略。
+
+当前本地版本每条 routine 只有一个 cron/一次性 schedule，并提供运行历史。watch、webhook、
+GitHub 和消息平台触发不在当前实现内。
 
 ## 9. 工具日志和活动历史
 
@@ -322,7 +327,7 @@ GET /v1/client/manifest
 3. Client Manifest、签名包、客户端后台同步和回滚。
 4. 企业 Bot 模板、群预设、Skills 和 Knowledge 分配。
 5. 本地群聊和 `handoff_to_bot`。
-6. Routines 服务器定义和客户端调度。
+6. Routines 服务器定义和分发；客户端定义、调度和执行已实现。
 7. Memory 分层：个人本地 Memory 已实现；企业共享 Memory 和晋升流程待实现。
 8. 工具运行记录、活动历史和诊断 bundle。
 9. 私有附件、预置附件。

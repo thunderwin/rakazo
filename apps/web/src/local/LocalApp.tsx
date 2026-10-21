@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Bot,
   Brain,
+  CalendarClock,
   Clock3,
   Globe2,
   LogOut,
@@ -20,6 +21,7 @@ import { LocalComposer } from "./LocalComposer";
 import { LocalGroupDialog } from "./LocalGroupDialog";
 import { LocalMemoryDialog } from "./LocalMemoryDialog";
 import { LocalLiveMessage, LocalMessageView } from "./LocalMessageView";
+import { LocalRoutinesDialog } from "./LocalRoutinesDialog";
 import { LocalSettingsDialog } from "./LocalSettings";
 import {
   type LocalBot,
@@ -168,6 +170,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [routinesOpen, setRoutinesOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [newBotName, setNewBotName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -721,15 +724,26 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {activeBot ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Memory"
-                  onClick={() => setMemoryOpen(true)}
-                >
-                  <Brain size={15} />
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Routines"
+                    onClick={() => setRoutinesOpen(true)}
+                  >
+                    <CalendarClock size={15} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Memory"
+                    onClick={() => setMemoryOpen(true)}
+                  >
+                    <Brain size={15} />
+                  </Button>
+                </>
               ) : null}
               <Button
                 type="button"
@@ -887,12 +901,20 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
         }
       />
       {activeBot ? (
-        <LocalMemoryDialog
-          open={memoryOpen}
-          onOpenChange={setMemoryOpen}
-          api={api}
-          bot={activeBot}
-        />
+        <>
+          <LocalMemoryDialog
+            open={memoryOpen}
+            onOpenChange={setMemoryOpen}
+            api={api}
+            bot={activeBot}
+          />
+          <LocalRoutinesDialog
+            open={routinesOpen}
+            onOpenChange={setRoutinesOpen}
+            api={api}
+            bot={activeBot}
+          />
+        </>
       ) : null}
     </div>
   );

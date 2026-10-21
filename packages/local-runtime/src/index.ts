@@ -30,6 +30,13 @@ export {
   type PeerBotMessageRequest,
 } from "./message-bot-tool.js";
 export {
+  type LocalRoutineInput,
+  LocalRoutineRuntime,
+  LocalRoutineToolProvider,
+  type LocalRoutineUpdate,
+  ROUTINE_TOOL_NAMES,
+} from "./routines.js";
+export {
   type LocalRunEnd,
   LocalRuntime,
   type LocalRuntimeOptions,

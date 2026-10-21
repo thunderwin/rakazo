@@ -49,6 +49,7 @@ describe("desktop preload bridge", () => {
       "groups",
       "memory",
       "messages",
+      "routines",
       "runs",
       "settings",
     ]);
@@ -97,6 +98,16 @@ describe("desktop preload bridge", () => {
     await bridge.local?.memory.list({ botId: "bot-1", scope: "bot" });
     await bridge.local?.memory.update("memory-1", "fact", 1);
     await bridge.local?.memory.remove("memory-1");
+    await bridge.local?.routines.list("bot-1");
+    await bridge.local?.routines.create("bot-1", {
+      name: "Daily",
+      prompt: "Check",
+      cron: "0 9 * * *",
+    });
+    await bridge.local?.routines.update("routine-1", { enabled: false });
+    await bridge.local?.routines.remove("routine-1");
+    await bridge.local?.routines.runNow("routine-1");
+    await bridge.local?.routines.history("routine-1", 20);
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -135,6 +146,12 @@ describe("desktop preload bridge", () => {
       "desktop.local.memory.list",
       "desktop.local.memory.update",
       "desktop.local.memory.remove",
+      "desktop.local.routines.list",
+      "desktop.local.routines.create",
+      "desktop.local.routines.update",
+      "desktop.local.routines.remove",
+      "desktop.local.routines.runNow",
+      "desktop.local.routines.history",
     ]);
   });
 

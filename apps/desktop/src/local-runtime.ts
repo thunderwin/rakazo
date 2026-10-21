@@ -57,6 +57,7 @@ export async function createDesktopLocalRuntime(
     onEvent: options.onEvent,
     onRunEnd: options.onRunEnd,
   });
+  service.startRoutineScheduler();
   return service;
 }
 

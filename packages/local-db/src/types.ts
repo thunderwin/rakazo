@@ -69,9 +69,29 @@ export interface Routine {
   name: string;
   prompt: string;
   cron: string;
+  timezone: string;
   enabled: boolean;
+  source: "local" | "managed";
+  lastRunAt: string | null;
+  nextRunAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type RoutineRunTrigger = "scheduled" | "missed" | "manual";
+export type RoutineRunStatus = "running" | "completed" | "failed" | "stopped";
+
+export interface RoutineRun {
+  id: string;
+  routineId: string;
+  runId: string | null;
+  scheduledFor: string;
+  trigger: RoutineRunTrigger;
+  status: RoutineRunStatus;
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  createdAt: string;
 }
 
 export interface LocalGroup {

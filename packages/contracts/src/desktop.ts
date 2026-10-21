@@ -122,6 +122,43 @@ export interface DesktopLocalMemoryDocument {
   updatedAt: string;
 }
 
+export interface DesktopLocalRoutine {
+  id: string;
+  botId: string;
+  name: string;
+  prompt: string;
+  cron: string;
+  timezone: string;
+  source: "local" | "managed";
+  enabled: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalRoutineRun {
+  id: string;
+  routineId: string;
+  runId: string | null;
+  scheduledFor: string;
+  trigger: "scheduled" | "missed" | "manual";
+  status: "running" | "completed" | "failed" | "stopped";
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  createdAt: string;
+}
+
+export interface DesktopLocalRoutineInput {
+  name: string;
+  prompt: string;
+  cron: string;
+  timezone?: string;
+  enabled?: boolean;
+  runAt?: string;
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -276,6 +313,17 @@ export interface RakazoDesktopLocal {
       expectedRevision?: number,
     ) => Promise<DesktopLocalMemoryDocument>;
     remove: (documentId: string) => Promise<void>;
+  };
+  routines: {
+    list: (botId: string) => Promise<DesktopLocalRoutine[]>;
+    create: (botId: string, input: DesktopLocalRoutineInput) => Promise<DesktopLocalRoutine>;
+    update: (
+      routineId: string,
+      input: Partial<DesktopLocalRoutineInput>,
+    ) => Promise<DesktopLocalRoutine>;
+    remove: (routineId: string) => Promise<void>;
+    runNow: (routineId: string) => Promise<DesktopLocalRoutineRun>;
+    history: (routineId: string, limit?: number) => Promise<DesktopLocalRoutineRun[]>;
   };
 }
 

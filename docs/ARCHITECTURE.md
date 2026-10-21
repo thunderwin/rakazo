@@ -185,9 +185,11 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   更新状态；不包含消息正文、session token、New API token 或浏览器 Cookie。
 - 本地 run 和 tool activity 写入 SQLite；UI 可查看状态、耗时、参数、结果和错误。
 - bot/账号 Memory 写入本地 SQLite；直聊注入 32 KiB 上下文，群聊不暴露私有 Memory。
+- 本地 Routines 支持 cron/interval/一次性 schedule、在线调度、补跑、运行历史和
+  `schedule_create/list/cancel`。
 
-仍待迁移：fleet 管理、应用启动、桌面操作、routines。服务器专属的团队、电脑、
-账号管理页面不会进入本地 renderer。
+仍待迁移：fleet 管理、应用启动、桌面操作。服务器专属的团队、电脑、账号管理页面
+不会进入本地 renderer。
 
 ### 4.3 本地数据库
 
@@ -212,8 +214,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 
 当前 schema 已有 bots、threads、messages、chat_groups、group_members、group_threads、
 group_messages、peer_messages、runs、tool_runs、memory_documents、memory_revisions、
-settings 和 routines 表；repository 覆盖 bots、threads、messages、群聊、peer_messages、
-run/tool activity、Memory 和 settings。routines 的 repository/本地调度尚未实现。
+routine_runs、settings 和 routines 表；repository 覆盖 bots、threads、messages、群聊、
+peer_messages、run/tool activity、Memory、Routines 和 settings。
 
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
 审计；它不保存到服务器。
@@ -359,7 +361,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 建立清晰的编排端口，并直接复用已经独立出来的 `PiAgentRuntime`：
 
 1. 已定义本地 engine/store/tool 端口，并用 Pi adapter 组合；不复制 executor。
-2. SQLite store 已覆盖 bot/thread/message、Memory 和 tool run；routine 仍待实现。
+2. SQLite store 已覆盖 bot/thread/message、Memory、Routines 和 tool run。
 3. 本地 runtime 已接入 Electron 主进程；独立 utility process 仍待拆分。
 4. 原版 React 组件已通过 `apps/web/src/local-main.tsx` 和 `dist-local` 接入本地
    IPC；旧 `local.html` 预览和手工 JS/CSS 已删除。
@@ -423,5 +425,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/GROUPS.md`：本地群聊、群消息和 `handoff_to_bot`。
 - `docs/ACTIVITY.md`：本地 run/tool 活动记录和隐私边界。
 - `docs/MEMORY.md`：本地 bot/账号 Memory、工具、修订和隐私边界。
+- `docs/ROUTINES.md`：本地 routine 定义、调度、补跑和运行历史。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

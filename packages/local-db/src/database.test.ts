@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 5,
+      count: 6,
     });
     second.close();
   });
@@ -199,6 +199,76 @@ describe("local database", () => {
 
     expect(db.memory.remove(shared.id)).toBe(true);
     expect(db.memory.get(shared.id)).toBeNull();
+    db.close();
+  });
+
+  it("stores routine schedules and idempotent run claims", () => {
+    const db = openLocalDatabase(":memory:");
+    const bot = db.bots.create({ name: "Researcher" });
+    const due = db.routines.create({
+      botId: bot.id,
+      name: "Morning brief",
+      prompt: "Summarize the overnight changes.",
+      cron: "0 9 * * 1-5",
+      timezone: "Asia/Hong_Kong",
+      enabled: true,
+      nextRunAt: "2026-10-21T01:00:00.000Z",
+    });
+    db.routines.create({
+      botId: bot.id,
+      name: "Future",
+      prompt: "Later.",
+      cron: "0 10 * * 1-5",
+      timezone: "Asia/Hong_Kong",
+      enabled: true,
+      nextRunAt: "2026-10-22T02:00:00.000Z",
+    });
+
+    expect(db.routines.listDue("2026-10-21T02:00:00.000Z").map((routine) => routine.id)).toEqual([
+      due.id,
+    ]);
+    const started = db.routines.startRun({
+      routineId: due.id,
+      scheduledFor: due.nextRunAt!,
+      trigger: "scheduled",
+      startedAt: "2026-10-21T01:00:01.000Z",
+    })!;
+    expect(
+      db.routines.startRun({
+        routineId: due.id,
+        scheduledFor: due.nextRunAt!,
+        trigger: "scheduled",
+        startedAt: "2026-10-21T01:00:02.000Z",
+      }),
+    ).toBeNull();
+    db.runs.start({
+      id: "run-1",
+      kind: "direct",
+      botId: bot.id,
+      threadId: "thread-1",
+    });
+    db.routines.finishRun(started.id, {
+      runId: "run-1",
+      status: "completed",
+      endedAt: "2026-10-21T01:00:03.000Z",
+    });
+    db.routines.finishSchedule({
+      id: due.id,
+      lastRunAt: "2026-10-21T01:00:03.000Z",
+      nextRunAt: "2026-10-22T01:00:00.000Z",
+    });
+
+    expect(db.routines.getRun(started.id)).toMatchObject({
+      runId: "run-1",
+      status: "completed",
+    });
+    expect(db.routines.get(due.id)).toMatchObject({
+      timezone: "Asia/Hong_Kong",
+      nextRunAt: "2026-10-22T01:00:00.000Z",
+    });
+    expect(db.routines.listRuns(due.id)).toHaveLength(1);
+    expect(db.routines.remove(due.id)).toBe(true);
+    expect(db.routines.getRun(started.id)).toBeNull();
     db.close();
   });
 

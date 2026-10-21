@@ -32,8 +32,11 @@ Current implementation:
 - versioned bot and account-scoped memory stored in SQLite, with `remember` and
   `save_shared_memory`; direct chats receive a bounded memory context and group
   chats do not expose private memory tools
+- local routines with cron, interval, and one-time schedules, durable run
+  claims/history, missed-run recovery, and `schedule_create`, `schedule_list`,
+  and `schedule_cancel`
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding
 
-App launch and routines are still separate migration work.
+App launch is still separate migration work.

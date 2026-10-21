@@ -10,6 +10,7 @@ export {
 } from "./repositories/memory.js";
 export { MessageRepository } from "./repositories/messages.js";
 export { type PeerMessage, PeerMessageRepository } from "./repositories/peer-messages.js";
+export { RoutineRepository } from "./repositories/routines.js";
 export { RunRepository } from "./repositories/runs.js";
 export { SettingsRepository } from "./repositories/settings.js";
 export { ThreadRepository } from "./repositories/threads.js";
@@ -37,5 +38,8 @@ export type {
   LocalToolRunStatus,
   MessageRole,
   Routine,
+  RoutineRun,
+  RoutineRunStatus,
+  RoutineRunTrigger,
   Thread,
 } from "./types.js";

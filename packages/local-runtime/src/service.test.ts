@@ -307,6 +307,52 @@ describe("local runtime service", () => {
 
     expect(groupTools).not.toContain("remember");
     expect(groupTools).not.toContain("save_shared_memory");
+    expect(groupTools).not.toContain("schedule_create");
+    expect(groupTools).not.toContain("schedule_list");
+    expect(groupTools).not.toContain("schedule_cancel");
+    service.close();
+  });
+
+  it("lets a direct bot create and list a local routine", async () => {
+    let routineId = "";
+    const routineEngine: LocalAgentEngine = {
+      async *run(request) {
+        const created = (await request.executeTool(
+          "schedule_create",
+          {
+            name: "Morning brief",
+            prompt: "Summarize overnight changes.",
+            cron: "0 9 * * *",
+            timezone: "UTC",
+          },
+          "schedule-tool",
+        )) as { id: string };
+        routineId = created.id;
+        yield { type: "text", text: "Scheduled" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: routineEngine,
+      tools,
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Research assistant" });
+
+    await service.sendMessage(bot.id, "Schedule a morning brief");
+
+    expect(service.listRoutines(bot.id)).toEqual([
+      expect.objectContaining({
+        id: routineId,
+        name: "Morning brief",
+        prompt: "Summarize overnight changes.",
+        cron: "0 9 * * *",
+        enabled: true,
+      }),
+    ]);
+    expect(service.listRoutineRuns(routineId)).toEqual([]);
     service.close();
   });
 

@@ -64,6 +64,7 @@ apps/web/src/local-main.tsx
 - 当前 bot 的 Brain 按钮打开本地 Memory，分为 `This bot` 和 `Shared`。
 - 文档可以查看、编辑、删除和下载；保存携带 revision，避免静默覆盖新内容。
 - Activity 展示本地 run/tool 状态、耗时、参数、结果和错误。
+- Routines 按钮管理当前 bot 的定时任务，支持 schedule 编辑、启停、立即运行和最近运行。
 
 ## 4. 开发和验证
 
@@ -75,5 +76,5 @@ pnpm --filter @rakazo/desktop build
 ```
 
 组件测试覆盖 mention 选择与发送、BotAvatar/Markdown 渲染、模型额度错误、Retry
-保留输入、群聊与 handoff 展示、Memory 编辑以及设置/浏览器状态。桌面构建继续由
+保留输入、群聊与 handoff 展示、Memory/Routine 编辑以及设置/浏览器状态。桌面构建继续由
 `@rakazo/desktop` 的 `prebuild` 自动生成 `dist-local`。

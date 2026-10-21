@@ -211,6 +211,35 @@ const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 6,
+    sql: `
+      ALTER TABLE routines ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC';
+      ALTER TABLE routines ADD COLUMN source TEXT NOT NULL DEFAULT 'local';
+      ALTER TABLE routines ADD COLUMN last_run_at TEXT;
+      ALTER TABLE routines ADD COLUMN next_run_at TEXT;
+
+      CREATE INDEX routines_enabled_next
+        ON routines(enabled, next_run_at);
+
+      CREATE TABLE routine_runs (
+        id TEXT PRIMARY KEY,
+        routine_id TEXT NOT NULL REFERENCES routines(id) ON DELETE CASCADE,
+        run_id TEXT REFERENCES runs(id) ON DELETE SET NULL,
+        scheduled_for TEXT NOT NULL,
+        trigger TEXT NOT NULL CHECK (trigger IN ('scheduled', 'missed', 'manual')),
+        status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'stopped')),
+        error TEXT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE (routine_id, scheduled_for)
+      );
+
+      CREATE INDEX routine_runs_routine_started
+        ON routine_runs(routine_id, started_at DESC);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

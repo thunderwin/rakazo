@@ -22,6 +22,7 @@ import type {
   LocalAgentTool,
 } from "./agent.js";
 import { PRIVATE_MEMORY_TOOL_NAMES } from "./memory.js";
+import { ROUTINE_TOOL_NAMES } from "./routines.js";
 import type { LocalToolProvider } from "./tools.js";
 
 export interface GroupRunResult {
@@ -263,7 +264,10 @@ export class LocalGroupRuntime {
     const tools = this.options.tools
       .definitionsFor(bot)
       .filter(
-        (tool) => tool.name !== "handoff_to_bot" && !PRIVATE_MEMORY_TOOL_NAMES.has(tool.name),
+        (tool) =>
+          tool.name !== "handoff_to_bot" &&
+          !PRIVATE_MEMORY_TOOL_NAMES.has(tool.name) &&
+          !ROUTINE_TOOL_NAMES.has(tool.name),
       );
     if (!bot.disabledBuiltinTools.includes("handoff_to_bot")) tools.push(handoffTool);
     let model: LocalAgentModel | null = null;
@@ -302,8 +306,8 @@ export class LocalGroupRuntime {
           tools,
           model,
           executeTool: async (name, args, executionId) => {
-            if (PRIVATE_MEMORY_TOOL_NAMES.has(name)) {
-              throw new Error("Private memory tools are not available in group chats");
+            if (PRIVATE_MEMORY_TOOL_NAMES.has(name) || ROUTINE_TOOL_NAMES.has(name)) {
+              throw new Error("Private memory and routine tools are not available in group chats");
             }
             if (name === "handoff_to_bot") {
               return this.executeHandoff({

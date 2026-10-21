@@ -106,6 +106,14 @@ function bridge(): RakazoDesktopLocal {
       update: vi.fn(),
       remove: vi.fn(),
     },
+    routines: {
+      list: vi.fn(async () => []),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      runNow: vi.fn(),
+      history: vi.fn(async () => []),
+    },
   };
 }
 
@@ -355,4 +363,58 @@ it("opens local bot memory and saves a revision", async () => {
   });
 
   expect(api.memory.update).toHaveBeenCalledWith("memory-1", "Updated fact.\n", 1);
+});
+
+it("opens local routines and saves an edited schedule", async () => {
+  const api = bridge();
+  const routine = {
+    id: "routine-1",
+    botId: bot.id,
+    name: "Morning brief",
+    prompt: "Summarize overnight changes.",
+    cron: "0 9 * * 1-5",
+    timezone: "Asia/Hong_Kong",
+    source: "local" as const,
+    enabled: true,
+    lastRunAt: null,
+    nextRunAt: "2026-10-22T01:00:00.000Z",
+    createdAt: "2026-10-20T12:00:00.000Z",
+    updatedAt: "2026-10-20T12:00:00.000Z",
+  };
+  api.routines.list = vi.fn(async () => [routine]);
+  api.routines.update = vi.fn(async (_id, input) => ({ ...routine, ...input }));
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    (host.querySelector('button[aria-label="Routines"]') as HTMLButtonElement).click();
+  });
+  await vi.waitFor(() => expect(document.body.textContent).toContain("Morning brief"));
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.includes("Morning brief"))
+      ?.click();
+  });
+  const name = document.body.querySelector("#local-routine-name") as HTMLInputElement;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(name, "Updated brief");
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    [...document.body.querySelectorAll("button")]
+      .find((button) => button.textContent?.trim() === "Save")
+      ?.click();
+  });
+
+  expect(api.routines.update).toHaveBeenCalledWith(
+    "routine-1",
+    expect.objectContaining({
+      name: "Updated brief",
+      prompt: "Summarize overnight changes.",
+      cron: "0 9 * * 1-5",
+    }),
+  );
 });

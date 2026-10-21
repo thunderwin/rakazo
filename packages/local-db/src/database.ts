@@ -9,6 +9,7 @@ import { GroupRepository } from "./repositories/groups.js";
 import { MemoryRepository } from "./repositories/memory.js";
 import { MessageRepository } from "./repositories/messages.js";
 import { PeerMessageRepository } from "./repositories/peer-messages.js";
+import { RoutineRepository } from "./repositories/routines.js";
 import { RunRepository } from "./repositories/runs.js";
 import { SettingsRepository } from "./repositories/settings.js";
 import { ThreadRepository } from "./repositories/threads.js";
@@ -29,6 +30,7 @@ export class LocalDatabase {
   readonly memory: MemoryRepository;
   readonly peerMessages: PeerMessageRepository;
   readonly runs: RunRepository;
+  readonly routines: RoutineRepository;
   readonly settings: SettingsRepository;
 
   constructor(options: OpenLocalDatabaseOptions) {
@@ -50,6 +52,7 @@ export class LocalDatabase {
     this.memory = new MemoryRepository(this.sqlite);
     this.peerMessages = new PeerMessageRepository(this.sqlite);
     this.runs = new RunRepository(this.sqlite);
+    this.routines = new RoutineRepository(this.sqlite);
     this.settings = new SettingsRepository(this.sqlite);
   }
 

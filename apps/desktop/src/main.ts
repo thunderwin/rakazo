@@ -1099,6 +1099,59 @@ function localStringArray(
   return [...new Set(value.map((entry) => (entry as string).trim()))];
 }
 
+function localRoutineInput(
+  value: unknown,
+  required: true,
+): {
+  name: string;
+  prompt: string;
+  cron: string;
+  timezone?: string;
+  enabled?: boolean;
+  runAt?: string;
+};
+function localRoutineInput(
+  value: unknown,
+  required: false,
+): {
+  name?: string;
+  prompt?: string;
+  cron?: string;
+  timezone?: string;
+  enabled?: boolean;
+  runAt?: string;
+};
+function localRoutineInput(value: unknown, required: boolean) {
+  const input = localRecord(value, "Routine");
+  const name =
+    input.name === undefined && !required
+      ? undefined
+      : localString(input.name, "Routine name", 80).trim();
+  const prompt =
+    input.prompt === undefined && !required
+      ? undefined
+      : localString(input.prompt, "Routine prompt", 100_000);
+  const cron =
+    input.cron === undefined && !required
+      ? undefined
+      : localString(input.cron, "Routine schedule", 200).trim();
+  if (input.enabled !== undefined && typeof input.enabled !== "boolean") {
+    throw new Error("Routine enabled is invalid");
+  }
+  return {
+    ...(name === undefined ? {} : { name }),
+    ...(prompt === undefined ? {} : { prompt }),
+    ...(cron === undefined ? {} : { cron }),
+    ...(input.timezone === undefined
+      ? {}
+      : { timezone: localString(input.timezone, "Routine timezone", 100).trim() }),
+    ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
+    ...(input.runAt === undefined
+      ? {}
+      : { runAt: localString(input.runAt, "Routine run time", 100) }),
+  };
+}
+
 function installLocalIpc() {
   if (localIpcInstalled) return;
   localIpcInstalled = true;
@@ -1407,6 +1460,47 @@ function installLocalIpc() {
     if (!requireLocalRuntime().removeMemory(localString(documentId, "Memory id", 200))) {
       throw new Error("Memory document not found");
     }
+  });
+  ipcMain.handle("desktop.local.routines.list", (event, botId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listRoutines(localString(botId, "Bot id", 200));
+  });
+  ipcMain.handle("desktop.local.routines.create", (event, botId: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().createRoutine(
+      localString(botId, "Bot id", 200),
+      localRoutineInput(input, true),
+    );
+  });
+  ipcMain.handle("desktop.local.routines.update", (event, routineId: unknown, input: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().updateRoutine(
+      localString(routineId, "Routine id", 200),
+      localRoutineInput(input, false),
+    );
+  });
+  ipcMain.handle("desktop.local.routines.remove", (event, routineId: unknown) => {
+    requireLocalWindow(event);
+    if (!requireLocalRuntime().removeRoutine(localString(routineId, "Routine id", 200))) {
+      throw new Error("Routine not found");
+    }
+  });
+  ipcMain.handle("desktop.local.routines.runNow", (event, routineId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().runRoutineNow(localString(routineId, "Routine id", 200));
+  });
+  ipcMain.handle("desktop.local.routines.history", (event, routineId: unknown, limit: unknown) => {
+    requireLocalWindow(event);
+    if (
+      limit !== undefined &&
+      (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
+    ) {
+      throw new Error("Routine history limit must be between 1 and 100");
+    }
+    return requireLocalRuntime().listRoutineRuns(
+      localString(routineId, "Routine id", 200),
+      limit as number | undefined,
+    );
   });
 }
 

@@ -90,6 +90,16 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
         ipcRenderer.invoke("desktop.local.memory.update", documentId, content, expectedRevision),
       remove: (documentId) => ipcRenderer.invoke("desktop.local.memory.remove", documentId),
     },
+    routines: {
+      list: (botId) => ipcRenderer.invoke("desktop.local.routines.list", botId),
+      create: (botId, input) => ipcRenderer.invoke("desktop.local.routines.create", botId, input),
+      update: (routineId, input) =>
+        ipcRenderer.invoke("desktop.local.routines.update", routineId, input),
+      remove: (routineId) => ipcRenderer.invoke("desktop.local.routines.remove", routineId),
+      runNow: (routineId) => ipcRenderer.invoke("desktop.local.routines.runNow", routineId),
+      history: (routineId, limit) =>
+        ipcRenderer.invoke("desktop.local.routines.history", routineId, limit),
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),
