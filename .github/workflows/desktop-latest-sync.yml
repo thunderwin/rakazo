@@ -1,0 +1,85 @@
+name: desktop-latest-sync
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: desktop-latest-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Find the latest successful internal build
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="$(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/runs?branch=feat/browser-extension&status=success&per_page=100" \
+              --jq '.workflow_runs[] | select(.name == "desktop-internal") | .id' |
+              head -n 1
+          )"
+          test -n "$run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download macOS artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ steps.latest.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p incoming
+          for arch in arm64 x64; do
+            mkdir -p "incoming/$arch"
+            gh run download "$RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "ericbot-macos-$arch-unsigned" \
+              --dir "incoming/$arch"
+          done
+
+      - name: Prepare stable download names
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          arm_zip="$(find incoming/arm64 -type f -name '*.zip' -print -quit)"
+          x64_zip="$(find incoming/x64 -type f -name '*.zip' -print -quit)"
+          test -n "$arm_zip"
+          test -n "$x64_zip"
+          cp "$arm_zip" release/ericBot-macos-arm64-unsigned.zip
+          cp "$x64_zip" release/ericBot-macos-x64-unsigned.zip
+          (
+            cd release
+            sha256sum *.zip > SHA256SUMS.txt
+          )
+
+      - name: Publish rolling internal release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view internal-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create internal-latest \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "ericBot internal latest" \
+              --notes "Rolling unsigned macOS builds for trusted internal testing."
+          fi
+          gh release upload internal-latest release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

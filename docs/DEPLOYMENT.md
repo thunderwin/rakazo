@@ -526,3 +526,19 @@ pnpm --filter @rakazo/desktop pack:mac:preview
 - 稳定版本号和 CHANGELOG。
 - 在 Apple Silicon 与 Intel 至少各一台干净 Mac 上安装、登录、升级和卸载测试。
 - 通过密码管理器分发测试账号，不把账号密码写进安装包、README 或聊天记录。
+
+### 内测下载站
+
+`apps/landing` 是部署在 Cloudflare Worker 上的一页下载站。Worker 提供以下稳定入口：
+
+```text
+/download/mac/arm64
+/download/mac/x64
+/download/checksums
+```
+
+这些入口不包含版本号，由 Worker 重定向到 GitHub `internal-latest` 预发布中的固定文件名。
+`desktop-internal` 生成 arm64/x64 未签名测试包；`desktop-latest-sync` 每 30 分钟从最新
+成功构建同步资产并覆盖 `internal-latest`。因此官网 URL 始终不变，用户总是下载最新测试包。
+
+该下载站不提供 Apple 公证，也不应被描述为正式稳定版。公开文档和仓库不记录实际生产域名。

@@ -1,0 +1,14 @@
+{
+  "name": "@rakazo/landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "test -n \"$RAKAZO_LANDING_DOMAIN\" && wrangler deploy --domain \"$RAKAZO_LANDING_DOMAIN\"",
+    "dev": "wrangler dev",
+    "check": "wrangler deploy --dry-run --outdir dist"
+  },
+  "devDependencies": {
+    "wrangler": "4.93.1"
+  }
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ericBot · 本地 AI 助手</title>
+    <meta
+      name="description"
+      content="ericBot 在本地运行 Agent，在获得授权后使用文件、终端和浏览器完成工作。"
+    />
+    <meta name="theme-color" content="#f5f2ea" />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav aria-label="主导航">
+        <a class="brand" href="/" aria-label="ericBot 首页">
+          <span class="brand-mark" aria-hidden="true">e</span>
+          <span>ericBot</span>
+        </a>
+        <span class="channel">Internal beta</span>
+      </nav>
+
+      <section class="hero">
+        <p class="eyebrow">YOUR AGENT, ON YOUR MAC</p>
+        <h1>会动手的 AI，<br />数据留在你的电脑。</h1>
+        <p class="lede">
+          ericBot 在你的 Mac 上运行 Agent。它只在需要时读取文件、执行命令或操作浏览器，
+          每一步都经过你的授权。
+        </p>
+        <div class="actions">
+          <a class="button primary" href="/download/mac/arm64">
+            <span>下载 Apple Silicon 版</span>
+            <small>M1 / M2 / M3 / M4</small>
+          </a>
+          <a class="button" href="/download/mac/x64">
+            <span>下载 Intel 版</span>
+            <small>Intel Mac</small>
+          </a>
+        </div>
+        <p class="checksum">
+          不确定架构？
+          <a href="https://support.apple.com/zh-cn/116943" rel="noreferrer">查看 Apple 说明</a>
+          · <a href="/download/checksums">SHA-256</a>
+        </p>
+      </section>
+
+      <section class="details" aria-label="产品说明">
+        <article>
+          <span>01</span>
+          <h2>Agent 在本地运行</h2>
+          <p>对话、文件和记忆保存在本机 SQLite。服务器只负责账号和模型网关。</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h2>工具需要你点头</h2>
+          <p>写入文件、运行命令、操作网页前都会显示请求。随时可以停止当前任务。</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h2>使用现有 Chrome 登录态</h2>
+          <p>浏览器扩展连接本机客户端，在独立 Agent Window 中工作，不上传 Cookie。</p>
+        </article>
+      </section>
+
+      <section class="notice">
+        <strong>内测版本</strong>
+        <p>
+          当前安装包没有 Apple Developer ID 签名和公证。首次打开需要在 Finder
+          中右键选择“打开”，或在系统设置中允许。仅用于受信任的测试设备。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>© 2026 ericBot</span>
+      <a href="https://github.com/thunderwin/rakazo">GitHub</a>
+    </footer>
+  </body>
+</html>
