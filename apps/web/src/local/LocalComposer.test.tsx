@@ -103,5 +103,39 @@ it("opens the mention picker, inserts a bot chip, and sends the mention text", a
   const send = host.querySelector('button[aria-label="Send"]') as HTMLButtonElement;
   await act(async () => send.click());
 
-  expect(onSend).toHaveBeenCalledWith("@Researcher check this");
+  expect(onSend).toHaveBeenCalledWith("@Researcher check this", []);
+});
+
+it("accepts a file attachment and can send it without text", async () => {
+  vi.stubGlobal("URL", {
+    createObjectURL: vi.fn(() => "blob:attachment"),
+    revokeObjectURL: vi.fn(),
+  });
+  const onSend = vi.fn(async () => true);
+  root = createRoot(host);
+  await act(async () =>
+    root?.render(
+      <LocalComposer
+        bots={bots}
+        activeBotName="Assistant"
+        running={false}
+        enterToSend
+        onSend={onSend}
+        onStop={vi.fn(async () => undefined)}
+      />,
+    ),
+  );
+  const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+  const file = new File(["hello"], "notes.txt", { type: "text/plain" });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+
+  expect(host.textContent).toContain("notes.txt");
+  const send = host.querySelector('button[aria-label="Send"]') as HTMLButtonElement;
+  await act(async () => send.click());
+
+  expect(onSend).toHaveBeenCalledWith(
+    "",
+    [expect.objectContaining({ file, mimeType: "text/plain" })],
+  );
 });

@@ -1,9 +1,11 @@
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { BotAvatar } from "@rakazo/ui-web";
 import { AlertTriangle, ArrowRight, Check, LoaderCircle, Wrench } from "lucide-react";
+import { LocalAttachmentView } from "./LocalAttachmentView";
 import { MentionText } from "./MentionText";
 import {
   type LocalBot,
+  type LocalBridge,
   type LocalGroupMessage,
   type LocalMessage,
   type LocalMessageBlock,
@@ -24,10 +26,12 @@ export function LocalMessageView({
   message,
   bot,
   bots,
+  api,
 }: {
   message: LocalMessage | LocalGroupMessage;
   bot?: LocalBot;
   bots: readonly LocalBot[];
+  api: LocalBridge;
 }) {
   const blocks = messageBlocks(message);
   const text = messageText(message);
@@ -46,6 +50,18 @@ export function LocalMessageView({
       typeof block.toBotId === "string" &&
       typeof block.text === "string" &&
       typeof block.hop === "number",
+  );
+  const attachments = blocks.filter(
+    (block): block is Extract<LocalMessageBlock, { kind: "image" | "file" }> => {
+      if (block.kind !== "image" && block.kind !== "file") return false;
+      if (!("artifactId" in block) || !("name" in block) || !("mimeType" in block)) return false;
+      if (typeof block.artifactId !== "string" || typeof block.name !== "string") return false;
+      if (block.kind === "image") return typeof block.mimeType === "string";
+      if (block.kind === "file") {
+        return typeof block.mimeType === "string" && typeof block.size === "number";
+      }
+      return false;
+    },
   );
   const user = message.role === "user";
 
@@ -75,14 +91,23 @@ export function LocalMessageView({
               : "px-1 py-0.5 text-[15px] leading-6 text-foreground"
           }
         >
+          {attachments.map((attachment) => (
+            <LocalAttachmentView
+              key={`${attachment.kind}:${attachment.artifactId}`}
+              block={attachment}
+              api={api}
+            />
+          ))}
           {text ? (
-            user ? (
-              <div className="whitespace-pre-wrap break-words">
-                <MentionText text={text} bots={bots} />
-              </div>
-            ) : (
-              <ChatMarkdown>{text}</ChatMarkdown>
-            )
+            <div className={attachments.length ? "mt-2" : undefined}>
+              {user ? (
+                <div className="whitespace-pre-wrap break-words">
+                  <MentionText text={text} bots={bots} />
+                </div>
+              ) : (
+                <ChatMarkdown>{text}</ChatMarkdown>
+              )}
+            </div>
           ) : null}
         </div>
 

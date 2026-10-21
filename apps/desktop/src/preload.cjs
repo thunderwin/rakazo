@@ -42,7 +42,8 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     },
     messages: {
       list: (botId) => ipcRenderer.invoke("desktop.local.messages.list", botId),
-      send: (botId, text) => ipcRenderer.invoke("desktop.local.messages.send", botId, text),
+      send: (botId, text, artifactIds) =>
+        ipcRenderer.invoke("desktop.local.messages.send", botId, text, artifactIds),
     },
     groups: {
       list: () => ipcRenderer.invoke("desktop.local.groups.list"),
@@ -51,8 +52,8 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       remove: (groupId) => ipcRenderer.invoke("desktop.local.groups.remove", groupId),
       messages: {
         list: (groupId) => ipcRenderer.invoke("desktop.local.groups.messages.list", groupId),
-        send: (groupId, text) =>
-          ipcRenderer.invoke("desktop.local.groups.messages.send", groupId, text),
+        send: (groupId, text, artifactIds) =>
+          ipcRenderer.invoke("desktop.local.groups.messages.send", groupId, text, artifactIds),
       },
       cancel: (groupId) => ipcRenderer.invoke("desktop.local.groups.cancel", groupId),
     },
@@ -99,6 +100,10 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       runNow: (routineId) => ipcRenderer.invoke("desktop.local.routines.runNow", routineId),
       history: (routineId, limit) =>
         ipcRenderer.invoke("desktop.local.routines.history", routineId, limit),
+    },
+    artifacts: {
+      create: (input) => ipcRenderer.invoke("desktop.local.artifacts.create", input),
+      read: (artifactId) => ipcRenderer.invoke("desktop.local.artifacts.read", artifactId),
     },
   },
   oauth: {

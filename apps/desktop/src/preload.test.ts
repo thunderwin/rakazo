@@ -42,6 +42,7 @@ describe("desktop preload bridge", () => {
     ]);
     expect(Object.keys(bridge.local!).sort()).toEqual([
       "activity",
+      "artifacts",
       "auth",
       "bots",
       "browser",
@@ -108,6 +109,13 @@ describe("desktop preload bridge", () => {
     await bridge.local?.routines.remove("routine-1");
     await bridge.local?.routines.runNow("routine-1");
     await bridge.local?.routines.history("routine-1", 20);
+    await bridge.local?.artifacts.create({
+      botId: "bot-1",
+      name: "notes.txt",
+      mimeType: "text/plain",
+      contentBase64: "aGVsbG8=",
+    });
+    await bridge.local?.artifacts.read("artifact-1");
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -152,6 +160,8 @@ describe("desktop preload bridge", () => {
       "desktop.local.routines.remove",
       "desktop.local.routines.runNow",
       "desktop.local.routines.history",
+      "desktop.local.artifacts.create",
+      "desktop.local.artifacts.read",
     ]);
   });
 

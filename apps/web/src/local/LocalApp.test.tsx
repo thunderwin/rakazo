@@ -114,6 +114,10 @@ function bridge(): RakazoDesktopLocal {
       runNow: vi.fn(),
       history: vi.fn(async () => []),
     },
+    artifacts: {
+      create: vi.fn(),
+      read: vi.fn(async () => null),
+    },
   };
 }
 
@@ -417,4 +421,31 @@ it("opens local routines and saves an edited schedule", async () => {
       cron: "0 9 * * 1-5",
     }),
   );
+});
+
+it("renders an attachment block from the local artifact store", async () => {
+  const api = bridge();
+  api.messages.list = vi.fn(async () => [
+    {
+      id: "message-attachment",
+      threadId: "thread-1",
+      sequence: 1,
+      role: "user" as const,
+      blocks: [
+        {
+          kind: "file",
+          artifactId: "artifact-1",
+          mimeType: "text/plain",
+          name: "notes.txt",
+          size: 5,
+        },
+      ],
+      createdAt: "2026-10-20T12:00:00.000Z",
+      updatedAt: "2026-10-20T12:00:00.000Z",
+    },
+  ]);
+  root = createRoot(host);
+  await act(async () => root?.render(<LocalApp bridge={api} />));
+  await vi.waitFor(() => expect(host.textContent).toContain("notes.txt"));
+  expect(host.querySelector('button[aria-label="Download notes.txt"]')).not.toBeNull();
 });

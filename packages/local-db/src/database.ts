@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { migrate } from "./migrations.js";
+import { ArtifactRepository } from "./repositories/artifacts.js";
 import { BotRepository } from "./repositories/bots.js";
 import { GroupMessageRepository } from "./repositories/group-messages.js";
 import { GroupThreadRepository } from "./repositories/group-threads.js";
@@ -21,6 +22,7 @@ export interface OpenLocalDatabaseOptions {
 
 export class LocalDatabase {
   readonly sqlite: Database.Database;
+  readonly artifacts: ArtifactRepository;
   readonly bots: BotRepository;
   readonly groups: GroupRepository;
   readonly groupThreads: GroupThreadRepository;
@@ -43,6 +45,7 @@ export class LocalDatabase {
     this.sqlite.pragma("busy_timeout = 5000");
     this.sqlite.pragma("foreign_keys = ON");
     migrate(this.sqlite);
+    this.artifacts = new ArtifactRepository(this.sqlite);
     this.bots = new BotRepository(this.sqlite);
     this.groups = new GroupRepository(this.sqlite);
     this.groupThreads = new GroupThreadRepository(this.sqlite);

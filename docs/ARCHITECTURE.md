@@ -187,6 +187,7 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - bot/账号 Memory 写入本地 SQLite；直聊注入 32 KiB 上下文，群聊不暴露私有 Memory。
 - 本地 Routines 支持 cron/interval/一次性 schedule、在线调度、补跑、运行历史和
   `schedule_create/list/cancel`。
+- 本地附件存 SQLite artifact；图片作为当前轮视觉输入，其他文件以类型/大小提示交给 Agent。
 
 仍待迁移：fleet 管理、应用启动、桌面操作。服务器专属的团队、电脑、账号管理页面
 不会进入本地 renderer。
@@ -214,8 +215,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 
 当前 schema 已有 bots、threads、messages、chat_groups、group_members、group_threads、
 group_messages、peer_messages、runs、tool_runs、memory_documents、memory_revisions、
-routine_runs、settings 和 routines 表；repository 覆盖 bots、threads、messages、群聊、
-peer_messages、run/tool activity、Memory、Routines 和 settings。
+routine_runs、artifacts、settings 和 routines 表；repository 覆盖 bots、threads、
+messages、群聊、peer_messages、run/tool activity、Memory、Routines、附件和 settings。
 
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
 审计；它不保存到服务器。
@@ -426,5 +427,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/ACTIVITY.md`：本地 run/tool 活动记录和隐私边界。
 - `docs/MEMORY.md`：本地 bot/账号 Memory、工具、修订和隐私边界。
 - `docs/ROUTINES.md`：本地 routine 定义、调度、补跑和运行历史。
+- `docs/ATTACHMENTS.md`：本地附件存储、模型输入和交互边界。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

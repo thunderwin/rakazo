@@ -10,6 +10,11 @@ export type {
   LocalAgentTool,
 } from "./agent.js";
 export {
+  type LocalArtifactInput,
+  type LocalAttachment,
+  LocalAttachmentStore,
+} from "./attachments.js";
+export {
   type BrowserHost,
   createBrowserTools,
 } from "./browser-tools.js";

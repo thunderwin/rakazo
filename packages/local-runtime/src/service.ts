@@ -7,6 +7,7 @@ import {
 } from "@rakazo/local-db";
 import { RecordingToolProvider } from "./activity-tools.js";
 import type { LocalAgentEngine, LocalAgentModel, LocalAgentRunContext } from "./agent.js";
+import { type LocalArtifactInput, LocalAttachmentStore } from "./attachments.js";
 import { LocalGroupRuntime } from "./group-runtime.js";
 import { LocalMemory, LocalMemoryToolProvider } from "./memory.js";
 import type { PeerBotMessageRequest } from "./message-bot-tool.js";
@@ -36,12 +37,14 @@ export class LocalRuntimeService {
   readonly db: LocalDatabase;
   readonly runtime: LocalRuntime;
   readonly memory: LocalMemory;
+  readonly attachments: LocalAttachmentStore;
   private readonly routines: LocalRoutineRuntime;
   private readonly groups: LocalGroupRuntime;
 
   constructor(options: LocalRuntimeServiceOptions) {
     this.db = openLocalDatabase(options.databasePath);
     this.memory = new LocalMemory(this.db.memory);
+    this.attachments = new LocalAttachmentStore(this.db.artifacts);
     const tools = new RecordingToolProvider(
       new LocalRoutineToolProvider(
         new LocalMemoryToolProvider(options.tools, this.memory),
@@ -145,8 +148,18 @@ export class LocalRuntimeService {
     return this.groups.listMessages(groupId);
   }
 
-  sendGroupMessage(groupId: string, text: string, options: LocalAgentRunContext = {}) {
-    return this.groups.sendMessage(groupId, text, options);
+  async sendGroupMessage(
+    groupId: string,
+    text: string,
+    options: LocalAgentRunContext = {},
+    artifactIds: string[] = [],
+  ) {
+    return this.groups.sendMessage(
+      groupId,
+      text,
+      options,
+      this.attachments.resolveForGroup(groupId, artifactIds),
+    );
   }
 
   cancelGroup(groupId: string) {
@@ -167,6 +180,14 @@ export class LocalRuntimeService {
 
   removeMemory(documentId: string) {
     return this.memory.remove(documentId);
+  }
+
+  createArtifact(input: LocalArtifactInput) {
+    return this.attachments.create(input);
+  }
+
+  readArtifact(id: string) {
+    return this.attachments.read(id);
   }
 
   startRoutineScheduler() {
@@ -197,12 +218,18 @@ export class LocalRuntimeService {
     return this.routines.history(routineId, limit);
   }
 
-  sendMessage(
+  async sendMessage(
     botId: string,
     text: string,
     options: LocalAgentRunContext = {},
+    artifactIds: string[] = [],
   ): Promise<SendMessageResult> {
-    return this.runtime.sendMessage(botId, text, options);
+    return this.runtime.sendMessage(
+      botId,
+      text,
+      options,
+      this.attachments.resolveForBot(botId, artifactIds),
+    );
   }
 
   abort(runId: string): Promise<void> {

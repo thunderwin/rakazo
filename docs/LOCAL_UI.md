@@ -66,6 +66,12 @@ apps/web/src/local-main.tsx
 - Activity 展示本地 run/tool 状态、耗时、参数、结果和错误。
 - Routines 按钮管理当前 bot 的定时任务，支持 schedule 编辑、启停、立即运行和最近运行。
 
+### 附件
+
+- Composer 支持文件选择、拖放、粘贴、图片缩略图和发送前移除。
+- 直接聊天和群聊都可以只发送附件。
+- 消息中显示图片或文件卡片，并可从本地 artifact 下载。
+
 ## 4. 开发和验证
 
 ```bash
@@ -76,5 +82,5 @@ pnpm --filter @rakazo/desktop build
 ```
 
 组件测试覆盖 mention 选择与发送、BotAvatar/Markdown 渲染、模型额度错误、Retry
-保留输入、群聊与 handoff 展示、Memory/Routine 编辑以及设置/浏览器状态。桌面构建继续由
+保留输入、群聊与 handoff 展示、Memory/Routine/附件展示以及设置/浏览器状态。桌面构建继续由
 `@rakazo/desktop` 的 `prebuild` 自动生成 `dist-local`。

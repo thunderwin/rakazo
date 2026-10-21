@@ -1,5 +1,6 @@
 export { LocalDatabase, type OpenLocalDatabaseOptions, openLocalDatabase } from "./database.js";
 export { migrate } from "./migrations.js";
+export { ArtifactRepository } from "./repositories/artifacts.js";
 export { BotRepository } from "./repositories/bots.js";
 export { GroupMessageRepository } from "./repositories/group-messages.js";
 export { GroupThreadRepository } from "./repositories/group-threads.js";
@@ -26,6 +27,8 @@ export type {
   GroupThread,
   JsonValue,
   LocalActivityRun,
+  LocalArtifact,
+  LocalArtifactWithContent,
   LocalGroup,
   LocalGroupWithMembers,
   LocalMemoryDocument,

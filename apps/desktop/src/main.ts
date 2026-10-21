@@ -2,7 +2,11 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { DesktopReachability, DesktopSetup } from "@rakazo/contracts";
+import {
+  ATTACHMENT_MAX_BASE64_LENGTH,
+  type DesktopReachability,
+  type DesktopSetup,
+} from "@rakazo/contracts";
 import { LOCAL_SETTINGS_PAGE } from "@rakazo/contracts/local-settings";
 import type { LocalRuntimeService } from "@rakazo/local-runtime";
 import {
@@ -1074,6 +1078,13 @@ function localString(value: unknown, label: string, maxLength: number): string {
   return value;
 }
 
+function localMessageText(value: unknown): string {
+  if (typeof value !== "string" || value.length > 100_000) {
+    throw new Error("Message is invalid");
+  }
+  return value;
+}
+
 function optionalLocalString(value: unknown, label: string, maxLength: number): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "string" || value.length > maxLength) {
@@ -1260,13 +1271,18 @@ function installLocalIpc() {
     requireLocalWindow(event);
     return requireLocalRuntime().listMessages(localString(botId, "Bot id", 200));
   });
-  ipcMain.handle("desktop.local.messages.send", async (event, botId: unknown, text: unknown) => {
-    requireLocalWindow(event);
-    return requireLocalRuntime().sendMessage(
-      localString(botId, "Bot id", 200),
-      localString(text, "Message", 100_000),
-    );
-  });
+  ipcMain.handle(
+    "desktop.local.messages.send",
+    async (event, botId: unknown, text: unknown, artifactIds: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().sendMessage(
+        localString(botId, "Bot id", 200),
+        localMessageText(text),
+        {},
+        artifactIds === undefined ? [] : localStringArray(artifactIds, "Attachments", 0, 4),
+      );
+    },
+  );
   ipcMain.handle("desktop.local.groups.list", (event) => {
     requireLocalWindow(event);
     return requireLocalRuntime().listGroups();
@@ -1316,11 +1332,13 @@ function installLocalIpc() {
   });
   ipcMain.handle(
     "desktop.local.groups.messages.send",
-    async (event, groupId: unknown, text: unknown) => {
+    async (event, groupId: unknown, text: unknown, artifactIds: unknown) => {
       requireLocalWindow(event);
       return requireLocalRuntime().sendGroupMessage(
         localString(groupId, "Group id", 200),
-        localString(text, "Message", 100_000),
+        localMessageText(text),
+        {},
+        artifactIds === undefined ? [] : localStringArray(artifactIds, "Attachments", 0, 4),
       );
     },
   );
@@ -1501,6 +1519,34 @@ function installLocalIpc() {
       localString(routineId, "Routine id", 200),
       limit as number | undefined,
     );
+  });
+  ipcMain.handle("desktop.local.artifacts.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Attachment");
+    if (
+      typeof value.contentBase64 !== "string" ||
+      value.contentBase64.length === 0 ||
+      value.contentBase64.length > ATTACHMENT_MAX_BASE64_LENGTH
+    ) {
+      throw new Error("Attachment content is invalid");
+    }
+    const botId = value.botId === undefined ? undefined : localString(value.botId, "Bot id", 200);
+    const groupId =
+      value.groupId === undefined ? undefined : localString(value.groupId, "Group id", 200);
+    if ((botId ? 1 : 0) + (groupId ? 1 : 0) !== 1) {
+      throw new Error("Attachment must belong to one bot or one group");
+    }
+    return requireLocalRuntime().createArtifact({
+      ...(botId ? { botId } : {}),
+      ...(groupId ? { groupId } : {}),
+      name: localString(value.name, "Attachment name", 255),
+      mimeType: localString(value.mimeType, "Attachment type", 100),
+      contentBase64: value.contentBase64,
+    });
+  });
+  ipcMain.handle("desktop.local.artifacts.read", (event, artifactId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().readArtifact(localString(artifactId, "Attachment id", 200));
   });
 }
 

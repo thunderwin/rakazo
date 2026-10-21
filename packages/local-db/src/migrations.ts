@@ -240,6 +240,28 @@ const MIGRATIONS: Migration[] = [
         ON routine_runs(routine_id, started_at DESC);
     `,
   },
+  {
+    version: 7,
+    sql: `
+      CREATE TABLE artifacts (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT REFERENCES bots(id) ON DELETE CASCADE,
+        group_id TEXT REFERENCES chat_groups(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        size INTEGER NOT NULL CHECK (size > 0),
+        content BLOB NOT NULL,
+        created_at TEXT NOT NULL,
+        CHECK (
+          (bot_id IS NOT NULL AND group_id IS NULL) OR
+          (bot_id IS NULL AND group_id IS NOT NULL)
+        )
+      );
+
+      CREATE INDEX artifacts_bot_id ON artifacts(bot_id);
+      CREATE INDEX artifacts_group_id ON artifacts(group_id);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

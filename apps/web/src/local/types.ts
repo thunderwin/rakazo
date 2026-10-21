@@ -19,6 +19,14 @@ export type LocalRunEvent = DesktopLocalRunEvent;
 export type LocalMessageBlock =
   | { kind: "text"; text: string }
   | { kind: "error"; message: string }
+  | { kind: "image"; artifactId: string; mimeType: string; name: string }
+  | {
+      kind: "file";
+      artifactId: string;
+      mimeType: string;
+      name: string;
+      size: number;
+    }
   | {
       kind: "tool_call";
       executionId?: string;

@@ -1,14 +1,30 @@
+import {
+  ATTACHMENT_ALLOWED_MIME_TYPES,
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENT_MAX_COUNT,
+  attachmentSizeLabel,
+  isAttachmentImageMimeType,
+} from "@rakazo/contracts";
 import type { ComposerMention } from "@rakazo/core";
 import {
   buildComposerMentionOptions,
   clampMentionHighlightIndex,
+  inferAttachmentMimeType,
   mentionChipKey,
   resolveMentionPickerKey,
 } from "@rakazo/core";
 import { BotAvatar, Button } from "@rakazo/ui-web";
-import { ArrowUp, AtSign, Square, X } from "lucide-react";
+import { ArrowUp, AtSign, FileText, Paperclip, Square, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { isFileDrag } from "../lib/pending-attachments";
 import type { LocalBot } from "./types";
+
+export interface ComposerAttachment {
+  id: string;
+  file: File;
+  mimeType: string;
+  previewUrl?: string;
+}
 
 function trailingMention(value: string): string | null {
   const match = /(?:^|\s)@([\p{L}\p{N}_-]*)$/u.exec(value);
@@ -29,7 +45,7 @@ export function LocalComposer({
   includeEveryone?: boolean;
   running: boolean;
   enterToSend: boolean;
-  onSend: (text: string) => Promise<boolean>;
+  onSend: (text: string, attachments: readonly ComposerAttachment[]) => Promise<boolean>;
   onStop: () => Promise<void>;
 }) {
   const [draft, setDraft] = useState("");
@@ -38,7 +54,21 @@ export function LocalComposer({
   const [highlight, setHighlight] = useState(0);
   const [composing, setComposing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [notice, setNotice] = useState("");
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+
+  useEffect(
+    () => () => {
+      for (const attachment of attachmentsRef.current) {
+        if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+      }
+    },
+    [],
+  );
 
   const options = useMemo(
     () =>
@@ -105,18 +135,57 @@ export function LocalComposer({
     const body = draft.trim();
     const mentionText = mentions.map((mention) => `@${mention.name}`).join(" ");
     const text = [mentionText, body].filter(Boolean).join(" ");
-    if (!text || running || sending) return;
+    if ((!text && attachments.length === 0) || running || sending) return;
     setSending(true);
     try {
-      if (await onSend(text)) {
+      if (await onSend(text, attachments)) {
+        for (const attachment of attachments) {
+          if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+        }
         setDraft("");
         setMentions([]);
         setMentionQuery(null);
+        setAttachments([]);
+        setNotice("");
       }
     } finally {
       setSending(false);
       requestAnimationFrame(() => textarea.current?.focus());
     }
+  }
+
+  function addFiles(files: readonly File[]) {
+    const skipped: string[] = [];
+    const next: ComposerAttachment[] = [];
+    for (const file of files) {
+      if (attachments.length + next.length >= ATTACHMENT_MAX_COUNT) {
+        skipped.push(`${file.name} (max ${ATTACHMENT_MAX_COUNT} files)`);
+        continue;
+      }
+      const mimeType = inferAttachmentMimeType(file.name, file.type);
+      if (!mimeType) {
+        skipped.push(`${file.name} (unsupported type)`);
+        continue;
+      }
+      if (file.size > ATTACHMENT_MAX_BYTES) {
+        skipped.push(`${file.name} (over ${attachmentSizeLabel(ATTACHMENT_MAX_BYTES)})`);
+        continue;
+      }
+      next.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        mimeType,
+        ...(isAttachmentImageMimeType(mimeType) ? { previewUrl: URL.createObjectURL(file) } : {}),
+      });
+    }
+    if (next.length) setAttachments((current) => [...current, ...next]);
+    setNotice(skipped.length ? `Skipped ${skipped.join(", ")}` : "");
+  }
+
+  function removeAttachment(attachment: ComposerAttachment) {
+    if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+    setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+    setNotice("");
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -157,10 +226,21 @@ export function LocalComposer({
     }
   }
 
-  const canSend = Boolean(draft.trim() || mentions.length);
+  const canSend = Boolean(draft.trim() || mentions.length || attachments.length);
 
   return (
-    <div className="relative px-4 pb-4 pt-2 sm:px-6">
+    <fieldset
+      aria-label="Message composer"
+      className="relative m-0 min-w-0 border-0 px-4 pb-4 pt-2 sm:px-6"
+      onDragOver={(event) => {
+        if (isFileDrag(event.dataTransfer)) event.preventDefault();
+      }}
+      onDrop={(event) => {
+        if (!isFileDrag(event.dataTransfer)) return;
+        event.preventDefault();
+        addFiles(Array.from(event.dataTransfer.files));
+      }}
+    >
       {pickerOpen ? (
         <div
           id="local-mention-picker"
@@ -205,6 +285,47 @@ export function LocalComposer({
       ) : null}
 
       <div className="rounded-[24px] border border-border bg-card shadow-[0_10px_35px_rgba(0,0,0,0.12)] transition-colors focus-within:border-ring/70">
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          className="hidden"
+          accept={ATTACHMENT_ALLOWED_MIME_TYPES.join(",")}
+          onChange={(event) => {
+            addFiles(Array.from(event.target.files ?? []));
+            event.target.value = "";
+          }}
+        />
+        {attachments.length ? (
+          <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+            {attachments.map((attachment) => (
+              <span
+                key={attachment.id}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-xl border border-border bg-muted/45 px-2 py-1 text-[12px]"
+              >
+                {attachment.previewUrl ? (
+                  <img
+                    src={attachment.previewUrl}
+                    alt=""
+                    className="size-6 rounded-md object-cover"
+                  />
+                ) : (
+                  <FileText size={14} className="text-muted-foreground" />
+                )}
+                <span className="max-w-52 truncate">{attachment.file.name}</span>
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                  aria-label={`Remove ${attachment.file.name}`}
+                  disabled={running || sending}
+                  onClick={() => removeAttachment(attachment)}
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         {mentions.length ? (
           <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
             {mentions.map((mention) => {
@@ -239,8 +360,17 @@ export function LocalComposer({
           <button
             type="button"
             className="mb-0.5 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-secondary text-muted-foreground hover:text-foreground"
+            aria-label="Attach files"
+            disabled={running || sending}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Paperclip size={15} />
+          </button>
+          <button
+            type="button"
+            className="mb-0.5 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-secondary text-muted-foreground hover:text-foreground"
             aria-label="Mention a bot"
-            disabled={running || bots.length === 0}
+            disabled={running || sending || bots.length === 0}
             onClick={() => {
               const next = draft ? `${draft} @` : "@";
               focusWithDraft(next);
@@ -265,6 +395,13 @@ export function LocalComposer({
             disabled={running}
             className="min-h-8 max-h-42 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
             onChange={(event) => updateDraft(event.target.value)}
+            onPaste={(event) => {
+              const files = Array.from(event.clipboardData.files);
+              if (files.length) {
+                event.preventDefault();
+                addFiles(files);
+              }
+            }}
             onCompositionStart={() => setComposing(true)}
             onCompositionEnd={(event) => {
               setComposing(false);
@@ -297,9 +434,10 @@ export function LocalComposer({
           )}
         </div>
       </div>
+      {notice ? <p className="mt-1 text-center text-[10.5px] text-destructive">{notice}</p> : null}
       <p className="mt-1.5 text-center text-[10.5px] text-muted-foreground/75">
         {enterToSend ? "Enter to send · Shift+Enter for a new line" : "⌘/Ctrl+Enter to send"}
       </p>
-    </div>
+    </fieldset>
   );
 }

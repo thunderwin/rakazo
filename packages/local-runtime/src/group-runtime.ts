@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
   botMessageHopExhausted,
+  messageBlockForArtifact,
   nextBotMessageHop,
+  promptTextForAttachments,
   renderGroupMembersContext,
   resolveGroupTargetBotIds,
 } from "@rakazo/core";
@@ -21,6 +23,7 @@ import type {
   LocalAgentRunContext,
   LocalAgentTool,
 } from "./agent.js";
+import type { LocalAttachment } from "./attachments.js";
 import { PRIVATE_MEMORY_TOOL_NAMES } from "./memory.js";
 import { ROUTINE_TOOL_NAMES } from "./routines.js";
 import type { LocalToolProvider } from "./tools.js";
@@ -114,9 +117,15 @@ function isRecord(value: JsonValue): value is { [key: string]: JsonValue } {
 
 function textOfBlocks(blocks: JsonValue[]): string {
   return blocks
-    .map((block) =>
-      isRecord(block) && block.kind === "text" && typeof block.text === "string" ? block.text : "",
-    )
+    .map((block) => {
+      if (!isRecord(block)) return "";
+      if (block.kind === "text" && typeof block.text === "string") return block.text;
+      if (block.kind === "image" && typeof block.name === "string") return `[image: ${block.name}]`;
+      if (block.kind === "file" && typeof block.name === "string") {
+        return `[file: ${block.name} (${String(block.mimeType)}, ${String(block.size)} bytes)]`;
+      }
+      return "";
+    })
     .filter(Boolean)
     .join("\n");
 }
@@ -177,9 +186,10 @@ export class LocalGroupRuntime {
     groupId: string,
     rawText: string,
     options: LocalAgentRunContext = {},
+    attachments: readonly LocalAttachment[] = [],
   ): Promise<GroupSendResult> {
     const text = rawText.trim();
-    if (!text) throw new Error("Message cannot be empty");
+    if (!text && attachments.length === 0) throw new Error("Message cannot be empty");
     const group = this.options.db.groups.get(groupId);
     if (!group) throw new Error("Group not found");
     if (group.members.length < 2) throw new Error("This group no longer has enough members");
@@ -189,7 +199,10 @@ export class LocalGroupRuntime {
     const userMessage = this.options.db.groupMessages.append({
       threadId: thread.id,
       role: "user",
-      blocks: [{ kind: "text", text }],
+      blocks: [
+        ...(text ? [{ kind: "text" as const, text }] : []),
+        ...attachments.map((attachment) => messageBlockForArtifact(attachment)),
+      ],
     });
     const targetIds = resolveGroupTargetBotIds({
       text,
@@ -204,7 +217,7 @@ export class LocalGroupRuntime {
 
     const queue: GroupWorkItem[] = targetIds.map((botId) => ({
       botId,
-      prompt: text,
+      prompt: promptTextForAttachments(text, [...attachments]),
       sourceMessageId: userMessage.id,
       hop: 0,
       chain: [],
@@ -214,7 +227,7 @@ export class LocalGroupRuntime {
       while (queue.length > 0) {
         signal.throwIfAborted();
         const item = queue.shift()!;
-        const result = await this.runBot(group, thread, item, signal, options.userId);
+        const result = await this.runBot(group, thread, item, signal, attachments, options.userId);
         runs.push(result);
         for (const handoff of result.handoffs) {
           if (botMessageHopExhausted(handoff.hop)) {
@@ -244,6 +257,7 @@ export class LocalGroupRuntime {
     thread: GroupThread,
     item: GroupWorkItem,
     signal: AbortSignal,
+    attachments: readonly LocalAttachment[],
     userId?: string,
   ): Promise<
     GroupRunResult & {
@@ -303,6 +317,23 @@ export class LocalGroupRuntime {
             .filter(Boolean)
             .join("\n\n"),
           history,
+          currentTurnImages: attachments
+            .filter(
+              (attachment) =>
+                attachment.mimeType === "image/jpeg" ||
+                attachment.mimeType === "image/png" ||
+                attachment.mimeType === "image/webp" ||
+                attachment.mimeType === "image/gif",
+            )
+            .map((attachment) => ({
+              name: attachment.name,
+              mimeType: attachment.mimeType as
+                | "image/jpeg"
+                | "image/png"
+                | "image/webp"
+                | "image/gif",
+              data: attachment.data,
+            })),
           tools,
           model,
           executeTool: async (name, args, executionId) => {

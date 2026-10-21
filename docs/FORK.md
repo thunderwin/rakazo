@@ -149,7 +149,7 @@ docs/                        架构、V1 范围、fork 说明
   `local/accounts/<sha256(userId)>/`；登录前不打开任何账号数据库，退出或切换账号时
   先取消活动 run。
 - 存储 bot、thread、message、bot/账号 Memory、routine、settings 和工具记录。
-- Memory 文档/revision 以及 routine repository、本地调度和运行历史已实现。
+- Memory 文档/revision、routine repository/调度/history 和本地附件 artifact 已实现。
 - 升级时执行迁移；失败保留备份。
 - 提供导出/导入；V1 不做云端同步。
 - 敏感字段和备份加密。

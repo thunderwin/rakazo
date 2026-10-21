@@ -159,6 +159,20 @@ export interface DesktopLocalRoutineInput {
   runAt?: string;
 }
 
+export interface DesktopLocalArtifact {
+  id: string;
+  botId: string | null;
+  groupId: string | null;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface DesktopLocalArtifactWithContent extends DesktopLocalArtifact {
+  contentBase64: string;
+}
+
 export interface DesktopLocalCreateBotInput {
   name: string;
   title?: string;
@@ -232,6 +246,7 @@ export interface RakazoDesktopLocal {
     send: (
       botId: string,
       text: string,
+      artifactIds?: string[],
     ) => Promise<{
       thread: { id: string; botId: string; title: string; createdAt: string; updatedAt: string };
       userMessage: DesktopLocalMessage;
@@ -269,6 +284,7 @@ export interface RakazoDesktopLocal {
       send: (
         groupId: string,
         text: string,
+        artifactIds?: string[],
       ) => Promise<{
         thread: { id: string; groupId: string; title: string };
         userMessage: DesktopGroupMessage;
@@ -324,6 +340,16 @@ export interface RakazoDesktopLocal {
     remove: (routineId: string) => Promise<void>;
     runNow: (routineId: string) => Promise<DesktopLocalRoutineRun>;
     history: (routineId: string, limit?: number) => Promise<DesktopLocalRoutineRun[]>;
+  };
+  artifacts: {
+    create: (input: {
+      botId?: string;
+      groupId?: string;
+      name: string;
+      mimeType: string;
+      contentBase64: string;
+    }) => Promise<DesktopLocalArtifact>;
+    read: (artifactId: string) => Promise<DesktopLocalArtifactWithContent | null>;
   };
 }
 

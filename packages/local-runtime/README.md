@@ -35,6 +35,8 @@ Current implementation:
 - local routines with cron, interval, and one-time schedules, durable run
   claims/history, missed-run recovery, and `schedule_create`, `schedule_list`,
   and `schedule_cancel`
+- local attachments stored as SQLite artifacts, with current-turn image input
+  and bot/group ownership checks
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding

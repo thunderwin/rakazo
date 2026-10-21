@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 6,
+      count: 7,
     });
     second.close();
   });
@@ -269,6 +269,35 @@ describe("local database", () => {
     expect(db.routines.listRuns(due.id)).toHaveLength(1);
     expect(db.routines.remove(due.id)).toBe(true);
     expect(db.routines.getRun(started.id)).toBeNull();
+    db.close();
+  });
+
+  it("stores local artifact metadata and bytes", () => {
+    const db = openLocalDatabase(":memory:");
+    const bot = db.bots.create({ name: "Reader" });
+    const artifact = db.artifacts.create({
+      botId: bot.id,
+      name: "notes.txt",
+      mimeType: "text/plain",
+      content: new TextEncoder().encode("local notes"),
+    });
+
+    expect(artifact).toMatchObject({
+      botId: bot.id,
+      groupId: null,
+      name: "notes.txt",
+      mimeType: "text/plain",
+      size: 11,
+    });
+    expect(new TextDecoder().decode(db.artifacts.read(artifact.id)!.content)).toBe("local notes");
+    expect(() =>
+      db.artifacts.create({
+        botId: bot.id,
+        name: "empty.txt",
+        mimeType: "text/plain",
+        content: new Uint8Array(),
+      }),
+    ).toThrow("empty");
     db.close();
   });
 

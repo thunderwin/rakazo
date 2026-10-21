@@ -23,6 +23,7 @@ function toPiRequest(request: LocalAgentRunRequest): AgentRunRequest {
     prompt: request.prompt,
     instructions: request.instructions,
     history: request.history,
+    currentTurnImages: request.currentTurnImages,
     tools: request.tools,
     model: request.model,
     contextStrategy: "current",

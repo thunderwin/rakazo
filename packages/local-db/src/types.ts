@@ -94,6 +94,20 @@ export interface RoutineRun {
   createdAt: string;
 }
 
+export interface LocalArtifact {
+  id: string;
+  botId: string | null;
+  groupId: string | null;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface LocalArtifactWithContent extends LocalArtifact {
+  content: Uint8Array;
+}
+
 export interface LocalGroup {
   id: string;
   name: string;

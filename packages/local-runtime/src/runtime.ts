@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { messageBlockForArtifact, promptTextForAttachments } from "@rakazo/core";
 import type { Bot, CreateBotInput, JsonValue, LocalMessage, Thread } from "@rakazo/local-db";
 import type {
   LocalAgentEngine,
@@ -7,6 +8,7 @@ import type {
   LocalAgentModel,
   LocalAgentRunContext,
 } from "./agent.js";
+import type { LocalAttachment } from "./attachments.js";
 import type { LocalConversationStore } from "./store.js";
 import type { LocalToolProvider } from "./tools.js";
 
@@ -56,7 +58,12 @@ function textFromBlocks(blocks: JsonValue[]): string {
   return blocks
     .map((block) => {
       if (!isRecord(block)) return "";
-      return block.kind === "text" && typeof block.text === "string" ? block.text : "";
+      if (block.kind === "text" && typeof block.text === "string") return block.text;
+      if (block.kind === "image" && typeof block.name === "string") return `[image: ${block.name}]`;
+      if (block.kind === "file" && typeof block.name === "string") {
+        return `[file: ${block.name} (${String(block.mimeType)}, ${String(block.size)} bytes)]`;
+      }
+      return "";
     })
     .filter((text) => text.length > 0)
     .join("\n");
@@ -107,9 +114,12 @@ export class LocalRuntime {
     botId: string,
     text: string,
     options: LocalAgentRunContext = {},
+    attachments: readonly LocalAttachment[] = [],
   ): Promise<SendMessageResult> {
     const content = text.trim();
-    if (content.length === 0) throw new Error("Message cannot be empty");
+    if (content.length === 0 && attachments.length === 0) {
+      throw new Error("Message cannot be empty");
+    }
 
     const bot = this.store.getBot(botId);
     if (!bot) throw new Error("Bot not found");
@@ -122,7 +132,10 @@ export class LocalRuntime {
     const userMessage = this.store.appendMessage({
       threadId: thread.id,
       role: "user",
-      blocks: [{ kind: "text", text: content }],
+      blocks: [
+        ...(content ? [{ kind: "text" as const, text: content }] : []),
+        ...attachments.map((attachment) => messageBlockForArtifact(attachment)),
+      ],
     });
 
     const runId = randomUUID();
@@ -155,11 +168,28 @@ export class LocalRuntime {
               threadId: thread.id,
               runId,
               sourceMessageId: userMessage.id,
-              prompt: content,
+              prompt: promptTextForAttachments(content, [...attachments]),
               instructions: [bot.instructions.trim(), memoryContext]
                 .filter((instruction): instruction is string => Boolean(instruction))
                 .join("\n\n"),
               history,
+              currentTurnImages: attachments
+                .filter(
+                  (attachment) =>
+                    attachment.mimeType === "image/jpeg" ||
+                    attachment.mimeType === "image/png" ||
+                    attachment.mimeType === "image/webp" ||
+                    attachment.mimeType === "image/gif",
+                )
+                .map((attachment) => ({
+                  name: attachment.name,
+                  mimeType: attachment.mimeType as
+                    | "image/jpeg"
+                    | "image/png"
+                    | "image/webp"
+                    | "image/gif",
+                  data: attachment.data,
+                })),
               tools: toolDefinitions,
               model,
               executeTool: (name, args, executionId) =>

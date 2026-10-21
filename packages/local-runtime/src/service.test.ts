@@ -356,6 +356,111 @@ describe("local runtime service", () => {
     service.close();
   });
 
+  it("stores attachments and sends images and file notes for the current turn", async () => {
+    const observed: LocalAgentRunRequest[] = [];
+    const attachmentEngine: LocalAgentEngine = {
+      async *run(request) {
+        observed.push(request);
+        yield { type: "text", text: "Reviewed" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: attachmentEngine,
+      tools,
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Reader" });
+    const image = service.createArtifact({
+      botId: bot.id,
+      name: "screen.png",
+      mimeType: "image/png",
+      contentBase64: "iVBORw0KGgo=",
+    });
+    const file = service.createArtifact({
+      botId: bot.id,
+      name: "notes.txt",
+      mimeType: "text/plain",
+      contentBase64: "aGVsbG8=",
+    });
+
+    await service.sendMessage(bot.id, "Review both", {}, [image.id, file.id]);
+
+    expect(service.readArtifact(file.id)).toMatchObject({
+      name: "notes.txt",
+      contentBase64: "aGVsbG8=",
+    });
+    expect(observed[0]?.prompt).toContain('User attached file "notes.txt"');
+    expect(observed[0]?.currentTurnImages).toEqual([
+      expect.objectContaining({ name: "screen.png", mimeType: "image/png" }),
+    ]);
+    expect(service.listMessages(bot.id)[0]?.blocks).toEqual([
+      { kind: "text", text: "Review both" },
+      {
+        kind: "image",
+        artifactId: image.id,
+        mimeType: "image/png",
+        name: "screen.png",
+      },
+      {
+        kind: "file",
+        artifactId: file.id,
+        mimeType: "text/plain",
+        name: "notes.txt",
+        size: 5,
+      },
+    ]);
+    const other = service.createBot({ name: "Other" });
+    await expect(service.sendMessage(other.id, "Wrong target", {}, [file.id])).rejects.toThrow(
+      "Attachment not found",
+    );
+    service.close();
+  });
+
+  it("keeps group attachments scoped to the group and shares the current image", async () => {
+    const observed: LocalAgentRunRequest[] = [];
+    const groupEngine: LocalAgentEngine = {
+      async *run(request) {
+        observed.push(request);
+        yield { type: "text", text: "Seen" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: groupEngine,
+      tools,
+      resolveModel,
+    });
+    const first = service.createBot({ name: "Researcher" });
+    const second = service.createBot({ name: "Writer" });
+    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+    const image = service.createArtifact({
+      groupId: group.id,
+      name: "brief.png",
+      mimeType: "image/png",
+      contentBase64: "iVBORw0KGgo=",
+    });
+
+    await service.sendGroupMessage(group.id, "", {}, [image.id]);
+
+    expect(observed[0]?.currentTurnImages).toEqual([
+      expect.objectContaining({ name: "brief.png" }),
+    ]);
+    expect(service.listGroupMessages(group.id)[0]?.blocks).toEqual([
+      {
+        kind: "image",
+        artifactId: image.id,
+        mimeType: "image/png",
+        name: "brief.png",
+      },
+    ]);
+    service.close();
+  });
+
   it("stops peer bot cycles", () => {
     const service = new LocalRuntimeService({
       databasePath: ":memory:",

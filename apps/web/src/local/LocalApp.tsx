@@ -15,9 +15,10 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { readFileAsBase64 } from "../lib/pending-attachments";
 import { LocalActivityDialog } from "./LocalActivityDialog";
 import { LocalAuthScreen } from "./LocalAuthScreen";
-import { LocalComposer } from "./LocalComposer";
+import { type ComposerAttachment, LocalComposer } from "./LocalComposer";
 import { LocalGroupDialog } from "./LocalGroupDialog";
 import { LocalMemoryDialog } from "./LocalMemoryDialog";
 import { LocalLiveMessage, LocalMessageView } from "./LocalMessageView";
@@ -372,20 +373,33 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     }
   }
 
-  async function sendText(text: string): Promise<boolean> {
+  async function sendText(
+    text: string,
+    attachments: readonly ComposerAttachment[] = [],
+  ): Promise<boolean> {
     if (!api || !activeTarget) return false;
     const target = activeTarget;
     const expectedTarget = targetKey(target);
     stopped.current = false;
     setError(null);
     setPendingText(text);
-    setRunning(true);
-    setLiveBotId(target.kind === "bot" ? target.id : null);
-    setLiveText("");
-    setLiveStatus("Thinking");
     try {
-      if (target.kind === "bot") await api.messages.send(target.id, text);
-      else await api.groups.messages.send(target.id, text);
+      const artifactIds: string[] = [];
+      for (const attachment of attachments) {
+        const artifact = await api.artifacts.create({
+          ...(target.kind === "bot" ? { botId: target.id } : { groupId: target.id }),
+          name: attachment.file.name,
+          mimeType: attachment.mimeType,
+          contentBase64: await readFileAsBase64(attachment.file),
+        });
+        artifactIds.push(artifact.id);
+      }
+      setRunning(true);
+      setLiveBotId(target.kind === "bot" ? target.id : null);
+      setLiveText("");
+      setLiveStatus("Thinking");
+      if (target.kind === "bot") await api.messages.send(target.id, text, artifactIds);
+      else await api.groups.messages.send(target.id, text, artifactIds);
       const next =
         target.kind === "bot"
           ? await api.messages.list(target.id)
@@ -404,7 +418,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
         const presented = presentError(localErrorMessage(cause));
         setError({
           ...presented,
-          retry: () => void sendText(text),
+          retry: () => void sendText(text, attachments),
         });
       }
       return false;
@@ -832,6 +846,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                       message={message}
                       bot={bots.find((bot) => bot.id === botId)}
                       bots={activeMembers}
+                      api={api}
                     />
                   );
                 })
@@ -841,6 +856,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
                   message={optimisticMessage}
                   bot={activeBot ?? undefined}
                   bots={activeMembers}
+                  api={api}
                 />
               ) : null}
               {running ? (

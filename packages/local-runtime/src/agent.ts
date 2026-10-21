@@ -35,6 +35,11 @@ export interface LocalAgentRunRequest {
   prompt: string;
   instructions: string;
   history: LocalAgentMessage[];
+  currentTurnImages?: Array<{
+    name: string;
+    mimeType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+    data: Uint8Array;
+  }>;
   tools: LocalAgentTool[];
   model: LocalAgentModel;
   executeTool: (

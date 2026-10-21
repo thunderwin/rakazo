@@ -23,4 +23,4 @@ renderers should use IPC instead of opening the database directly.
 
 Current schema: bots, threads, messages, group chats/members/threads/messages,
 peer messages, runs, tool runs, memory documents/revisions, routines and
-routine runs, settings, and migrations.
+routine runs, artifacts, settings, and migrations.
