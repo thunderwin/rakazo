@@ -49,6 +49,9 @@ export interface DesktopLocalBot {
   disabledBuiltinTools: string[];
   templateKey: string | null;
   templateVersion: number | null;
+  source?: "local" | "managed";
+  managedKey?: string | null;
+  packageVersion?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +71,9 @@ export interface DesktopLocalGroup {
   name: string;
   description: string;
   color: string;
+  source?: "local" | "managed";
+  managedKey?: string | null;
+  packageVersion?: number | null;
   members: DesktopLocalBot[];
   createdAt: string;
   updatedAt: string;
@@ -211,6 +217,14 @@ export interface DesktopLocalUserSettings {
   theme: "system" | "light" | "dark";
   sendWithEnter: boolean;
   defaultModelId: string | null;
+}
+
+export interface DesktopManagedManifestState {
+  organizationId: string;
+  organizationName: string;
+  version: number;
+  hash: string;
+  publishedAt: string;
 }
 
 export interface DesktopBrowserBridgeStatus {
@@ -398,6 +412,10 @@ export interface RakazoDesktopLocal {
       },
     ) => Promise<DesktopLocalSkill>;
     remove: (name: string) => Promise<void>;
+  };
+  manifest: {
+    state: () => Promise<DesktopManagedManifestState | null>;
+    onUpdated: (listener: (state: DesktopManagedManifestState | null) => void) => () => void;
   };
 }
 

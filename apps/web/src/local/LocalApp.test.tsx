@@ -130,6 +130,10 @@ function bridge(): RakazoDesktopLocal {
       update: vi.fn(),
       remove: vi.fn(),
     },
+    manifest: {
+      state: vi.fn(async () => null),
+      onUpdated: vi.fn(() => () => undefined),
+    },
   };
 }
 

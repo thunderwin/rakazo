@@ -125,9 +125,38 @@ model Organization {
   invitations Invitation[]
   spaces      Space[]
   billing     BillingAccount?
+  clientManifest ClientManifest?
 
   @@unique([slug])
   @@map("organization")
+}
+
+model ClientManifest {
+  organizationId  String       @id
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  content         Json         @default("{}")
+  version         Int          @default(0)
+  hash            String?
+  signature       String?
+  publishedAt     DateTime?
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("client_manifests")
+}
+
+model ControlPlaneAudit {
+  id             String   @id @default(cuid())
+  organizationId String?
+  actorUserId    String
+  action         String
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("control_plane_audits")
 }
 
 model BillingAccount {

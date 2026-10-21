@@ -242,6 +242,7 @@ export function LocalRoutinesDialog({
   }
 
   const editing = routines?.find((routine) => routine.id === editingId);
+  const managed = editing?.source === "managed";
   const valid =
     name.trim().length > 0 &&
     prompt.trim().length > 0 &&
@@ -322,6 +323,7 @@ export function LocalRoutinesDialog({
               <Input
                 id="local-routine-name"
                 value={name}
+                disabled={managed}
                 maxLength={80}
                 placeholder="Morning brief"
                 onChange={(event) => setName(event.target.value)}
@@ -335,6 +337,7 @@ export function LocalRoutinesDialog({
               <Textarea
                 id="local-routine-prompt"
                 value={prompt}
+                disabled={managed}
                 rows={5}
                 maxLength={100_000}
                 placeholder="What should this bot do when the routine runs?"
@@ -350,6 +353,7 @@ export function LocalRoutinesDialog({
                 id="local-routine-mode"
                 className="h-8 rounded-lg border border-border bg-input px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 value={mode}
+                disabled={managed}
                 onChange={(event) => setMode(event.target.value as ScheduleMode)}
               >
                 {Object.entries(MODE_LABELS).map(([value, label]) => (
@@ -369,6 +373,7 @@ export function LocalRoutinesDialog({
                   id="local-routine-run-at"
                   type="datetime-local"
                   value={runAt}
+                  disabled={managed}
                   onChange={(event) => setRunAt(event.target.value)}
                 />
               </label>
@@ -381,6 +386,7 @@ export function LocalRoutinesDialog({
                 <Input
                   id="local-routine-cron"
                   value={customCron}
+                  disabled={managed}
                   placeholder="0 9 * * 1-5"
                   className="font-mono"
                   onChange={(event) => setCustomCron(event.target.value)}
@@ -396,6 +402,7 @@ export function LocalRoutinesDialog({
                   id="local-routine-time"
                   type="time"
                   value={time}
+                  disabled={managed}
                   onChange={(event) => setTime(event.target.value)}
                 />
               </label>
@@ -405,6 +412,7 @@ export function LocalRoutinesDialog({
                 type="checkbox"
                 className="size-4 accent-foreground"
                 checked={enabled}
+                disabled={managed}
                 onChange={(event) => setEnabled(event.target.checked)}
               />
               Active
@@ -458,25 +466,34 @@ export function LocalRoutinesDialog({
             ) : null}
 
             <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-              <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
-                {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
-                {editingId === "new" ? "Create" : "Save"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={closeEditor}>
-                Cancel
-              </Button>
-              {editing ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="ms-auto text-destructive"
-                  disabled={saving || running}
-                  onClick={() => void remove()}
-                >
-                  <Trash2 size={12} />
-                  {confirmDelete ? "Confirm delete" : "Delete"}
-                </Button>
-              ) : null}
+              {managed ? (
+                <p className="text-[11.5px] text-muted-foreground">
+                  Managed by your organization. Run it now or update the assigned preset on the
+                  server.
+                </p>
+              ) : (
+                <>
+                  <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
+                    {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
+                    {editingId === "new" ? "Create" : "Save"}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={closeEditor}>
+                    Cancel
+                  </Button>
+                  {editing ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="ms-auto text-destructive"
+                      disabled={saving || running}
+                      onClick={() => void remove()}
+                    >
+                      <Trash2 size={12} />
+                      {confirmDelete ? "Confirm delete" : "Delete"}
+                    </Button>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
         )}

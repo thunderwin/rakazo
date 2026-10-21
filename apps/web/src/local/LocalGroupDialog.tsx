@@ -39,6 +39,7 @@ export function LocalGroupDialog({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
+  const managed = group?.source === "managed";
 
   useEffect(() => {
     if (!open) return;
@@ -112,6 +113,7 @@ export function LocalGroupDialog({
             <Input
               id="local-group-name"
               value={name}
+              disabled={managed}
               maxLength={120}
               placeholder="Research team"
               onChange={(event) => setName(event.target.value)}
@@ -125,6 +127,7 @@ export function LocalGroupDialog({
             <Input
               id="local-group-description"
               value={description}
+              disabled={managed}
               maxLength={2_000}
               placeholder="What this group works on"
               onChange={(event) => setDescription(event.target.value)}
@@ -154,6 +157,7 @@ export function LocalGroupDialog({
                   </span>
                   <Checkbox
                     checked={checked}
+                    disabled={managed}
                     aria-label={`${checked ? "Remove" : "Add"} ${bot.name}`}
                     onCheckedChange={() =>
                       setSelected((current) =>
@@ -179,7 +183,7 @@ export function LocalGroupDialog({
 
         <DialogFooter className="justify-between">
           <div>
-            {group ? (
+            {group && !managed ? (
               confirmDelete ? (
                 <div className="flex gap-1.5">
                   <Button
@@ -214,13 +218,21 @@ export function LocalGroupDialog({
             ) : null}
           </div>
           <div className="flex gap-1.5">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
-              {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
-              {group ? "Save" : "Create"}
-            </Button>
+            {managed ? (
+              <Button type="button" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
+                  {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
+                  {group ? "Save" : "Create"}
+                </Button>
+              </>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

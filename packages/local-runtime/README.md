@@ -39,6 +39,8 @@ Current implementation:
   and bot/group ownership checks
 - local knowledge search/read plus `SKILL.md` catalogs, forced skill expansion,
   user skill management, and read-only managed/builtin sources
+- validated managed Client Manifest application for bot/group/knowledge/skill/routine
+  presets, with user data preserved
 - SQLite bot/thread/message/settings persistence
 - account-local theme, send-key, default-model, and bot configuration settings
 - bot template loading and idempotent seeding

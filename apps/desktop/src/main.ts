@@ -32,6 +32,7 @@ import {
 } from "./auto-update.js";
 import { openBrowserAuth } from "./browser-auth.js";
 import { DesktopBrowserBridge } from "./browser-bridge.js";
+import { fetchClientManifest, verifyClientManifest } from "./client-manifest-sync.js";
 import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cli.js";
 import { prepareHostComputer } from "./host-computer.js";
 import { LocalAuth } from "./local-auth.js";
@@ -133,6 +134,7 @@ let requestingComputerAccess = false;
 let localRuntimeService: LocalRuntimeService | undefined;
 let localRuntimeAccountId: string | null = null;
 let localRuntimeGeneration = 0;
+let localManifestRefreshTimer: ReturnType<typeof setInterval> | undefined;
 const activeLocalRuns = new Set<string>();
 let localModeContext:
   | {
@@ -948,6 +950,8 @@ function requireLocalRuntime(): LocalRuntimeService {
 
 async function closeLocalRuntime(): Promise<void> {
   localRuntimeGeneration += 1;
+  if (localManifestRefreshTimer) clearInterval(localManifestRefreshTimer);
+  localManifestRefreshTimer = undefined;
   const service = localRuntimeService;
   localRuntimeService = undefined;
   localRuntimeAccountId = null;
@@ -1046,6 +1050,43 @@ async function startLocalRuntime(accountId: string): Promise<void> {
   }
   localRuntimeService = service;
   localRuntimeAccountId = accountId;
+  await refreshClientManifest(service, generation);
+  if (localManifestRefreshTimer) clearInterval(localManifestRefreshTimer);
+  localManifestRefreshTimer = setInterval(
+    () => void refreshClientManifest(service, generation),
+    5 * 60_000,
+  );
+  localManifestRefreshTimer.unref?.();
+}
+
+async function refreshClientManifest(
+  service: LocalRuntimeService,
+  generation: number,
+): Promise<void> {
+  if (!localModeContext?.gatewayUrl || !localAuth) return;
+  try {
+    const manifest = await fetchClientManifest({
+      serverUrl: localModeContext.gatewayUrl,
+      token: await localAuth.getToken(),
+    });
+    if (generation !== localRuntimeGeneration || localRuntimeService !== service) return;
+    const publicKey = process.env.RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY?.trim();
+    if (manifest && (!publicKey || !verifyClientManifest(manifest, publicKey))) {
+      throw new Error("Client manifest signature is missing or invalid");
+    }
+    const current = service.getManagedManifestState();
+    if (manifest?.hash === current?.hash) return;
+    const state = manifest
+      ? service.applyClientManifest(manifest)
+      : service.clearManagedManifest()
+        ? null
+        : current;
+    if (localWindow !== null && !localWindow.isDestroyed()) {
+      localWindow.webContents.send("desktop.local.manifest.updated", state);
+    }
+  } catch {
+    // Keep the last verified local preset during transient server or network failures.
+  }
 }
 
 function requireLocalAuth(): LocalAuth {
@@ -1239,6 +1280,9 @@ function installLocalIpc() {
   ipcMain.handle("desktop.local.bots.update", (event, botId: unknown, input: unknown) => {
     requireLocalWindow(event);
     const id = localString(botId, "Bot id", 200);
+    if (requireLocalRuntime().db.bots.get(id)?.source === "managed") {
+      throw new Error("This bot is managed by your organization");
+    }
     const value = localRecord(input, "Bot input");
     const updated = requireLocalRuntime().db.bots.update(id, {
       ...(value.name === undefined ? {} : { name: localString(value.name, "Bot name", 120) }),
@@ -1617,6 +1661,10 @@ function installLocalIpc() {
     if (!requireLocalRuntime().removeSkill(localString(name, "Skill name", 80).trim())) {
       throw new Error("Skill not found");
     }
+  });
+  ipcMain.handle("desktop.local.manifest.state", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().getManagedManifestState();
   });
 }
 

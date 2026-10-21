@@ -10,6 +10,9 @@ interface RoutineRow {
   cron: string;
   timezone: string;
   source: "local" | "managed";
+  managed_key: string | null;
+  package_id: string | null;
+  version: number | null;
   enabled: number;
   last_run_at: string | null;
   next_run_at: string | null;
@@ -39,6 +42,9 @@ function routineRow(row: RoutineRow): Routine {
     cron: row.cron,
     timezone: row.timezone,
     source: row.source,
+    managedKey: row.managed_key,
+    packageId: row.package_id,
+    version: row.version,
     enabled: row.enabled === 1,
     lastRunAt: row.last_run_at,
     nextRunAt: row.next_run_at,
@@ -156,6 +162,90 @@ export class RoutineRepository {
 
   remove(id: string): boolean {
     return this.db.prepare("DELETE FROM routines WHERE id = ?").run(id).changes > 0;
+  }
+
+  upsertManaged(input: {
+    organizationId: string;
+    packageId: string;
+    version: number;
+    key: string;
+    botId: string;
+    name: string;
+    prompt: string;
+    cron: string;
+    timezone: string;
+    enabled: boolean;
+    nextRunAt: string | null;
+  }): Routine {
+    const managedKey = `${input.organizationId}:${input.key}`;
+    const existing = this.db
+      .prepare("SELECT * FROM routines WHERE managed_key = ?")
+      .get(managedKey) as RoutineRow | undefined;
+    const now = new Date().toISOString();
+    if (!existing) {
+      const id = randomUUID();
+      this.db
+        .prepare(
+          `INSERT INTO routines
+            (id, bot_id, name, prompt, cron, timezone, source, managed_key,
+             package_id, version, enabled, next_run_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'managed', ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          input.botId,
+          input.name,
+          input.prompt,
+          input.cron,
+          input.timezone,
+          managedKey,
+          input.packageId,
+          input.version,
+          input.enabled ? 1 : 0,
+          input.nextRunAt,
+          now,
+          now,
+        );
+      return this.get(id)!;
+    }
+    this.db
+      .prepare(
+        `UPDATE routines
+         SET bot_id = ?, name = ?, prompt = ?, cron = ?, timezone = ?,
+             package_id = ?, version = ?, enabled = ?, next_run_at = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(
+        input.botId,
+        input.name,
+        input.prompt,
+        input.cron,
+        input.timezone,
+        input.packageId,
+        input.version,
+        input.enabled ? 1 : 0,
+        input.nextRunAt,
+        now,
+        existing.id,
+      );
+    return this.get(existing.id)!;
+  }
+
+  deleteManagedExcept(organizationId: string, keepKeys: readonly string[]): number {
+    const prefix = `${organizationId}:`;
+    const keep = new Set(keepKeys.map((key) => `${prefix}${key}`));
+    const rows = this.db
+      .prepare(
+        "SELECT id, managed_key FROM routines WHERE source = 'managed' AND managed_key LIKE ?",
+      )
+      .all(`${prefix}%`) as Array<{ id: string; managed_key: string }>;
+    const remove = this.db.prepare("DELETE FROM routines WHERE id = ?");
+    let count = 0;
+    for (const row of rows) {
+      if (keep.has(row.managed_key)) continue;
+      count += remove.run(row.id).changes;
+    }
+    return count;
   }
 
   listDue(now: string): Routine[] {

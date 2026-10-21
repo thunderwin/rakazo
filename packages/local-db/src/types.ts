@@ -21,6 +21,9 @@ export interface Bot {
   disabledBuiltinTools: string[];
   templateKey: string | null;
   templateVersion: number | null;
+  source?: "local" | "managed";
+  managedKey?: string | null;
+  packageVersion?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +40,9 @@ export interface CreateBotInput {
   disabledBuiltinTools?: string[];
   templateKey?: string | null;
   templateVersion?: number | null;
+  source?: "local" | "managed";
+  managedKey?: string | null;
+  packageVersion?: number | null;
 }
 
 export interface Thread {
@@ -72,6 +78,9 @@ export interface Routine {
   timezone: string;
   enabled: boolean;
   source: "local" | "managed";
+  managedKey: string | null;
+  packageId: string | null;
+  version: number | null;
   lastRunAt: string | null;
   nextRunAt: string | null;
   createdAt: string;
@@ -138,6 +147,9 @@ export interface LocalGroup {
   name: string;
   description: string;
   color: string;
+  source?: "local" | "managed";
+  managedKey?: string | null;
+  packageVersion?: number | null;
   createdAt: string;
   updatedAt: string;
 }

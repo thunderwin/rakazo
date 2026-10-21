@@ -45,6 +45,7 @@ export function LocalSettingsDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [diagnostics, setDiagnostics] = useState("");
+  const managed = bot.source === "managed";
 
   useEffect(() => {
     if (!open) return;
@@ -86,14 +87,16 @@ export function LocalSettingsDialog({
         sendWithEnter: enterToSend,
         defaultModelId: defaultModel.trim() || null,
       });
-      const nextBot = await api.bots.update(bot.id, {
-        name: name.trim(),
-        description: description.trim(),
-        instructions,
-        modelId: model.trim() || null,
-        thinkingLevel: thinking || null,
-        color,
-      });
+      const nextBot = managed
+        ? undefined
+        : await api.bots.update(bot.id, {
+            name: name.trim(),
+            description: description.trim(),
+            instructions,
+            modelId: model.trim() || null,
+            thinkingLevel: thinking || null,
+            color,
+          });
       onSaved(nextSettings, nextBot);
       onOpenChange(false);
     } catch (cause) {
@@ -247,6 +250,7 @@ export function LocalSettingsDialog({
             <div className="min-w-0 flex-1">
               <Input
                 value={name}
+                disabled={managed}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
               />
@@ -264,6 +268,7 @@ export function LocalSettingsDialog({
                 title={item.name}
                 aria-label={item.name}
                 aria-pressed={color === item.id || color === item.hex}
+                disabled={managed}
                 className="grid size-7 place-items-center rounded-full border border-border focus-visible:ring-2 focus-visible:ring-ring"
                 style={{ backgroundColor: item.hex }}
                 onClick={() => setColor(item.id)}
@@ -282,6 +287,7 @@ export function LocalSettingsDialog({
             <Input
               id="local-settings-description"
               value={description}
+              disabled={managed}
               maxLength={2000}
               onChange={(event) => setDescription(event.target.value)}
             />
@@ -295,6 +301,7 @@ export function LocalSettingsDialog({
               <Input
                 id="local-settings-model"
                 value={model}
+                disabled={managed}
                 placeholder="Use the default"
                 onChange={(event) => setModel(event.target.value)}
               />
@@ -306,6 +313,7 @@ export function LocalSettingsDialog({
               Thinking
               <select
                 id="local-settings-thinking"
+                disabled={managed}
                 className="h-8 rounded-lg border border-border bg-input px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 value={thinking}
                 onChange={(event) => setThinking(event.target.value)}
@@ -327,11 +335,17 @@ export function LocalSettingsDialog({
             <Textarea
               id="local-settings-instructions"
               rows={6}
+              disabled={managed}
               maxLength={40_000}
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
             />
           </label>
+          {managed ? (
+            <p className="text-[11.5px] text-muted-foreground">
+              Managed by your organization. Update the assigned preset on the server to change it.
+            </p>
+          ) : null}
         </section>
 
         <section className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
@@ -363,7 +377,11 @@ export function LocalSettingsDialog({
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={saving || !name.trim()} onClick={() => void save()}>
+          <Button
+            type="button"
+            disabled={saving || (!managed && !name.trim())}
+            onClick={() => void save()}
+          >
             {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
             Save
           </Button>

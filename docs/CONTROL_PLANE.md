@@ -1,6 +1,7 @@
 # 个人终端与企业托管控制面
 
-> 状态：架构决策，尚未实现。确认日期 2026-10-21。
+> 状态：个人终端功能已实现；最小组织、成员、Client Manifest、签名和 `/admin` 管理页
+> 已实现。详细实施边界见 `docs/ADMIN.md`。核实日期：2026-10-21。
 
 ## 1. 产品定位
 
@@ -333,9 +334,9 @@ GitHub 和消息平台触发不在当前实现内。
 1. 服务器 organization、membership、企业付款映射和 tenant guard。
 2. 最小管理员面板：组织、员工、发布和分配。
 3. Client Manifest、签名包、客户端后台同步和回滚。
-4. 企业 Bot 模板、群预设、Skills 和 Knowledge 分配。
+4. 企业 Bot 模板、群预设、Skills、Knowledge 和 routine manifest 分配：最小版本已实现。
 5. 本地群聊和 `handoff_to_bot`。
 6. Routines 服务器定义和分发；客户端定义、调度和执行已实现。
 7. Memory 分层：个人本地 Memory 已实现；企业共享 Memory 和晋升流程待实现。
-8. 工具运行记录、活动历史和诊断 bundle。
+8. 工具运行记录、活动历史：本地已实现；诊断 bundle 上传待实现。
 9. 私有附件、预置附件。

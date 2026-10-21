@@ -297,6 +297,30 @@ const MIGRATIONS: Migration[] = [
         ON agent_skills(source, name);
     `,
   },
+  {
+    version: 9,
+    sql: `
+      ALTER TABLE bots ADD COLUMN source TEXT NOT NULL DEFAULT 'local';
+      ALTER TABLE bots ADD COLUMN managed_key TEXT;
+      ALTER TABLE bots ADD COLUMN package_version INTEGER;
+      CREATE UNIQUE INDEX bots_managed_key
+        ON bots(managed_key) WHERE managed_key IS NOT NULL;
+      CREATE INDEX bots_source ON bots(source);
+
+      ALTER TABLE chat_groups ADD COLUMN source TEXT NOT NULL DEFAULT 'local';
+      ALTER TABLE chat_groups ADD COLUMN managed_key TEXT;
+      ALTER TABLE chat_groups ADD COLUMN package_version INTEGER;
+      CREATE UNIQUE INDEX chat_groups_managed_key
+        ON chat_groups(managed_key) WHERE managed_key IS NOT NULL;
+      CREATE INDEX chat_groups_source ON chat_groups(source);
+
+      ALTER TABLE routines ADD COLUMN managed_key TEXT;
+      ALTER TABLE routines ADD COLUMN package_id TEXT;
+      ALTER TABLE routines ADD COLUMN version INTEGER;
+      CREATE UNIQUE INDEX routines_managed_key
+        ON routines(managed_key) WHERE managed_key IS NOT NULL;
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

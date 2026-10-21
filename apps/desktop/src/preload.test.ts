@@ -49,6 +49,7 @@ describe("desktop preload bridge", () => {
       "diagnostics",
       "groups",
       "knowledge",
+      "manifest",
       "memory",
       "messages",
       "routines",
@@ -130,6 +131,7 @@ describe("desktop preload bridge", () => {
     });
     await bridge.local?.skills.update("Review", { description: "Review carefully" });
     await bridge.local?.skills.remove("Review");
+    await bridge.local?.manifest.state();
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
       "desktop.oauth.open",
       "desktop.oauth.cancel",
@@ -184,6 +186,7 @@ describe("desktop preload bridge", () => {
       "desktop.local.skills.create",
       "desktop.local.skills.update",
       "desktop.local.skills.remove",
+      "desktop.local.manifest.state",
     ]);
   });
 

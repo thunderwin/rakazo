@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { ClientManifestContentSchema } from "@rakazo/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import type { LocalAgentEngine, LocalAgentRunRequest } from "./agent.js";
 import { LocalRuntimeService } from "./service.js";
@@ -507,6 +508,102 @@ describe("local runtime service", () => {
         }),
       ],
     });
+    service.close();
+  });
+
+  it("applies a managed client manifest without deleting user data", () => {
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine,
+      tools,
+      resolveModel,
+    });
+    const userBot = service.createBot({ name: "My assistant" });
+    const content = ClientManifestContentSchema.parse({
+      name: "Example Company",
+      minimumClientVersion: "0.3.0",
+      botTemplates: [
+        {
+          key: "analyst",
+          name: "Company analyst",
+          instructions: "Use company sources.",
+        },
+        {
+          key: "writer",
+          name: "Company writer",
+          instructions: "Write clearly.",
+          color: "green",
+        },
+      ],
+      groupPresets: [
+        {
+          key: "launch",
+          name: "Launch team",
+          botKeys: ["analyst", "writer"],
+        },
+      ],
+      knowledge: [{ key: "policy", title: "Release policy", content: "Verify rollback." }],
+      skills: [
+        {
+          key: "review",
+          name: "Company review",
+          description: "Review a release",
+          content: "---\nname: Company review\ndescription: Review a release\n---\n\nCheck it.",
+        },
+      ],
+      routines: [
+        {
+          key: "daily",
+          botKey: "analyst",
+          name: "Daily brief",
+          prompt: "Summarize changes.",
+          cron: "0 9 * * *",
+          timezone: "UTC",
+        },
+      ],
+    });
+    const state = service.applyClientManifest({
+      organization: { id: "org-1", name: "Example Company" },
+      version: 3,
+      hash: "abc",
+      publishedAt: "2026-10-21T00:00:00.000Z",
+      signature: null,
+      content,
+    });
+
+    expect(state).toMatchObject({ organizationId: "org-1", version: 3 });
+    expect(service.listBots().map((bot) => bot.name)).toEqual(
+      expect.arrayContaining(["My assistant", "Company analyst", "Company writer"]),
+    );
+    expect(service.listGroups()[0]).toMatchObject({
+      name: "Launch team",
+      source: "managed",
+      members: [{ name: "Company analyst" }, { name: "Company writer" }],
+    });
+    expect(service.listKnowledge()).toEqual([
+      expect.objectContaining({ title: "Release policy", source: "managed" }),
+    ]);
+    expect(service.listSkills().find((skill) => skill.name === "Company review")).toMatchObject({
+      source: "managed",
+      readOnly: true,
+    });
+    const analyst = service.listBots().find((bot) => bot.name === "Company analyst")!;
+    expect(service.db.routines.list(analyst.id)).toEqual([
+      expect.objectContaining({ name: "Daily brief", source: "managed" }),
+    ]);
+
+    service.applyClientManifest({
+      organization: { id: "org-1", name: "Example Company" },
+      version: 4,
+      hash: "def",
+      publishedAt: "2026-10-22T00:00:00.000Z",
+      signature: null,
+      content: ClientManifestContentSchema.parse({ name: "Example Company" }),
+    });
+    expect(service.listBots().map((bot) => bot.id)).toEqual([userBot.id]);
+    expect(service.listGroups()).toEqual([]);
+    expect(service.listKnowledge()).toEqual([]);
+    expect(service.listSkills().map((skill) => skill.source)).toEqual(["builtin"]);
     service.close();
   });
 

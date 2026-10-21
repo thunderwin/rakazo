@@ -156,6 +156,9 @@ export class LocalRoutineRuntime {
   update(id: string, input: LocalRoutineUpdate): Routine {
     const existing = this.options.db.routines.get(id);
     if (!existing) throw new Error("Routine not found");
+    if (existing.source === "managed") {
+      throw new Error("This routine is managed by your organization");
+    }
     const cron = input.cron?.trim() || existing.cron;
     const timezone = validTimezone(input.timezone?.trim() || existing.timezone);
     const enabled = input.enabled ?? existing.enabled;
@@ -180,6 +183,9 @@ export class LocalRoutineRuntime {
   }
 
   remove(id: string): boolean {
+    if (this.options.db.routines.get(id)?.source === "managed") {
+      throw new Error("This routine is managed by your organization");
+    }
     return this.options.db.routines.remove(id);
   }
 

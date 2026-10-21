@@ -62,6 +62,7 @@ export interface AppEnv {
   newApiAdminToken?: string;
   newApiAdminUserId?: number;
   newApiDefaultModel?: string;
+  clientManifestPrivateKey?: string;
   e2bApiKey: string | undefined;
   daytonaApiKey: string | undefined;
   daytonaApiUrl: string | undefined;
@@ -173,6 +174,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   const cloudAgentProvider = resolveCloudAgentProvider(source);
   const deploymentModel = resolveDeploymentModel(source);
   const newApiBaseUrl = optional(source.NEW_API_BASE_URL);
+  const clientManifestPrivateKey = optional(source.CLIENT_MANIFEST_PRIVATE_KEY);
   const newApiAdminToken = optional(source.NEW_API_ADMIN_TOKEN);
   const newApiAdminUserIdRaw = optional(source.NEW_API_ADMIN_USER_ID);
   if (
@@ -230,6 +232,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     newApiAdminToken,
     newApiAdminUserId,
     newApiDefaultModel: optional(source.NEW_API_DEFAULT_MODEL),
+    clientManifestPrivateKey,
     e2bApiKey: source.E2B_API_KEY,
     daytonaApiKey: source.DAYTONA_API_KEY,
     daytonaApiUrl: source.DAYTONA_API_URL,

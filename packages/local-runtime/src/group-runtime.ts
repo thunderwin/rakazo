@@ -163,6 +163,9 @@ export class LocalGroupRuntime {
     groupId: string,
     input: { name?: string; description?: string; color?: string; botIds?: string[] },
   ): LocalGroupWithMembers | null {
+    if (this.options.db.groups.get(groupId)?.source === "managed") {
+      throw new Error("This group is managed by your organization");
+    }
     if (input.botIds && (input.botIds.length < 2 || input.botIds.length > 10)) {
       throw new Error("A group needs 2 to 10 bots");
     }
@@ -170,6 +173,9 @@ export class LocalGroupRuntime {
   }
 
   removeGroup(groupId: string): boolean {
+    if (this.options.db.groups.get(groupId)?.source === "managed") {
+      throw new Error("This group is managed by your organization");
+    }
     if (this.active.has(groupId)) throw new Error("Stop the group before deleting it");
     return this.options.db.groups.remove(groupId);
   }

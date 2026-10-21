@@ -1,4 +1,8 @@
-import type { DesktopBrowserBridgeStatus, DesktopLocalRunStarted } from "@rakazo/contracts";
+import type {
+  DesktopBrowserBridgeStatus,
+  DesktopLocalRunStarted,
+  DesktopManagedManifestState,
+} from "@rakazo/contracts";
 import { GROK_COLOR_LIST } from "@rakazo/core";
 import { BotAvatar, Button, GroupAvatar, Skeleton } from "@rakazo/ui-web";
 import {
@@ -187,6 +191,7 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
   const [liveBotId, setLiveBotId] = useState<string | null>(null);
   const [pendingText, setPendingText] = useState("");
   const [browser, setBrowser] = useState<DesktopBrowserBridgeStatus | null>(null);
+  const [managedManifest, setManagedManifest] = useState<DesktopManagedManifestState | null>(null);
   const activeTargetRef = useRef<LocalTarget | null>(null);
   const activeRunId = useRef<string | null>(null);
   const stopped = useRef(false);
@@ -245,6 +250,27 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
     })();
     return () => {
       cancelled = true;
+    };
+  }, [api]);
+
+  useEffect(() => {
+    if (!api) return;
+    let active = true;
+    void api.manifest
+      .state()
+      .then((state) => {
+        if (active) setManagedManifest(state);
+      })
+      .catch(() => undefined);
+    const stop = api.manifest.onUpdated((state) => {
+      setManagedManifest(state);
+      void loadWorkspace().catch((cause) => {
+        setError(presentError(localErrorMessage(cause)));
+      });
+    });
+    return () => {
+      active = false;
+      stop();
     };
   }, [api]);
 
@@ -694,6 +720,11 @@ export function LocalApp({ bridge }: { bridge?: LocalBridge }) {
           </nav>
 
           <div className="border-t border-sidebar-border px-4 py-3">
+            {managedManifest ? (
+              <p className="mb-2 truncate text-[10.5px] text-muted-foreground">
+                Managed by {managedManifest.organizationName}
+              </p>
+            ) : null}
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <Globe2 size={13} />
               <span

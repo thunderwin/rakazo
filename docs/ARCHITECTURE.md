@@ -190,6 +190,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 本地附件存 SQLite artifact；图片作为当前轮视觉输入，其他文件以类型/大小提示交给 Agent。
 - Knowledge 使用本地文档库和关键词检索；Skills 使用 `SKILL.md` catalog、强制引用和本地
   user/managed 缓存。
+- 服务器提供组织/member、版本化 Client Manifest、Ed25519 签名和 `/admin` 内部管理页；
+  客户端每 5 分钟验证并同步 managed presets。
 
 仍待迁移：fleet 管理、应用启动、桌面操作。服务器专属的团队、电脑、账号管理页面
 不会进入本地 renderer。
@@ -433,5 +435,6 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/ROUTINES.md`：本地 routine 定义、调度、补跑和运行历史。
 - `docs/ATTACHMENTS.md`：本地附件存储、模型输入和交互边界。
 - `docs/KNOWLEDGE_SKILLS.md`：Knowledge 检索、Skills 格式、工具和分发边界。
+- `docs/ADMIN.md`：组织、成员、manifest、签名和内部管理面板。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

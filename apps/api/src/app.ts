@@ -102,6 +102,8 @@ import { cors } from "hono/cors";
 import { storeInboundAttachment } from "./artifacts.js";
 import { createBillingService } from "./billing.js";
 import { mountBillingRoutes } from "./billing-webhook.js";
+import { mountClientControlPlane } from "./client-control-plane-http.js";
+import { createClientManifestSigner } from "./client-manifest-signature.js";
 import { mountDiagramScript } from "./diagram-script.js";
 import type { AppEnv } from "./env.js";
 import { loadEnv } from "./env.js";
@@ -670,6 +672,27 @@ export async function createApp(
     return auth.handler(emptyAuthBodyAsJson(c.req.raw));
   });
   mountLocalSettings(app, { token: env.desktopStackToken, prisma, rpc });
+  mountClientControlPlane(app, {
+    prisma,
+    ...(env.clientManifestPrivateKey
+      ? { signManifest: createClientManifestSigner(env.clientManifestPrivateKey) }
+      : {}),
+    currentUser: async (request) => {
+      const session = await auth.api.getSession({ headers: sessionHeaders(request) });
+      const sessionRow = session?.user
+        ? await prisma.session.findUnique({
+            where: { id: session.session.id },
+            select: { activeOrganizationId: true },
+          })
+        : null;
+      return session?.user
+        ? {
+            userId: session.user.id,
+            activeOrganizationId: sessionRow?.activeOrganizationId ?? null,
+          }
+        : null;
+    },
+  });
   const requestSession = async (request: Request) => {
     const session = await auth.api.getSession({ headers: sessionHeaders(request) });
     if (!session?.user) return null;

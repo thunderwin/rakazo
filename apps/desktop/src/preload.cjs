@@ -118,6 +118,14 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
       update: (name, input) => ipcRenderer.invoke("desktop.local.skills.update", name, input),
       remove: (name) => ipcRenderer.invoke("desktop.local.skills.remove", name),
     },
+    manifest: {
+      state: () => ipcRenderer.invoke("desktop.local.manifest.state"),
+      onUpdated: (listener) => {
+        const handler = (_event, state) => listener(state);
+        ipcRenderer.on("desktop.local.manifest.updated", handler);
+        return () => ipcRenderer.off("desktop.local.manifest.updated", handler);
+      },
+    },
   },
   oauth: {
     open: (url) => ipcRenderer.invoke("desktop.oauth.open", url),

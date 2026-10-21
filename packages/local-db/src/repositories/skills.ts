@@ -109,4 +109,32 @@ export class SkillRepository {
       0
     );
   }
+
+  replaceManaged(input: {
+    packageId: string;
+    version: number;
+    skills: Array<{ key: string; name: string; description: string; content: string }>;
+  }): void {
+    const now = new Date().toISOString();
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM agent_skills WHERE source = 'managed'").run();
+      const insert = this.db.prepare(
+        `INSERT INTO agent_skills
+          (id, name, description, content, source, package_id, version, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'managed', ?, ?, ?, ?)`,
+      );
+      for (const skill of input.skills) {
+        insert.run(
+          `managed:${skill.key}`,
+          skill.name,
+          skill.description,
+          skill.content,
+          input.packageId,
+          input.version,
+          now,
+          now,
+        );
+      }
+    })();
+  }
 }

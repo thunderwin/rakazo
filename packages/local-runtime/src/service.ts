@@ -1,3 +1,5 @@
+import type { ClientManifestEnvelope } from "@rakazo/contracts";
+import { isOneShotRoutineCron, nextCronDate } from "@rakazo/core";
 import {
   type Bot,
   type CreateBotInput,
@@ -237,6 +239,160 @@ export class LocalRuntimeService {
 
   removeSkill(name: string) {
     return this.skills.remove(name);
+  }
+
+  applyClientManifest(manifest: ClientManifestEnvelope) {
+    const previous = this.getManagedManifestState();
+    if (previous && previous.organizationId !== manifest.organization.id) {
+      this.clearManagedResources(previous.organizationId);
+    }
+    const botByKey = new Map<string, string>();
+    for (const template of manifest.content.botTemplates) {
+      const bot = this.db.bots.upsertManaged({
+        organizationId: manifest.organization.id,
+        key: template.key,
+        packageVersion: manifest.version,
+        name: template.name,
+        title: template.title,
+        description: template.description,
+        instructions: template.instructions,
+        color: template.color,
+        modelId: template.modelId,
+        thinkingLevel: template.thinkingLevel,
+        disabledBuiltinTools: template.disabledBuiltinTools,
+      });
+      this.db.threads.getOrCreateForBot(bot.id);
+      botByKey.set(template.key, bot.id);
+    }
+    const groupKeys: string[] = [];
+    for (const preset of manifest.content.groupPresets) {
+      const botIds = preset.botKeys.map((key) => botByKey.get(key));
+      if (botIds.some((id) => !id)) {
+        throw new Error(`Group preset ${preset.key} references an unknown bot template`);
+      }
+      this.db.groups.upsertManaged({
+        organizationId: manifest.organization.id,
+        key: preset.key,
+        packageVersion: manifest.version,
+        name: preset.name,
+        description: preset.description,
+        color: preset.color,
+        botIds: botIds as string[],
+      });
+      groupKeys.push(preset.key);
+    }
+    const now = new Date();
+    const routineKeys: string[] = [];
+    for (const preset of manifest.content.routines) {
+      const botId = botByKey.get(preset.botKey);
+      if (!botId) {
+        throw new Error(`Routine preset ${preset.key} references an unknown bot template`);
+      }
+      if (isOneShotRoutineCron(preset.cron)) {
+        throw new Error(`Managed routine ${preset.key} cannot use a one-time schedule`);
+      }
+      let nextRunAt: string | null = null;
+      try {
+        nextRunAt = nextCronDate(preset.cron, now, preset.timezone).toISOString();
+      } catch {
+        throw new Error(`Routine preset ${preset.key} has an invalid cron or timezone`);
+      }
+      this.db.routines.upsertManaged({
+        organizationId: manifest.organization.id,
+        packageId: `${manifest.organization.id}:${manifest.version}`,
+        version: manifest.version,
+        key: preset.key,
+        botId,
+        name: preset.name,
+        prompt: preset.prompt,
+        cron: preset.cron,
+        timezone: preset.timezone,
+        enabled: preset.enabled,
+        nextRunAt: preset.enabled ? nextRunAt : null,
+      });
+      routineKeys.push(preset.key);
+    }
+    this.db.groups.deleteManagedExcept(manifest.organization.id, groupKeys);
+    this.db.routines.deleteManagedExcept(manifest.organization.id, routineKeys);
+    this.db.bots.deleteManagedExcept(manifest.organization.id, [...botByKey.keys()]);
+    const packageId = `${manifest.organization.id}:${manifest.version}`;
+    this.db.knowledge.replaceManaged({
+      packageId,
+      version: manifest.version,
+      documents: manifest.content.knowledge.map((document) => ({
+        key: `${manifest.organization.id}:${document.key}`,
+        title: document.title,
+        content: document.content,
+      })),
+    });
+    this.db.skills.replaceManaged({
+      packageId,
+      version: manifest.version,
+      skills: manifest.content.skills.map((skill) => ({
+        key: `${manifest.organization.id}:${skill.key}`,
+        name: skill.name,
+        description: skill.description,
+        content: skill.content,
+      })),
+    });
+    const state = {
+      organizationId: manifest.organization.id,
+      organizationName: manifest.organization.name,
+      version: manifest.version,
+      hash: manifest.hash,
+      publishedAt: manifest.publishedAt,
+    };
+    this.db.settings.set("managed.client-manifest", state);
+    return state;
+  }
+
+  clearManagedManifest(): boolean {
+    const current = this.getManagedManifestState();
+    if (!current) return false;
+    this.clearManagedResources(current.organizationId);
+    this.db.knowledge.replaceManaged({
+      packageId: current.organizationId,
+      version: 0,
+      documents: [],
+    });
+    this.db.skills.replaceManaged({ packageId: current.organizationId, version: 0, skills: [] });
+    this.db.settings.set("managed.client-manifest", null);
+    return true;
+  }
+
+  getManagedManifestState(): {
+    organizationId: string;
+    organizationName: string;
+    version: number;
+    hash: string;
+    publishedAt: string;
+  } | null {
+    const value = this.db.settings.get("managed.client-manifest");
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof value.organizationId !== "string" ||
+      typeof value.organizationName !== "string" ||
+      typeof value.version !== "number" ||
+      typeof value.hash !== "string" ||
+      typeof value.publishedAt !== "string"
+    ) {
+      return null;
+    }
+    return value as {
+      organizationId: string;
+      organizationName: string;
+      version: number;
+      hash: string;
+      publishedAt: string;
+    };
+  }
+
+  private clearManagedResources(organizationId: string) {
+    this.db.routines.deleteManagedExcept(organizationId, []);
+    this.db.groups.deleteManagedExcept(organizationId, []);
+    this.db.bots.deleteManagedExcept(organizationId, []);
   }
 
   startRoutineScheduler() {

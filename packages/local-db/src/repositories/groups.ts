@@ -14,6 +14,9 @@ interface GroupRow {
   name: string;
   description: string;
   color: string;
+  source: "local" | "managed";
+  managed_key: string | null;
+  package_version: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +34,9 @@ function rowToGroup(row: GroupRow): LocalGroup {
     name: row.name,
     description: row.description,
     color: row.color,
+    source: row.source,
+    managedKey: row.managed_key,
+    packageVersion: row.package_version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -54,8 +60,8 @@ export class GroupRepository {
       this.db
         .prepare(
           `INSERT INTO chat_groups
-            (id, name, description, color, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+            (id, name, description, color, source, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'local', ?, ?)`,
         )
         .run(id, name, input.description?.trim() ?? "", input.color ?? "violet", now, now);
       this.replaceMembers(id, botIds, now);
@@ -122,6 +128,83 @@ export class GroupRepository {
 
   remove(id: string): boolean {
     return this.db.prepare("DELETE FROM chat_groups WHERE id = ?").run(id).changes > 0;
+  }
+
+  upsertManaged(input: {
+    organizationId: string;
+    key: string;
+    packageVersion: number;
+    name: string;
+    description: string;
+    color: string;
+    botIds: string[];
+  }): LocalGroupWithMembers {
+    const managedKey = `${input.organizationId}:${input.key}`;
+    const existing = this.db
+      .prepare("SELECT * FROM chat_groups WHERE managed_key = ?")
+      .get(managedKey) as GroupRow | undefined;
+    const now = new Date().toISOString();
+    if (!existing) {
+      const id = randomUUID();
+      return this.db.transaction(() => {
+        this.db
+          .prepare(
+            `INSERT INTO chat_groups
+              (id, name, description, color, source, managed_key, package_version,
+               created_at, updated_at)
+             VALUES (?, ?, ?, ?, 'managed', ?, ?, ?, ?)`,
+          )
+          .run(
+            id,
+            input.name,
+            input.description,
+            input.color,
+            managedKey,
+            input.packageVersion,
+            now,
+            now,
+          );
+        this.replaceMembers(id, input.botIds, now);
+        this.db
+          .prepare(
+            `INSERT INTO group_threads (id, group_id, title, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(randomUUID(), id, input.name, now, now);
+        return this.get(id)!;
+      })();
+    }
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE chat_groups
+           SET name = ?, description = ?, color = ?, package_version = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(input.name, input.description, input.color, input.packageVersion, now, existing.id);
+      this.replaceMembers(existing.id, input.botIds, now);
+      this.db
+        .prepare("UPDATE group_threads SET title = ?, updated_at = ? WHERE group_id = ?")
+        .run(input.name, now, existing.id);
+    })();
+    return this.get(existing.id)!;
+  }
+
+  deleteManagedExcept(organizationId: string, keepKeys: readonly string[]): number {
+    const prefix = `${organizationId}:`;
+    const keep = new Set(keepKeys.map((key) => `${prefix}${key}`));
+    const rows = this.db
+      .prepare(
+        "SELECT id, managed_key FROM chat_groups WHERE source = 'managed' AND managed_key LIKE ?",
+      )
+      .all(`${prefix}%`) as Array<{ id: string; managed_key: string }>;
+    const remove = this.db.prepare("DELETE FROM chat_groups WHERE id = ?");
+    let count = 0;
+    for (const row of rows) {
+      if (keep.has(row.managed_key)) continue;
+      count += remove.run(row.id).changes;
+    }
+    return count;
   }
 
   listMembers(groupId: string): Bot[] {

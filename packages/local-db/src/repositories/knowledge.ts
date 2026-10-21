@@ -96,4 +96,31 @@ export class KnowledgeRepository {
         .changes > 0
     );
   }
+
+  replaceManaged(input: {
+    packageId: string;
+    version: number;
+    documents: Array<{ key: string; title: string; content: string }>;
+  }): void {
+    const now = new Date().toISOString();
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM knowledge_documents WHERE source = 'managed'").run();
+      const insert = this.db.prepare(
+        `INSERT INTO knowledge_documents
+          (id, title, content, source, package_id, version, created_at, updated_at)
+         VALUES (?, ?, ?, 'managed', ?, ?, ?, ?)`,
+      );
+      for (const document of input.documents) {
+        insert.run(
+          `managed:${document.key}`,
+          document.title,
+          document.content,
+          input.packageId,
+          input.version,
+          now,
+          now,
+        );
+      }
+    })();
+  }
 }

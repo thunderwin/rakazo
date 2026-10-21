@@ -52,6 +52,8 @@ NEW_API_BASE_URL=https://newapi.example.com
 NEW_API_ADMIN_TOKEN=replace-with-new-api-admin-access-token
 NEW_API_ADMIN_USER_ID=1
 NEW_API_DEFAULT_MODEL=
+# Ed25519 Client Manifest signing. Keep the private key server-side only.
+CLIENT_MANIFEST_PRIVATE_KEY=
 ```
 
 New API owns user quota, channel selection, pricing, top-ups, and settlement. Keep
