@@ -24,6 +24,20 @@ V1 不做多设备、共享团队频道、团队电脑、移动端和本地模�
 上游仍然提供可复用的基础：Web UI、Electron 壳、Pi runtime、工具协议和
 部分 provider 代码。品牌和产品层放在 fork 中维护。
 
+### 1.1 本地 runtime 是硬分叉
+
+`packages/local-runtime`、`packages/local-db`、本地 IPC、工具审批策略、群聊、Fleet、
+MCP、Skills 脚本和 computer use 已形成独立演进面。它们不是上游 executor 的配置包装，
+上游新增工具或修改 executor 行为也不会自动出现在本地路径。
+
+因此：
+
+- 上游 merge 只负责同步共享 UI、协议基础和可安全吸收的通用修复。
+- 本地 Agent 行为以 `packages/local-runtime` 为准，必须单独测试和发布。
+- 每次桌面发版前审计一次上游差异；安全修复在 7 天内评估，普通 UI/工具改动按月批量移植。
+- 可泛化的本地 runtime、审批策略和离线测试优先考虑贡献回上游；不为了 merge 方便而复制
+  上游服务器 executor。
+
 ## 2. 远端和分支
 
 ```text
@@ -131,8 +145,8 @@ docs/                        架构、V1 范围、fork 说明
 
 ### 6.1 本地 runtime
 
-- 运行在 Electron utility process 或独立本地进程。
-- 当前运行在 Electron 主进程；utility process 拆分仍待完成。
+- **目标**：运行在 Electron utility process 或独立本地进程。
+- **现状**：运行在 Electron 主进程；utility process 拆分仍待完成。
 - `@rakazo/local-runtime` 定义 Agent、store、tool 三个端口，不依赖 Prisma。
 - `PiLocalAgentEngine` 复用现有的 `PiAgentRuntime`，没有复制服务器 executor。
 - `shell`、`list_files`、`read_file`、`write_file` 已接入 Pi tool loop；写操作和
@@ -151,9 +165,11 @@ docs/                        架构、V1 范围、fork 说明
 - 存储 bot、thread、message、bot/账号 Memory、routine、settings 和工具记录。
 - Memory 文档/revision、routine repository/调度/history、本地附件 artifact、Knowledge、
   Skills、组织控制面、签名 Client Manifest 和客户端静默同步已实现。
-- 升级时执行迁移；失败保留备份。
-- 提供导出/导入；V1 不做云端同步。
-- 敏感字段和备份加密。
+- **现状**：数据库文件本身未加密；session 和 credential vault 使用 Electron
+  `safeStorage`。迁移在启动时直接执行，尚无自动迁移前备份。
+- **底层已有**：`LocalDatabase.backupTo()` 可以生成一份未加密的 SQLite 副本，并有单元测试。
+- **产品缺口**：没有导出/恢复 IPC、文件选择、格式版本、完整性校验或加密备份。
+- **计划**：数据库加密、加密导出/恢复、迁移前备份与失败回滚；V1 不做云端同步。
 
 ### 6.3 浏览器状态
 
@@ -307,7 +323,9 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 
 ## 9. 上游同步检查表
 
-- [ ] `git fetch upstream`
+- [x] 2026-10-21 fetch `upstream/main` 到 `7e9365db`
+- [x] 记录当前代码所基于的上游快照 `92214866`；尚未 merge 新快照
+- [x] 审查快照差距：114 个提交、725 个文件，其中前端/桌面约 192 个文件
 - [ ] `git merge upstream/main`
 - [ ] 依赖安装成功
 - [ ] `pnpm lint`
@@ -318,6 +336,17 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 - [ ] 配置包签名和回滚可用
 - [ ] 品牌文案和默认服务器仍正确
 - [x] 安装包更新源指向 `thunderwin/rakazo`，appId 为 `com.ericbot.desktop`
+
+2026-10-21 前端审计结论：
+
+- `ScratchpadSection`、Ticket Board、command palette 和 MCP 管理页没有上游改动，可直接
+  继续作为适配器组件复用。
+- `Artifacts.tsx` 有 155 行变化，主要是 shadcn `ToggleGroup`、`IconTooltip` 和交互组件
+  替换；合并时需要保留本地 `ArtifactsDataSource` 适配层。
+- Shell、Settings、认证、侧栏、Model picker、chat Markdown 和 `packages/ui-web` 有较大
+  改动。它们不是单个数据层替换，应作为独立前端同步批次验证。
+- 上游这 114 个提交还加入 passkeys、email code sign-in、secret request dismiss、
+  sidebar footer、content encryption 和多项安全修复；本地是否吸收需按 V1 边界逐项决定。
 
 ## 10. 安全红线
 

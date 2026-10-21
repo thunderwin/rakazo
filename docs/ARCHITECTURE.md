@@ -1,7 +1,7 @@
 # 系统架构
 
-> 文档状态：基于 `thunderwin/rakazo` fork，上游 `main` 提交
-> `9221486`，核实日期 2026-10-20。
+> 文档状态：当前代码基于上游 `main` 快照 `92214866`。2026-10-21 已 fetch 到
+> `upstream/main@7e9365db`，但尚未 merge；该快照领先当前基线 114 个提交、725 个文件。
 >
 > **重要：本文把“V1 目标架构”和“当前上游实现”分开写。**
 > V1 目标尚未全部实现；客户端已迁移本地 Pi 循环和 `shell`，其余服务器中心路径仍在。
@@ -10,17 +10,17 @@
 
 V1 采用 **单设备 local-first**：
 
-| 能力 | V1 位置 |
-|---|---|
-| 注册、登录、账号安全 | 服务器 |
-| 充值、订阅、额度、用量 | New API |
-| 模型网关 | 服务器（主要收入路径） |
-| 崩溃上报、监控、审计元数据 | 服务器 |
-| Agent 循环 | 客户端 |
-| shell、文件、浏览器、应用控制 | 客户端 |
-| bot 配置、对话、记忆 | 客户端 SQLite |
-| 定时任务 | 客户端 |
-| 多设备同步、共享团队频道、团队电脑 | **V1 不做** |
+| 能力                               | V1 位置                |
+| ---------------------------------- | ---------------------- |
+| 注册、登录、账号安全               | 服务器                 |
+| 充值、订阅、额度、用量             | New API                |
+| 模型网关                           | 服务器（主要收入路径） |
+| 崩溃上报、监控、审计元数据         | 服务器                 |
+| Agent 循环                         | 客户端                 |
+| shell、文件、浏览器、应用控制      | 客户端                 |
+| bot 配置、对话、记忆               | 客户端 SQLite          |
+| 定时任务                           | 客户端                 |
+| 多设备同步、共享团队频道、团队电脑 | **V1 不做**            |
 
 服务器卖 AI 调用和账号服务；用户数据留在客户端。
 
@@ -155,7 +155,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - `apps/desktop/src/pi-local-agent-engine.ts` 用现有 `PiAgentRuntime` 实现引擎端口。
 - 模型连接固定为 OpenAI-compatible，base URL 由组合根指向服务器网关；bot 只选择
   model id，不能更改服务器地址或直接接触 New API。
-- SQLite 实现当前保存 bot、thread、message 和 settings。
+- SQLite 实现当前保存 bot、thread/message、群聊、Memory、Routines、Fleet 工作项、
+  artifacts、Knowledge/Skills、MCP server、run/tool activity 和 settings。
 - 客户端设置（主题、默认模型、Enter 发送）和 bot 设置（名称、描述、instructions、
   模型、thinking level）保存在账号本地 SQLite；服务器不保存这些用户编辑数据。
 - 本地数据按 Rakazo userId 隔离：
@@ -167,6 +168,29 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   工作目录限定在本地 workspace。
 - `list_files`、`read_file`、`write_file` 已接入本地 workspace；只读工具不弹审批，
   写入和 shell 仍逐次审批。
+- `web_search` / `web_fetch` 已通过 keyless web adapter 接入本地 runtime；搜索默认先试
+  DuckDuckGo HTML，再回退到 Bing HTML。抓取拒绝 HTTP(S) 以外的协议、URL 内凭证、
+  loopback/private/link-local 地址和超限响应。
+- `render_plot` 使用 Observable Plot 生成 PNG，并把图片写入本地 artifact 和当前消息；
+  `attach_file` 可以把 workspace 文件附到聊天。
+- `generate_image` 只在配置了媒体供应商时向模型暴露；生成结果写入本地 artifact，
+  且不自动重试不确定的付费提交。
+- `generate_video` 仅在媒体供应商声明视频能力时出现；提交状态保存到本地
+  `media_jobs`，后续只按 job id 轮询，不自动重复提交。
+- `request_secret` / `list_secrets` / `secret_request` / `forget_secret` 已接入账号级
+  `safeStorage` 加密 vault；认证只注入保存的精确 origin，拒绝重定向并脱敏响应。
+- `ask_user` 使用本地选项弹窗；`message_user` 写入当前聊天；`open_path` / `launch_app`
+  在用户批准后调用桌面默认程序。
+- `computer_observe` / `computer_act` 使用本地屏幕和系统输入控制，并由操作系统管理屏幕与
+  辅助功能权限；`request_takeover` 会暂停并邀请用户完成受保护步骤。
+- `add_mcp_server` 支持 streamable HTTP、SSE 和 stdio MCP server，发现的工具在下一轮以
+  `mcp__<server>__<tool>` 暴露。
+- Scratchpad、Ticket 和任务目录写入本地 SQLite；Fleet 支持 section/pin、归档、恢复和永久
+  删除。
+- `save_memory` / `recall_memory` / `forget_memory` 和 `search_history` / `read_history`
+  已迁移到本地 SQLite；历史搜索只限当前 Bot 或群聊线程。
+- Skills 可携带最多 20 个声明式脚本文件；`skill_run` 只执行声明入口，每次经用户批准，
+  在工作区独立 run 目录运行，限制超时/输出/环境变量并校验 SHA-256。
 - `run_subagent` 已接入 Pi 现有嵌套 Agent 循环；它是一次 run 内的临时助手，不创建
   独立 bot、thread 或电脑。
 - `message_bot` 已支持持久 bot 之间的私聊委派：请求和回复写入本地
@@ -178,6 +202,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   UI 通过本地 IPC 使用 SQLite/runtime，不访问服务端 oRPC。
 - 本地 renderer 复用 `BotAvatar`、原版 mention picker/键盘逻辑、`ChatMarkdown` 和共享
   UI primitives；bot 名称、颜色、头像、mention chip、Markdown 和错误卡片保持统一身份。
+- Scratchpad、Ticket Board 和 Artifact Library 直接复用原版页面组件，通过可注入数据源
+  分别连接服务端 RPC 或本地 SQLite IPC；本地 Ticket 字段在适配器中映射到上游 UI 契约。
 - run 事件已通过 IPC 流到本地 React UI，并支持按 run id 停止当前模型或工具执行。
 - 模型、工具或浏览器操作失败时仍保存已经生成的文本和工具调用，并附带错误块；
   `onRunEnd` 统一清理活动 run、审批缓存和浏览器 Agent Window。Stop 同样进入该清理路径。
@@ -193,8 +219,9 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 - 服务器提供组织/member、版本化 Client Manifest、Ed25519 签名和 `/admin` 内部管理页；
   客户端每 5 分钟验证并同步 managed presets。
 
-仍待迁移：fleet 管理、应用启动、桌面操作。服务器专属的团队、电脑、账号管理页面
-不会进入本地 renderer。
+应用启动和桌面操作已通过 `open_path`、`launch_app`、`computer_observe` 和
+`computer_act` 接入。仍待迁移的是 Fleet 的完整拖拽/右键菜单和 section/pin 编辑界面；
+服务器专属的团队、电脑、账号管理页面不会进入本地 renderer。
 
 ### 4.3 本地数据库
 
@@ -222,7 +249,7 @@ group_messages、peer_messages、runs、tool_runs、memory_documents、memory_re
 routine_runs、artifacts、settings 和 routines 表；repository 覆盖 bots、threads、
 messages、群聊、peer_messages、run/tool activity、Memory、Routines、附件和 settings。
 Knowledge document 与 Agent Skills 另有本地 repository；当前 schema 已包含
-`knowledge_documents` 和 `agent_skills`。
+`knowledge_documents` 和 `agent_skills`，其中 `agent_skills.scripts` 保存受控脚本包。
 
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
 审计；它不保存到服务器。
@@ -277,6 +304,14 @@ Local Runtime
   “Allow once”授权，拒绝后不运行。本地 React UI 已有停止按钮。
 - 文件：`list_files` 和 `read_file` 在 workspace 内只读执行；`write_file` 写入
   workspace 并逐次审批。符号链接路径和路径逃逸会被拒绝。
+- 网页：`web_search` / `web_fetch` 只读、有限流；`web_fetch` 不执行页面 JavaScript。
+- 数据和媒体：`render_plot` / `attach_file` 把结果存为本地 artifact；配置媒体供应商后
+  可使用 `generate_image`。
+- Skills：`skill_run` 只接受 Skill 包中声明的脚本入口，并在每次运行前审批。脚本的
+  文件写入和联网声明受本地执行器约束；macOS 对 `network: false` 使用系统沙箱，
+  其他平台尚缺同等网络隔离。
+- 组织策略：Client Manifest 的 `featurePolicy.disabledTools` 由
+  `LocalToolPolicyProvider` 合并进 Bot 级禁用列表，实际影响模型可见工具。
 - 应用启动和屏幕控制：按平台能力提供，并明确权限。
 - 高风险工具不能仅靠 prompt 约束，必须有工具级权限和服务端/本地审批策略。
 
@@ -307,16 +342,16 @@ V1 继续使用 Better Auth session token；设备注册和短期设备 token �
 
 ## 6. 数据边界
 
-| 数据 | 服务端 / New API | 客户端 |
-|---|---|---|
-| 账号、密码哈希、session | 是 | 只存 session/token |
-| 订阅、充值、额度、用量 | New API | 只存展示缓存 |
-| bot 配置、instructions | 否 | 是 |
-| thread、message | 否 | 是 |
-| bot/账号 Memory、routines | 否 | 是 |
-| 本地文件、浏览器内容 | 否 | 是 |
-| 崩溃/错误元数据 | 是 | 可上报 |
-| 对话正文（模型网关） | 经过，不持久化 | 是 |
+| 数据                      | 服务端 / New API | 客户端             |
+| ------------------------- | ---------------- | ------------------ |
+| 账号、密码哈希、session   | 是               | 只存 session/token |
+| 订阅、充值、额度、用量    | New API          | 只存展示缓存       |
+| bot 配置、instructions    | 否               | 是                 |
+| thread、message           | 否               | 是                 |
+| bot/账号 Memory、routines | 否               | 是                 |
+| 本地文件、浏览器内容      | 否               | 是                 |
+| 崩溃/错误元数据           | 是               | 可上报             |
+| 对话正文（模型网关）      | 经过，不持久化   | 是                 |
 
 V1 不存在服务器端的跨设备恢复。用户换机或重装需要本地导出/导入。
 
@@ -435,6 +470,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - `docs/ROUTINES.md`：本地 routine 定义、调度、补跑和运行历史。
 - `docs/ATTACHMENTS.md`：本地附件存储、模型输入和交互边界。
 - `docs/KNOWLEDGE_SKILLS.md`：Knowledge 检索、Skills 格式、工具和分发边界。
+- `docs/LOCAL_TOOLS.md`：本地工具清单、条件、上游差异和迁移状态。
 - `docs/ADMIN.md`：组织、成员、manifest、签名和内部管理面板。
 - `docs/CONTROL_PLANE.md`：多企业、管理员面板、内容分发和日志边界。
 - `docs/BEST_PRACTICES.md`：基于当前代码的使用最佳实践和已知差异。

@@ -1,7 +1,8 @@
 # Model Gateway: OpenAI-Compatible New API Passthrough
 
-> 状态：V1 目标协议。客户端和服务端类型/代理已切换；New API 管理员替用户建令牌的接口
-> 仍需要运营方的 New API fork 提供。
+> 状态：V1 目标协议。客户端和服务端类型/代理已切换；运营方的 New API 部署已于
+> 2026-10-21 由产品所有者确认可用。本文不记录生产 URL 或凭据。本地 New API fork 的管理员
+> 建令牌接口仍需提交，确保源码与已部署版本一致。
 
 ## 1. 目标链路
 
@@ -147,15 +148,15 @@ SDK 再补一层 `/v1` 后请求成 `/v1/model/openai/v1/chat/completions`。
 
 New API 调研结果：
 
-| New API 情况 | 上游 HTTP | Rakazo HTTP |
-|---|---:|---:|
-| session/New API token 无效或过期 | 401 | 401 |
-| 用户/分组无权限、封禁 | 403 | 403 |
-| `insufficient_user_quota` | 403 | **402** |
-| `pre_consume_token_quota_failed` | 403 | **402** |
-| 限流 | 429 | 429 |
-| 渠道/供应商 5xx | 5xx | 502 |
-| 非法请求 | 4xx | 400 |
+| New API 情况                     | 上游 HTTP | Rakazo HTTP |
+| -------------------------------- | --------: | ----------: |
+| session/New API token 无效或过期 |       401 |         401 |
+| 用户/分组无权限、封禁            |       403 |         403 |
+| `insufficient_user_quota`        |       403 |     **402** |
+| `pre_consume_token_quota_failed` |       403 |     **402** |
+| 限流                             |       429 |         429 |
+| 渠道/供应商 5xx                  |       5xx |         502 |
+| 非法请求                         |       4xx |         400 |
 
 New API 的错误体通常是：
 

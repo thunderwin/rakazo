@@ -4,7 +4,36 @@ A bot can set up a fleet of bots the way you would: create groups, organize the 
 the instructions of bots it created, pick their model and schedule them. This is controlled per
 bot and is off by default.
 
+## Local ericBot implementation
+
+The local-first desktop client now has its own Fleet Management implementation. It is a per-bot
+capability, not a unique primary-bot role, and it is available in **Chat settings → Fleet
+management**.
+
+Local behavior:
+
+- Fleet Management is off for every new bot and is not inherited by a child bot.
+- `list_fleet` lists local bots and groups and identifies the child bots this bot owns.
+- `spawn_bot` creates a persistent child bot with `createdByBotId` set to its manager.
+- `create_group` and `update_group` create or change local groups with 2–10 members.
+- `update_bot` changes the profile of a child bot created by the calling bot.
+- `set_child_instructions` requires the version read through `list_fleet`; a stale edit is refused.
+- `set_child_bot_model` changes a child's model or thinking level, or resets both.
+- `create_child_routine` adds a local routine for a child bot.
+- Fleet writes require the local approval dialog. Automated routine, peer-message, and group-chat
+  runs do not receive Fleet tools.
+
+Current local limits:
+
+- There is no `organize_bot` section or pin UI in the local client.
+- There is no bot archive or permanent-delete tool.
+- Only bots created by the calling bot can have instructions, model, routine, or profile changes.
+- The manager cannot read or change credentials.
+
 ## Turning it on
+
+> The remaining sections document the upstream web/server behavior. For the local-client surface
+> and current limits, use the section above.
 
 Open a bot's settings, expand **Advanced** and turn on **Fleet management**. The switch is on web,
 the Electron desktop app (which hosts the web UI) and mobile bot settings.
@@ -61,6 +90,18 @@ instructions, model or thinking level change while the card waits, approving doe
 the bot has to ask again.
 
 `list_fleet`, `organize_bot` and `update_bot` need no card.
+
+## ericBot 本地实现
+
+> 核实日期：2026-10-21。
+
+- 本地 `organize_bot` 会持久化 Bot/Group 的 `section` 和 `pinned`，桌面侧栏按 section 分组并
+  将 pinned 项置顶。
+- 本地 `archive_bot` 只允许归档当前 Bot 创建的子 Bot；归档会停用它的 routines、从活动列表
+  隐藏，并保留 thread、Memory、文件、artifact 和数据。
+- 客户端的“Archived bots”对话框支持恢复和二次确认后的永久删除。
+- 本地 `create_group`、`update_group`、`set_child_instructions`、`set_child_bot_model`、
+  `create_child_routine`、`organize_bot` 和 `archive_bot` 使用桌面工具审批。
 
 ## What a bot cannot do
 

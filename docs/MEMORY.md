@@ -6,9 +6,9 @@
 
 V1 Memory 完全保存在当前账号的本地 SQLite，不上传服务器。它包含两个作用域：
 
-| Scope | 读取范围 | 写入方式 |
-|---|---|---|
-| `bot` | 当前 bot | `remember` 追加到 bot 文档 |
+| Scope  | 读取范围           | 写入方式                              |
+| ------ | ------------------ | ------------------------------------- |
+| `bot`  | 当前 bot           | `remember` 追加到 bot 文档            |
 | `user` | 当前账号的所有 bot | `save_shared_memory` 整份替换共享文档 |
 
 这不是企业共享 Memory。服务器维护、版本化并向组织成员分发 Memory 仍是后续工作。
@@ -55,10 +55,11 @@ SQLite migration 5 新增：
 
 ## 5. UI
 
-选择 bot 后，标题栏的 Memory 按钮打开本地 Memory：
+选择 Bot 后，标题栏的 Memory 按钮只打开当前 Bot 私有文档。账号共享文档从
+“应用设置 → 账户资源 → Shared memory”打开：
 
-- `This bot`：当前 bot 文档。
-- `Shared`：账号中所有 bot 共用的文档。
+- `This bot`：当前 Bot 文档。
+- `Shared`：当前账号中所有 Bot 共用的文档。
 - 查看、编辑、带冲突保护的保存。
 - 删除非 `MEMORY.md` 文档。
 - 下载当前页签的 Markdown。

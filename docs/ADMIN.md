@@ -8,21 +8,42 @@
 - 一个账号可以加入组织；客户端不做组织切换器。
 - 平台管理员可以创建组织并指定已有账号作为 owner。
 - Organization owner/admin 可以管理成员、发布 Client Manifest。
+- `/admin` 直接编辑并管理企业 Knowledge 和 Skills；Bot 模板、群组、Routines 和功能策略
+  仍放在高级 manifest JSON 中。
+- `/admin` 默认中文，并提供同页登录表单；平台管理员和企业管理员共用界面，由服务端
+  返回的组织列表和操作权限区分能力。
+- `featurePolicy.disabledTools` 通过高级 Manifest JSON 编辑。客户端会实际执行该策略，
+  并与每个 Bot 自己的 `disabledBuiltinTools` 合并。
 - Client Manifest 版本递增，保存内容 hash、发布时间和 Ed25519 签名。
 - 每次管理操作写入 `control_plane_audits`。
 - 内部管理页：`/admin`。
+- Admin SPA 源码位于 `apps/admin`；API 只托管 `apps/admin/dist` 并提供控制面 API。
+
+管理页布局（核实日期：2026-10-21）：
+
+- 平台管理员默认优先选择企业组织；Better Auth 自动生成的大量 `Personal` 工作区
+  收进默认折叠的“个人工作区”分组，避免抢占主视图。
+- 侧栏同时显示组织名称、slug 和成员数；新建企业使用渐进展开表单。
+- 成员邀请使用可见的“邀请邮箱 / 角色”标签；窄屏下表单与资源卡片转为单列。
+- 移除成员需要第二次确认，并在可访问名称中同步切换为“确认移除”。
+- 企业内容统一使用“知识库 / 技能”中文名称；空状态说明下一步操作。
 
 ## 2. 角色
 
-| 角色 | 来源 | 能力 |
-|---|---|---|
-| `platform_admin` | `DeploymentSettings.ownerUserId` | 创建组织；管理所有组织 |
-| organization `owner` | Better Auth Member role | 管理本组织、管理员和 manifest |
-| organization `admin` | Better Auth Member role | 管理成员、发布 manifest |
-| `member` | Better Auth Member role | 只读取自己组织的 manifest |
+| 角色                 | 来源                             | 能力                          |
+| -------------------- | -------------------------------- | ----------------------------- |
+| `platform_admin`     | `DeploymentSettings.ownerUserId` | 创建组织；管理所有组织        |
+| organization `owner` | Better Auth Member role          | 管理本组织、管理员和 manifest |
+| organization `admin` | Better Auth Member role          | 管理成员、发布 manifest       |
+| `member`             | Better Auth Member role          | 只读取自己组织的 manifest     |
 
 第一版没有复杂部门树、审批流或单独的平台管理员列表。部署中的首个用户成为
 `platform_admin`。
+
+可选的服务器配置 `PLATFORM_ADMIN_EMAILS` 接受逗号分隔的邮箱列表，用于在不替换部署
+owner 的情况下增加平台管理员。该配置只在服务端读取，普通客户端无法设置。本地开发测试
+账号使用 `platform-admin@ericbot.test`；真实凭证只保存在 Git 忽略的
+`TEST_ACCOUNTS.local.md`。
 
 ## 3. Manifest
 
@@ -39,7 +60,8 @@
 发布流程：
 
 ```text
-管理员编辑 JSON
+管理员编辑企业 Knowledge / Skills
+  （其他 preset 可选高级 JSON）
   -> schema 校验
   -> version + 1
   -> SHA-256 hash
@@ -47,6 +69,25 @@
   -> 保存 client_manifests
   -> 写入 audit
 ```
+
+Knowledge 和 Skills 使用结构化卡片编辑，至少包含稳定 key、展示名称和正文；Skills 正文
+必须是有效 `SKILL.md`。Skill 卡片还可以添加脚本文件，设置相对路径、Node/Python/Shell
+运行时、1–120 秒超时和联网声明；辅助文件可选择“辅助文件”，不会作为入口直接执行。
+服务端发布后，员工客户端通过签名 Manifest 自动同步为 `source=managed` 的只读本地缓存。
+客户端的 `skill_run` 每次仍需员工本地批准，不会在同步时自动执行脚本。
+
+工具策略通过高级 Manifest JSON 编辑：
+
+```json
+{
+  "featurePolicy": {
+    "disabledTools": ["shell", "computer_act"],
+    "allowComputerUse": false
+  }
+}
+```
+
+客户端仍必须有对应的代码工具；该策略只能禁用，不能远程创建或下发原生工具实现。
 
 客户端请求：
 
@@ -100,17 +141,27 @@ openssl pkey -in manifest-private.pem -pubout -outform DER | base64
 
 私钥不得进入仓库、客户端、日志或浏览器。产品打包前需要把公钥安全注入桌面构建配置。
 
+本地开发或 API 镜像需要先构建 Admin SPA：
+
+```bash
+pnpm --filter @rakazo/admin build
+pnpm --filter @rakazo/api start
+```
+
+独立 Vite 开发服务使用 `pnpm --filter @rakazo/admin dev`，默认端口 `5175`，并把
+`/api` 与 `/v1` 代理到 `127.0.0.1:3100`。
+
 ## 6. HTTP 接口
 
-| Method | Path | 用途 |
-|---|---|---|
-| GET | `/v1/client/manifest` | 客户端拉取签名 manifest |
-| GET | `/admin` | 内部管理页 |
-| GET | `/v1/admin/control/me` | 当前管理员和可见组织 |
-| POST | `/v1/admin/control/organizations` | platform admin 创建组织 |
-| GET/PUT | `/v1/admin/control/organizations/:id/manifest` | 查看/发布 manifest |
-| GET/POST | `/v1/admin/control/organizations/:id/members` | 列出/添加成员 |
-| DELETE | `/v1/admin/control/organizations/:id/members/:userId` | 移除成员 |
+| Method   | Path                                                  | 用途                    |
+| -------- | ----------------------------------------------------- | ----------------------- |
+| GET      | `/v1/client/manifest`                                 | 客户端拉取签名 manifest |
+| GET      | `/admin`                                              | 内部管理页              |
+| GET      | `/v1/admin/control/me`                                | 当前管理员和可见组织    |
+| POST     | `/v1/admin/control/organizations`                     | platform admin 创建组织 |
+| GET/PUT  | `/v1/admin/control/organizations/:id/manifest`        | 查看/发布 manifest      |
+| GET/POST | `/v1/admin/control/organizations/:id/members`         | 列出/添加成员           |
+| DELETE   | `/v1/admin/control/organizations/:id/members/:userId` | 移除成员                |
 
 管理写请求拒绝跨 origin 浏览器调用。所有响应不包含 session token、API key 或 provider
 正文。

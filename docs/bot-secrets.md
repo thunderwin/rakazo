@@ -1,5 +1,14 @@
 # Reusable credentials
 
+> **ericBot 本地桌面状态（2026-10-21）：** `request_secret`、`list_secrets`、
+> `secret_request`、`forget_secret` 已迁移到本地 runtime。支持 Bearer、自定义
+> header、Basic、网站登录和 shell command variable；值保存在 Electron `safeStorage`
+> 加密的账号级 vault，不进入模型或 IPC 返回值。网站登录只能通过 `browser_act` 在
+> 保存的精确 HTTPS origin 上填入，command variable 只注入已批准的 `shell` 和
+> `skill_run`。入口是 Bot 的“Chat settings → Credentials”。下文涉及 Postgres、
+> Web/Mobile 和 connector OAuth 的段落描述上游完整产品，不应视为当前 ericBot
+> 已实现事实。
+
 Ask a bot to connect an API using a key or password. It calls `request_secret` with a reference name and an HTTPS service origin. The protected card shows that origin before you save. Web, Electron and mobile use the same backend; the value is cleared from the input when submission starts and is omitted from messages, events and model input.
 
 For example, the bot can request:
@@ -86,8 +95,18 @@ The card asks for a username and a password. Both are stored encrypted in the sa
 ```json
 {
   "actions": [
-    { "kind": "fill_secret", "ref": "e3", "secret": "example_login", "field": "username" },
-    { "kind": "fill_secret", "ref": "e4", "secret": "example_login", "field": "password" },
+    {
+      "kind": "fill_secret",
+      "ref": "e3",
+      "secret": "example_login",
+      "field": "username"
+    },
+    {
+      "kind": "fill_secret",
+      "ref": "e4",
+      "secret": "example_login",
+      "field": "password"
+    },
     { "kind": "click", "ref": "e5" }
   ]
 }
