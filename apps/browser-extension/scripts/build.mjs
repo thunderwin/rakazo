@@ -6,6 +6,7 @@ import { build } from "esbuild";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const icon = path.resolve(root, "../desktop/assets/icon.png");
+const production = process.env.NODE_ENV === "production";
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(path.join(dist, "icons"), { recursive: true });
@@ -16,7 +17,7 @@ await build({
   format: "esm",
   platform: "browser",
   target: "chrome116",
-  sourcemap: true,
+  sourcemap: !production,
   entryNames: "[name]",
 });
 await Promise.all([

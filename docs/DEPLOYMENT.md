@@ -542,3 +542,8 @@ pnpm --filter @rakazo/desktop pack:mac:preview
 成功构建同步资产并覆盖 `internal-latest`。因此官网 URL 始终不变，用户总是下载最新测试包。
 
 该下载站不提供 Apple 公证，也不应被描述为正式稳定版。公开文档和仓库不记录实际生产域名。
+
+浏览器扩展由 `extension-internal` workflow 独立检查、执行 Chromium E2E、生成无 sourcemap
+的 ZIP，并更新 `extension-latest`。Landing Worker 的 `/download/extension` 始终指向最新 ZIP。
+该 ZIP 用于开发和受信任设备内测；Chrome Web Store / Edge Add-ons 提交仍需要开发者账号、
+商店素材、固定商店 ID 和人工审核。

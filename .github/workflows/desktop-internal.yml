@@ -4,7 +4,17 @@ name: desktop-internal
 # GitHub Release and does not require an Apple Developer account or notarization.
 on:
   push:
-    branches: [feat/browser-extension]
+    branches: [main, feat/browser-extension]
+    paths:
+      - ".github/workflows/desktop-internal.yml"
+      - "apps/desktop/**"
+      - "apps/web/**"
+      - "brand/**"
+      - "config/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   workflow_dispatch:
 
 permissions:
@@ -89,8 +99,6 @@ jobs:
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          arch_dir="$ARCH"
-          if [[ "$ARCH" == "x64" ]]; then arch_dir="x64"; fi
           CSC_IDENTITY_AUTO_DISCOVERY=false \
             pnpm --filter @rakazo/desktop exec electron-builder \
               --mac "--$ARCH" --dir --publish never \

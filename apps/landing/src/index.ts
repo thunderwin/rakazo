@@ -5,6 +5,7 @@ const RELEASE_ROOT = `https://github.com/${REPOSITORY}/releases/download/${RELEA
 const files = {
   arm64: "ericBot-macos-arm64-unsigned.zip",
   x64: "ericBot-macos-x64-unsigned.zip",
+  extension: "ericBot-browser-bridge.zip",
   checksums: "SHA256SUMS.txt",
 } as const;
 
@@ -13,10 +14,7 @@ interface AssetFetcher {
 }
 
 const worker = {
-  fetch(
-    request: Request,
-    env: { ASSETS: AssetFetcher },
-  ): Response | Promise<Response> {
+  fetch(request: Request, env: { ASSETS: AssetFetcher }): Response | Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/download/mac/arm64") {
@@ -25,12 +23,23 @@ const worker = {
     if (url.pathname === "/download/mac/x64") {
       return Response.redirect(`${RELEASE_ROOT}/${files.x64}`, 302);
     }
+    if (url.pathname === "/download/extension") {
+      return Response.redirect(
+        `https://github.com/${REPOSITORY}/releases/download/extension-latest/${files.extension}`,
+        302,
+      );
+    }
     if (url.pathname === "/download/checksums") {
       return Response.redirect(`${RELEASE_ROOT}/${files.checksums}`, 302);
     }
     if (url.pathname === "/api/release") {
       return Response.json(
-        { channel: "internal", repository: REPOSITORY, release: RELEASE_TAG, files },
+        {
+          channel: "internal",
+          repository: REPOSITORY,
+          releases: { desktop: RELEASE_TAG, extension: "extension-latest" },
+          files,
+        },
         {
           headers: {
             "cache-control": "public, max-age=60, stale-while-revalidate=300",

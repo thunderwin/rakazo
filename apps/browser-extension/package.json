@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:store": "NODE_ENV=production node scripts/build.mjs",
     "check": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --root ../.. apps/browser-extension/src",
     "test:e2e": "tsx scripts/e2e.ts"

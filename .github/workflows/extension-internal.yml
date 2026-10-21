@@ -1,0 +1,84 @@
+name: extension-internal
+
+on:
+  push:
+    branches: [main, feat/browser-extension]
+    paths:
+      - ".github/workflows/extension-internal.yml"
+      - "apps/browser-extension/**"
+      - "packages/browser-protocol/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extension-internal
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @rakazo/browser-extension check
+      - run: pnpm --filter @rakazo/browser-extension test
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @rakazo/browser-extension test:e2e
+      - run: pnpm --filter @rakazo/browser-extension run build:store
+
+      - name: Archive installable extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          (
+            cd apps/browser-extension/dist
+            zip -qr "$GITHUB_WORKSPACE/release/ericBot-browser-bridge.zip" .
+          )
+          (
+            cd release
+            sha256sum ericBot-browser-bridge.zip > SHA256SUMS.txt
+          )
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ericbot-browser-extension
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish rolling extension release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view extension-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/extension-latest" >/dev/null 2>&1; then
+              gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                -f ref="refs/tags/extension-latest" \
+                -f sha="$GITHUB_SHA" >/dev/null
+            fi
+            gh release create extension-latest \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --prerelease \
+              --title "ericBot browser extension latest" \
+              --notes "Rolling Chromium extension ZIP for trusted internal testing."
+          fi
+          gh release upload extension-latest release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

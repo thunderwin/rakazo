@@ -1,6 +1,9 @@
 name: desktop-latest-sync
 
 on:
+  workflow_run:
+    workflows: [desktop-internal]
+    types: [completed]
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
@@ -15,6 +18,7 @@ concurrency:
 
 jobs:
   sync:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,12 +29,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          run_id="$(
-            gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/actions/runs?branch=feat/browser-extension&status=success&per_page=100" \
-              --jq '.workflow_runs[] | select(.name == "desktop-internal") | .id' |
-              head -n 1
-          )"
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            run_id="${{ github.event.workflow_run.id }}"
+          else
+            run_id="$(
+              gh api --paginate \
+                "repos/${GITHUB_REPOSITORY}/actions/runs?status=success&per_page=100" \
+                --jq '.workflow_runs[] | select(.name == "desktop-internal") | .id' |
+                head -n 1
+            )"
+          fi
           test -n "$run_id"
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
 

@@ -186,6 +186,37 @@ h2 {
   line-height: 1.65;
 }
 
+.extension {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin: 44px 0 18px;
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+}
+
+.extension h2 {
+  margin: 20px 0 12px;
+}
+
+.extension p {
+  max-width: 660px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.extension .button {
+  flex: 0 0 auto;
+}
+
+code {
+  color: var(--ink);
+  font: 0.9em/1.5 ui-monospace, monospace;
+}
+
 .notice {
   display: grid;
   grid-template-columns: 140px 1fr;
@@ -240,5 +271,10 @@ footer a {
 
   .notice {
     grid-template-columns: 1fr;
+  }
+
+  .extension {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
