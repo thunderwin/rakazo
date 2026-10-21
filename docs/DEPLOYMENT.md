@@ -505,3 +505,24 @@ Rakazo 放在 SFO3 会增加一次跨洲传输；FRA1 可能缩短完整流式�
 - 只做了本机备份，尚未配置 R2 异地备份。
 - 当前预发布镜像不能视为可追溯的正式 release；正式版本必须从带 tag 的干净提交构建。
 - Mac 客户端尚未绑定该服务器和 Client Manifest 公钥。
+
+### 打包测试客户端
+
+未签名的内部测试包可以使用：
+
+```sh
+RAKAZO_BUILD_SERVER_URL=https://api.example.com \
+RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY="<服务器上的 SPKI 公钥>" \
+pnpm --filter @rakazo/desktop pack:mac:preview
+```
+
+该命令只生成用于本机 QA 的 `.app`，不能代替签名、公证和正式 DMG。Finder
+启动的安装包没有开发 shell 的运行时环境，因此服务器地址和 manifest 公钥必须在构建时写入。
+
+同事测试前还需要：
+
+- Apple Developer `Developer ID Application` 证书。
+- App Store Connect API key、Key ID 和 Issuer ID。
+- 稳定版本号和 CHANGELOG。
+- 在 Apple Silicon 与 Intel 至少各一台干净 Mac 上安装、登录、升级和卸载测试。
+- 通过密码管理器分发测试账号，不把账号密码写进安装包、README 或聊天记录。

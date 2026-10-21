@@ -18,17 +18,32 @@ That command generates a temporary legacy `.icns` from the current macOS PNG and
 creates `apps/desktop/out/mac-*/ericBot.app`. It is for local QA only; signed
 releases continue to use the Icon Composer source and the CI signing workflow.
 
+Packaged builds must bake the public server and Client Manifest verification
+key into the Electron main process; Finder-launched apps do not inherit the
+development shell's environment:
+
+```sh
+RAKAZO_BUILD_SERVER_URL=https://api.example.com \
+RAKAZO_BUILD_CLIENT_MANIFEST_PUBLIC_KEY=<base64 SPKI public key> \
+pnpm --filter @rakazo/desktop build
+```
+
+The same values are read from repository variables
+`RAKAZO_SERVER_URL` and `RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY` during the signed
+release workflow. A package without them starts without a server connection and
+cannot pull managed configuration.
+
 ## Repository secrets
 
 macOS (required):
 
-| Secret | Value |
-| --- | --- |
-| `DESKTOP_MAC_CSC_LINK` | Base64 of the `Developer ID Application` certificate exported as `.p12` |
-| `DESKTOP_MAC_CSC_KEY_PASSWORD` | Password used when exporting the `.p12` |
-| `APPLE_API_KEY_ID` | App Store Connect API key ID (the `XXXXXXXXXX` in `AuthKey_XXXXXXXXXX.p8`) |
-| `APPLE_API_ISSUER` | Issuer ID shown on App Store Connect > Users and Access > Integrations |
-| `APPLE_API_KEY_P8` | Contents of the `AuthKey_*.p8` file |
+| Secret                         | Value                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `DESKTOP_MAC_CSC_LINK`         | Base64 of the `Developer ID Application` certificate exported as `.p12`    |
+| `DESKTOP_MAC_CSC_KEY_PASSWORD` | Password used when exporting the `.p12`                                    |
+| `APPLE_API_KEY_ID`             | App Store Connect API key ID (the `XXXXXXXXXX` in `AuthKey_XXXXXXXXXX.p8`) |
+| `APPLE_API_ISSUER`             | Issuer ID shown on App Store Connect > Users and Access > Integrations     |
+| `APPLE_API_KEY_P8`             | Contents of the `AuthKey_*.p8` file                                        |
 
 The API key needs the Developer role. The workflow writes it to a mode 600 file
 in the runner's temp directory for the packaging step and deletes it afterwards.
@@ -39,10 +54,10 @@ the patch once an electron-builder release includes that fix.
 
 Windows (optional):
 
-| Secret | Value |
-| --- | --- |
-| `DESKTOP_WIN_CSC_LINK` | Base64 of the Authenticode certificate as `.p12`/`.pfx` |
-| `DESKTOP_WIN_CSC_KEY_PASSWORD` | Its password |
+| Secret                         | Value                                                   |
+| ------------------------------ | ------------------------------------------------------- |
+| `DESKTOP_WIN_CSC_LINK`         | Base64 of the Authenticode certificate as `.p12`/`.pfx` |
+| `DESKTOP_WIN_CSC_KEY_PASSWORD` | Its password                                            |
 
 When `DESKTOP_WIN_CSC_LINK` is unset the Windows build and its release assets
 are skipped. macOS and Linux always build, and the release is only published
