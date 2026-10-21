@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
+import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { i18n } from "../lib/i18n";
 import { LocalComposer } from "./LocalComposer";
 import type { LocalBot } from "./types";
+
+vi.mock("@lingui/react/macro", () => {
+  const t = (strings: TemplateStringsArray, ...values: unknown[]) => String.raw(strings, ...values);
+  return {
+    Trans: ({ children }: { children: ReactNode }) => children,
+    useLingui: () => ({ t }),
+  };
+});
 
 const assistant: LocalBot = {
   id: "bot-1",
@@ -16,6 +26,9 @@ const assistant: LocalBot = {
   modelId: null,
   thinkingLevel: null,
   disabledBuiltinTools: [],
+  fleetManagement: false,
+  createdByBotId: null,
+  instructionsVersion: 1,
   templateKey: null,
   templateVersion: null,
   createdAt: "2026-10-20T00:00:00.000Z",
@@ -37,6 +50,8 @@ let root: ReturnType<typeof createRoot> | undefined;
 let host: HTMLDivElement;
 
 beforeEach(() => {
+  i18n.load("en", {});
+  i18n.activate("en");
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal(
     "matchMedia",

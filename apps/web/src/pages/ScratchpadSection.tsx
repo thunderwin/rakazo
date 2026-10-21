@@ -6,7 +6,32 @@ import { useEffect, useRef, useState } from "react";
 
 import { rpc } from "../lib/rpc";
 
-export function ScratchpadSection({ botId }: { botId: string }) {
+export interface ScratchpadDataSource {
+  list: (botId: string) => Promise<ScratchpadItem[]>;
+  create: (botId: string, title: string) => Promise<ScratchpadItem>;
+  update: (
+    itemId: string,
+    status: ScratchpadItem["status"],
+  ) => Promise<ScratchpadItem>;
+  remove: (itemId: string) => Promise<void>;
+}
+
+const serverScratchpadSource: ScratchpadDataSource = {
+  list: (botId) => rpc.scratchpad.list({ botId }),
+  create: (botId, title) => rpc.scratchpad.create({ botId, title }),
+  update: (itemId, status) => rpc.scratchpad.update({ itemId, status }),
+  remove: async (itemId) => {
+    await rpc.scratchpad.remove({ itemId });
+  },
+};
+
+export function ScratchpadSection({
+  botId,
+  source = serverScratchpadSource,
+}: {
+  botId: string;
+  source?: ScratchpadDataSource;
+}) {
   const { t } = useLingui();
   const [items, setItems] = useState<ScratchpadItem[]>([]);
   const [draft, setDraft] = useState("");
@@ -16,15 +41,15 @@ export function ScratchpadSection({ botId }: { botId: string }) {
 
   async function refresh() {
     const generation = ++listGeneration.current;
-    const list = await rpc.scratchpad.list({ botId });
+    const list = await source.list(botId);
     if (generation !== listGeneration.current) return;
     setItems(list);
   }
 
   useEffect(() => {
     const generation = ++listGeneration.current;
-    void rpc.scratchpad
-      .list({ botId })
+    void source
+      .list(botId)
       .then((list) => {
         if (generation !== listGeneration.current) return;
         setItems(list);
@@ -36,7 +61,7 @@ export function ScratchpadSection({ botId }: { botId: string }) {
     return () => {
       listGeneration.current += 1;
     };
-  }, [botId]);
+  }, [botId, source]);
 
   async function addItem() {
     const title = draft.trim();
@@ -44,9 +69,12 @@ export function ScratchpadSection({ botId }: { botId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const created = await rpc.scratchpad.create({ botId, title });
+      const created = await source.create(botId, title);
       setDraft("");
-      setItems((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      setItems((current) => [
+        created,
+        ...current.filter((item) => item.id !== created.id),
+      ]);
       try {
         await refresh();
       } catch {
@@ -59,15 +87,22 @@ export function ScratchpadSection({ botId }: { botId: string }) {
     }
   }
 
-  async function setStatus(item: ScratchpadItem, status: ScratchpadItem["status"]) {
+  async function setStatus(
+    item: ScratchpadItem,
+    status: ScratchpadItem["status"],
+  ) {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      const updated = await rpc.scratchpad.update({ itemId: item.id, status });
+      const updated = await source.update(item.id, status);
       setItems((current) => {
-        const next = current.map((entry) => (entry.id === updated.id ? updated : entry));
-        return status === "done" ? next.filter((entry) => entry.status !== "done") : next;
+        const next = current.map((entry) =>
+          entry.id === updated.id ? updated : entry,
+        );
+        return status === "done"
+          ? next.filter((entry) => entry.status !== "done")
+          : next;
       });
       try {
         await refresh();
@@ -86,7 +121,7 @@ export function ScratchpadSection({ botId }: { botId: string }) {
     setBusy(true);
     setError(null);
     try {
-      await rpc.scratchpad.remove({ itemId: item.id });
+      await source.remove(item.id);
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       try {
         await refresh();
@@ -119,7 +154,9 @@ export function ScratchpadSection({ botId }: { botId: string }) {
               aria-label={item.status === "done" ? t`Reopen` : t`Complete`}
               checked={item.status === "done"}
               disabled={busy}
-              onCheckedChange={(checked) => void setStatus(item, checked ? "done" : "open")}
+              onCheckedChange={(checked) =>
+                void setStatus(item, checked ? "done" : "open")
+              }
               className="mt-0.5"
             />
             <div className="min-w-0 flex-1">
@@ -130,12 +167,17 @@ export function ScratchpadSection({ botId }: { botId: string }) {
                 {item.title}
               </div>
               {item.notes ? (
-                <div className="mt-0.5 text-[12.5px] text-muted-foreground/80" dir="auto">
+                <div
+                  className="mt-0.5 text-[12.5px] text-muted-foreground/80"
+                  dir="auto"
+                >
                   {item.notes}
                 </div>
               ) : null}
             </div>
-            <span className="shrink-0 text-[12px] text-muted-foreground/80">{item.status}</span>
+            <span className="shrink-0 text-[12px] text-muted-foreground/80">
+              {item.status}
+            </span>
             {item.status === "open" ? (
               <Button
                 variant="ghost"
@@ -196,7 +238,9 @@ export function ScratchpadSection({ botId }: { botId: string }) {
           <Trans>Add</Trans>
         </Button>
       </form>
-      {error ? <div className="mt-2 text-[13px] text-destructive">{error}</div> : null}
+      {error ? (
+        <div className="mt-2 text-[13px] text-destructive">{error}</div>
+      ) : null}
     </div>
   );
 }

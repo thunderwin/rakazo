@@ -1,6 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
-import type { Bot, Ticket, TicketComment, TicketPriority, TicketStatus } from "@rakazo/contracts";
+import type {
+  Bot,
+  Ticket,
+  TicketComment,
+  TicketPriority,
+  TicketStatus,
+} from "@rakazo/contracts";
 import {
   TICKET_COMMENT_MAX_LENGTH,
   TICKET_DESCRIPTION_MAX_LENGTH,
@@ -21,7 +27,7 @@ import {
 } from "@rakazo/ui-web";
 import { ChevronLeft } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
 import { useTicketPriorityLabels } from "../lib/ticket-priority";
@@ -29,42 +35,99 @@ import { useTicketStatusLabels } from "../lib/ticket-status";
 import { errorText } from "../lib/user-error";
 import { WindowChrome } from "./WindowChrome";
 
-export function BoardPage() {
+type BoardOwner = Pick<Bot, "id" | "name">;
+
+export interface BoardDataSource {
+  listTickets: () => Promise<Ticket[]>;
+  listOwners: () => Promise<BoardOwner[]>;
+  createTicket: (input: {
+    title: string;
+    description?: string;
+    assigneeBotId: string;
+    priority: TicketPriority;
+  }) => Promise<Ticket>;
+  updateTicket: (input: {
+    id: string;
+    title?: string;
+    description?: string | null;
+    assigneeBotId?: string;
+    status?: TicketStatus;
+    priority?: TicketPriority;
+  }) => Promise<Ticket>;
+  comments: (ticketId: string) => Promise<TicketComment[]>;
+  comment: (
+    ticketId: string,
+    body: string,
+    authorBotId?: string,
+  ) => Promise<TicketComment>;
+  subscribe?: (options: {
+    signal: AbortSignal;
+  }) => Promise<AsyncIterable<{ ticketId?: string }>>;
+}
+
+const serverBoardSource: BoardDataSource = {
+  listTickets: async () => (await rpc.tickets.list({})).tickets,
+  listOwners: () => rpc.bots.list(),
+  createTicket: (input) => rpc.tickets.create(input),
+  updateTicket: (input) => rpc.tickets.update(input),
+  comments: (ticketId) => rpc.tickets.comments({ ticketId }),
+  comment: (ticketId, body) => rpc.tickets.comment({ ticketId, body }),
+  subscribe: ({ signal }) => rpc.boards.subscribe(undefined, { signal }),
+};
+
+export function BoardPage({
+  source = serverBoardSource,
+  showWindowChrome = true,
+  embedded = false,
+  onBack,
+}: {
+  source?: BoardDataSource;
+  showWindowChrome?: boolean;
+  embedded?: boolean;
+  onBack?: () => void;
+}) {
   const { t } = useLingui();
+  const navigate = useNavigate();
   const statuses = useTicketStatusLabels();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [bots, setBots] = useState<Bot[]>([]);
+  const [bots, setBots] = useState<BoardOwner[]>([]);
   const [selected, setSelected] = useState<Ticket | "new" | null>(null);
   const [error, setError] = useState("");
-  const [commentRefresh, setCommentRefresh] = useState<Record<string, number>>({});
+  const [commentRefresh, setCommentRefresh] = useState<Record<string, number>>(
+    {},
+  );
   const reload = useCallback(async () => {
-    const result = await rpc.tickets.list({});
-    setTickets(result.tickets);
-  }, []);
+    setTickets(await source.listTickets());
+  }, [source]);
 
   useEffect(() => {
     let currentController: AbortController | undefined;
     let active = true;
-    void Promise.all([rpc.tickets.list({}), rpc.bots.list()])
-      .then(([result, owners]) => {
+    void Promise.all([source.listTickets(), source.listOwners()])
+      .then(([nextTickets, owners]) => {
         if (!active) return;
-        setTickets(result.tickets);
+        setTickets(nextTickets);
         setBots(owners);
       })
       .catch((cause) => {
         if (active) setError(errorText(cause));
       });
+    if (!source.subscribe) {
+      return () => {
+        active = false;
+      };
+    }
     let cancelRetry: (() => void) | undefined;
     void (async () => {
       while (active) {
         const controller = new AbortController();
         currentController = controller;
         try {
-          const stream = await rpc.boards.subscribe(undefined, { signal: controller.signal });
+          const stream = await source.subscribe!({ signal: controller.signal });
           if (!active) return;
-          const result = await rpc.tickets.list({});
+          const nextTickets = await source.listTickets();
           if (!active) return;
-          setTickets(result.tickets);
+          setTickets(nextTickets);
           setCommentRefresh((previous) => ({
             ...previous,
             "*": (previous["*"] ?? 0) + 1,
@@ -74,10 +137,11 @@ export function BoardPage() {
             if (!active) return;
             setCommentRefresh((previous) => ({
               ...previous,
-              [event.ticketId ?? "*"]: (previous[event.ticketId ?? "*"] ?? 0) + 1,
+              [event.ticketId ?? "*"]:
+                (previous[event.ticketId ?? "*"] ?? 0) + 1,
             }));
-            const result = await rpc.tickets.list({});
-            if (active) setTickets(result.tickets);
+            const next = await source.listTickets();
+            if (active) setTickets(next);
           }
         } catch (cause) {
           if (active) setError(errorText(cause));
@@ -100,13 +164,20 @@ export function BoardPage() {
       currentController?.abort();
       cancelRetry?.();
     };
-  }, []);
+  }, [source]);
 
   return (
-    <div className="flex h-screen min-w-0 flex-col overflow-hidden bg-background text-foreground">
-      <WindowChrome />
+    <div
+      className={`flex ${embedded ? "h-full" : "h-screen"} min-w-0 flex-col overflow-hidden bg-background text-foreground`}
+    >
+      {showWindowChrome ? <WindowChrome /> : null}
       <header className="flex items-center gap-3 border-b px-4 py-3">
-        <Button variant="ghost" size="icon" render={<Link to="/app" />} aria-label={t`Back`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t`Back`}
+          onClick={onBack ?? (() => navigate("/app"))}
+        >
           <ChevronLeft />
         </Button>
         <h1 className="flex-1 font-medium">
@@ -136,10 +207,15 @@ export function BoardPage() {
                     className="h-auto w-full flex-col items-start gap-1 whitespace-normal p-3 text-left font-normal"
                     onClick={() => setSelected(ticket)}
                   >
-                    <span className="text-xs text-muted-foreground">{ticket.ref}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {ticket.ref}
+                    </span>
                     <span>{ticket.title}</span>
                     <span className="text-xs text-muted-foreground">
-                      {bots.find((bot) => bot.id === ticket.assigneeBotId)?.name}
+                      {
+                        bots.find((bot) => bot.id === ticket.assigneeBotId)
+                          ?.name
+                      }
                     </span>
                   </Button>
                 ))}
@@ -161,6 +237,7 @@ export function BoardPage() {
             (commentRefresh["*"] ?? 0) +
             (selected === "new" ? 0 : (commentRefresh[selected.id] ?? 0))
           }
+          source={source}
           onClose={() => setSelected(null)}
           onSaved={reload}
         />
@@ -175,10 +252,12 @@ function TicketDialog({
   onClose,
   onSaved,
   commentRevision,
+  source,
 }: {
   commentRevision?: number;
   ticket: Ticket | null;
-  bots: Bot[];
+  bots: BoardOwner[];
+  source: BoardDataSource;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
@@ -188,9 +267,13 @@ function TicketDialog({
   const priorities = useTicketPriorityLabels();
   const [title, setTitle] = useState(ticket?.title ?? "");
   const [description, setDescription] = useState(ticket?.description ?? "");
-  const [owner, setOwner] = useState(ticket?.assigneeBotId ?? bots[0]?.id ?? "");
+  const [owner, setOwner] = useState(
+    ticket?.assigneeBotId ?? bots[0]?.id ?? "",
+  );
   const [status, setStatus] = useState<TicketStatus>(ticket?.status ?? "todo");
-  const [priority, setPriority] = useState<TicketPriority>(ticket?.priority ?? "normal");
+  const [priority, setPriority] = useState<TicketPriority>(
+    ticket?.priority ?? "normal",
+  );
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -199,8 +282,8 @@ function TicketDialog({
   useEffect(() => {
     if (!ticket) return;
     let active = true;
-    void rpc.tickets
-      .comments({ ticketId: ticket.id })
+    void source
+      .comments(ticket.id)
       .then((rows) => {
         if (active) setComments(rows);
       })
@@ -210,24 +293,32 @@ function TicketDialog({
     return () => {
       active = false;
     };
-  }, [ticket, commentRevision]);
+  }, [ticket, commentRevision, source]);
 
   async function save() {
     setBusy(true);
     setError("");
     try {
       if (ticket)
-        await rpc.tickets.update({
+        await source.updateTicket({
           id: ticket.id,
           ...(title !== ticket.title ? { title } : {}),
-          ...(description !== (ticket.description ?? "") ? { description } : {}),
+          ...(description !== (ticket.description ?? "")
+            ? { description }
+            : {}),
           ...(owner !== (ticket.assigneeBotId ?? bots[0]?.id ?? "")
             ? { assigneeBotId: owner }
             : {}),
           ...(status !== ticket.status ? { status } : {}),
           ...(priority !== ticket.priority ? { priority } : {}),
         });
-      else await rpc.tickets.create({ title, description, assigneeBotId: owner, priority });
+      else
+        await source.createTicket({
+          title,
+          description,
+          assigneeBotId: owner,
+          priority,
+        });
       await onSaved();
       onClose();
     } catch (cause) {
@@ -241,7 +332,7 @@ function TicketDialog({
     setBusy(true);
     setError("");
     try {
-      const row = await rpc.tickets.comment({ ticketId: ticket.id, body });
+      const row = await source.comment(ticket.id, body, owner);
       setComments((previous) => [...previous, row]);
       setBody("");
     } catch (cause) {
@@ -269,7 +360,10 @@ function TicketDialog({
             void save();
           }}
         >
-          <label htmlFor={`${formId}-title`} className="block space-y-1 text-sm">
+          <label
+            htmlFor={`${formId}-title`}
+            className="block space-y-1 text-sm"
+          >
             <span>
               <Trans>Title</Trans>
             </span>
@@ -281,7 +375,10 @@ function TicketDialog({
               required
             />
           </label>
-          <label htmlFor={`${formId}-description`} className="block space-y-1 text-sm">
+          <label
+            htmlFor={`${formId}-description`}
+            className="block space-y-1 text-sm"
+          >
             <span>
               <Trans>Description</Trans>
             </span>
@@ -293,7 +390,10 @@ function TicketDialog({
               maxLength={TICKET_DESCRIPTION_MAX_LENGTH}
             />
           </label>
-          <label htmlFor={`${formId}-owner`} className="block space-y-1 text-sm">
+          <label
+            htmlFor={`${formId}-owner`}
+            className="block space-y-1 text-sm"
+          >
             <span>
               <Trans>Owner</Trans>
             </span>
@@ -312,7 +412,10 @@ function TicketDialog({
             </NativeSelect>
           </label>
           {ticket ? (
-            <label htmlFor={`${formId}-status`} className="block space-y-1 text-sm">
+            <label
+              htmlFor={`${formId}-status`}
+              className="block space-y-1 text-sm"
+            >
               <span>
                 <Trans>Status</Trans>
               </span>
@@ -320,7 +423,9 @@ function TicketDialog({
                 className="w-full"
                 id={`${formId}-status`}
                 value={status}
-                onChange={(event) => setStatus(event.target.value as TicketStatus)}
+                onChange={(event) =>
+                  setStatus(event.target.value as TicketStatus)
+                }
               >
                 {TICKET_STATUSES.map((value) => (
                   <NativeSelectOption key={value} value={value}>
@@ -330,7 +435,10 @@ function TicketDialog({
               </NativeSelect>
             </label>
           ) : null}
-          <label htmlFor={`${formId}-priority`} className="block space-y-1 text-sm">
+          <label
+            htmlFor={`${formId}-priority`}
+            className="block space-y-1 text-sm"
+          >
             <span>
               <Trans>Priority</Trans>
             </span>
@@ -338,7 +446,9 @@ function TicketDialog({
               className="w-full"
               id={`${formId}-priority`}
               value={priority}
-              onChange={(event) => setPriority(event.target.value as TicketPriority)}
+              onChange={(event) =>
+                setPriority(event.target.value as TicketPriority)
+              }
             >
               {TICKET_PRIORITIES.map((value) => (
                 <NativeSelectOption key={value} value={value}>
@@ -354,12 +464,17 @@ function TicketDialog({
           </div>
         </form>
         {ticket ? (
-          <div data-testid="ticket-comments" className="space-y-3 border-t pt-3">
+          <div
+            data-testid="ticket-comments"
+            className="space-y-3 border-t pt-3"
+          >
             {comments.map((row) => (
               <div key={row.id} className="text-sm">
                 <div className="mb-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <span>{row.authorName}</span>
-                  <time dateTime={row.createdAt}>{formatRelativeTime(row.createdAt)}</time>
+                  <time dateTime={row.createdAt}>
+                    {formatRelativeTime(row.createdAt)}
+                  </time>
                 </div>
                 <ChatMarkdown>{row.body}</ChatMarkdown>
               </div>

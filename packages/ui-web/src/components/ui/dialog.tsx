@@ -5,7 +5,13 @@ import { Button } from "@rakazo/ui-web/components/ui/button";
 
 import { cn } from "@rakazo/ui-web/lib/utils";
 import { XIcon } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
+
+const DialogLabelsContext = React.createContext({ close: "Close" });
+
+function DialogLabelsProvider({ close, children }: { close: string; children: React.ReactNode }) {
+  return <DialogLabelsContext.Provider value={{ close }}>{children}</DialogLabelsContext.Provider>;
+}
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -44,6 +50,7 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
 }) {
+  const labels = React.useContext(DialogLabelsContext);
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -62,7 +69,7 @@ function DialogContent({
             render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{labels.close}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -84,6 +91,7 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean;
 }) {
+  const labels = React.useContext(DialogLabelsContext);
   return (
     <div
       data-slot="dialog-footer"
@@ -95,7 +103,9 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close>
+        <DialogPrimitive.Close render={<Button variant="outline" />}>
+          {labels.close}
+        </DialogPrimitive.Close>
       )}
     </div>
   );
@@ -131,6 +141,7 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogLabelsProvider,
   DialogOverlay,
   DialogPortal,
   DialogTitle,

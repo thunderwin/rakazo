@@ -1,3 +1,4 @@
+import { msg } from "@lingui/core/macro";
 import type {
   DesktopGroupMessage,
   DesktopLocalBot,
@@ -7,6 +8,7 @@ import type {
   DesktopLocalUserSettings,
   RakazoDesktopLocal,
 } from "@rakazo/contracts";
+import { i18n } from "../lib/i18n";
 
 export type LocalBridge = RakazoDesktopLocal;
 export type LocalBot = DesktopLocalBot;
@@ -62,5 +64,5 @@ export function messageText(message: { blocks: unknown[] }): string {
 export function localErrorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim()
     ? error.message
-    : "The request could not be completed.";
+    : i18n._(msg`The request could not be completed.`);
 }

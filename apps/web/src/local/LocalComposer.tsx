@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import {
   ATTACHMENT_ALLOWED_MIME_TYPES,
   ATTACHMENT_MAX_BYTES,
@@ -48,6 +49,7 @@ export function LocalComposer({
   onSend: (text: string, attachments: readonly ComposerAttachment[]) => Promise<boolean>;
   onStop: () => Promise<void>;
 }) {
+  const { t } = useLingui();
   const [draft, setDraft] = useState("");
   const [mentions, setMentions] = useState<ComposerMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -159,16 +161,16 @@ export function LocalComposer({
     const next: ComposerAttachment[] = [];
     for (const file of files) {
       if (attachments.length + next.length >= ATTACHMENT_MAX_COUNT) {
-        skipped.push(`${file.name} (max ${ATTACHMENT_MAX_COUNT} files)`);
+        skipped.push(t`${file.name} (max ${ATTACHMENT_MAX_COUNT} files)`);
         continue;
       }
       const mimeType = inferAttachmentMimeType(file.name, file.type);
       if (!mimeType) {
-        skipped.push(`${file.name} (unsupported type)`);
+        skipped.push(t`${file.name} (unsupported type)`);
         continue;
       }
       if (file.size > ATTACHMENT_MAX_BYTES) {
-        skipped.push(`${file.name} (over ${attachmentSizeLabel(ATTACHMENT_MAX_BYTES)})`);
+        skipped.push(t`${file.name} (over ${attachmentSizeLabel(ATTACHMENT_MAX_BYTES)})`);
         continue;
       }
       next.push({
@@ -179,7 +181,7 @@ export function LocalComposer({
       });
     }
     if (next.length) setAttachments((current) => [...current, ...next]);
-    setNotice(skipped.length ? `Skipped ${skipped.join(", ")}` : "");
+    setNotice(skipped.length ? t`Skipped ${skipped.join(", ")}` : "");
   }
 
   function removeAttachment(attachment: ComposerAttachment) {
@@ -230,7 +232,7 @@ export function LocalComposer({
 
   return (
     <fieldset
-      aria-label="Message composer"
+      aria-label={t`Message composer`}
       className="relative m-0 min-w-0 border-0 px-4 pb-4 pt-2 sm:px-6"
       onDragOver={(event) => {
         if (isFileDrag(event.dataTransfer)) event.preventDefault();
@@ -245,7 +247,7 @@ export function LocalComposer({
         <div
           id="local-mention-picker"
           role="listbox"
-          aria-label="Mentions"
+          aria-label={t`Mentions`}
           className="absolute inset-x-4 bottom-[calc(100%-2px)] z-20 overflow-hidden rounded-[16px] border border-border bg-popover p-1 shadow-2xl sm:inset-x-6"
         >
           {options.map((mention, index) => {
@@ -275,7 +277,7 @@ export function LocalComposer({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px]">@{mention.name}</span>
                   <span className="block truncate text-[11.5px] text-muted-foreground">
-                    {bot?.description || "Bot"}
+                    {bot?.description || t`Bot`}
                   </span>
                 </span>
               </button>
@@ -316,7 +318,7 @@ export function LocalComposer({
                 <button
                   type="button"
                   className="rounded-full p-0.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                  aria-label={`Remove ${attachment.file.name}`}
+                  aria-label={t`Remove ${attachment.file.name}`}
                   disabled={running || sending}
                   onClick={() => removeAttachment(attachment)}
                 >
@@ -346,7 +348,7 @@ export function LocalComposer({
                   <button
                     type="button"
                     className="rounded-full p-0.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                    aria-label={`Remove mention ${mention.name}`}
+                    aria-label={t`Remove mention ${mention.name}`}
                     onClick={() => removeMention(mention)}
                   >
                     <X size={11} />
@@ -360,7 +362,7 @@ export function LocalComposer({
           <button
             type="button"
             className="mb-0.5 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-secondary text-muted-foreground hover:text-foreground"
-            aria-label="Attach files"
+            aria-label={t`Attach files`}
             disabled={running || sending}
             onClick={() => fileInput.current?.click()}
           >
@@ -369,7 +371,7 @@ export function LocalComposer({
           <button
             type="button"
             className="mb-0.5 grid size-8 shrink-0 place-items-center rounded-full border border-border bg-secondary text-muted-foreground hover:text-foreground"
-            aria-label="Mention a bot"
+            aria-label={t`Mention a bot`}
             disabled={running || sending || bots.length === 0}
             onClick={() => {
               const next = draft ? `${draft} @` : "@";
@@ -389,8 +391,8 @@ export function LocalComposer({
             aria-expanded={pickerOpen}
             aria-controls={pickerOpen ? "local-mention-picker" : undefined}
             aria-activedescendant={pickerOpen ? `local-mention-option-${activeIndex}` : undefined}
-            aria-label={`Message ${activeBotName}`}
-            placeholder={`Message ${activeBotName}`}
+            aria-label={t`Message ${activeBotName}`}
+            placeholder={t`Message ${activeBotName}`}
             autoComplete="off"
             disabled={running}
             className="min-h-8 max-h-42 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
@@ -415,7 +417,7 @@ export function LocalComposer({
               variant="secondary"
               size="icon"
               className="mb-0.5 rounded-full"
-              aria-label="Stop"
+              aria-label={t`Stop`}
               onClick={() => void onStop()}
             >
               <Square size={14} fill="currentColor" />
@@ -425,7 +427,7 @@ export function LocalComposer({
               type="button"
               size="icon"
               className="mb-0.5 rounded-full"
-              aria-label="Send"
+              aria-label={t`Send`}
               disabled={!canSend || sending}
               onClick={() => void submit()}
             >
@@ -436,7 +438,11 @@ export function LocalComposer({
       </div>
       {notice ? <p className="mt-1 text-center text-[10.5px] text-destructive">{notice}</p> : null}
       <p className="mt-1.5 text-center text-[10.5px] text-muted-foreground/75">
-        {enterToSend ? "Enter to send · Shift+Enter for a new line" : "⌘/Ctrl+Enter to send"}
+        {enterToSend ? (
+          <Trans>Enter to send · Shift+Enter for a new line</Trans>
+        ) : (
+          <Trans>⌘/Ctrl+Enter to send</Trans>
+        )}
       </p>
     </fieldset>
   );

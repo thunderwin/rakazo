@@ -46,6 +46,7 @@ export default defineConfig({
       "infra/updater/src/**/*.test.ts",
       "apps/desktop/src/**/*.test.ts",
       "apps/browser-extension/src/**/*.test.ts",
+      "apps/admin/src/**/*.test.{ts,tsx}",
       "apps/web/src/**/*.test.{ts,tsx}",
       "apps/mobile/lib/**/*.test.{ts,tsx}",
       "apps/mobile/plugins/**/*.test.js",

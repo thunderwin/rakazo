@@ -29,21 +29,49 @@ msgstr ""
 msgid "{0, plural, one {Waiting for sign-in — the link expires in about # minute.} other {Waiting for sign-in — the link expires in about # minutes.}}"
 msgstr ""
 
+#. placeholder {0}: login ? "Password" : "Value"
+#. placeholder {0}: type === "login" ? "Password" : "Value"
+#: src/local/LocalSecretsDialog.tsx
+msgid "{0}"
+msgstr ""
+
 #. placeholder {0}: file.name
 #: src/pages/Shell.tsx
 msgid "{0} (max {ATTACHMENT_MAX_COUNT} attachments)"
 msgstr "{0} (maximal {ATTACHMENT_MAX_COUNT} Anhänge)"
 
 #. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (max {ATTACHMENT_MAX_COUNT} files)"
+msgstr ""
+
+#. placeholder {0}: file.name
+#. placeholder {1}: attachmentSizeLabel(ATTACHMENT_MAX_BYTES)
 #. placeholder {1}: attachmentSizeLabel(attachmentMaxBytes(bootstrapMe))
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "{0} (over {1})"
 msgstr "{0} (über {1})"
+
+#. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (unsupported type)"
+msgstr ""
 
 #. placeholder {0}: preset.n
 #: src/pages/RoutineSchedule.tsx
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
+
+#. placeholder {0}: group.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots"
+msgstr ""
+
+#. placeholder {0}: activeGroup.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots · Shared group thread"
+msgstr ""
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -85,6 +113,16 @@ msgstr ""
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "{0} runs · {1} tokens"
 msgstr "{0} Läufe · {1} Tokens"
+
+#. placeholder {0}: tools.length
+#: src/local/LocalMessageView.tsx
+msgid "{0} tool actions"
+msgstr ""
+
+#. placeholder {0}: run.tools.length
+#: src/local/LocalActivityDialog.tsx
+msgid "{0} tools"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/ExternalConversationSettings.tsx
@@ -285,6 +323,18 @@ msgstr "{workingBotName} arbeitet"
 msgid "@{0}"
 msgstr "@{0}"
 
+#: src/local/LocalComposer.tsx
+msgid "⌘/Ctrl+Enter to send"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "1 tool"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "1 tool action"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
 msgstr ""
@@ -292,6 +342,10 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "A command's output"
 msgstr "Ausgabe eines Befehls"
+
+#: src/local/LocalApp.tsx
+msgid "A local assistant with access to approved tools."
+msgstr ""
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/ModelSettingsOverlay.tsx
@@ -320,6 +374,7 @@ msgstr ""
 msgid "Access token (optional)"
 msgstr "Zugriffstoken (optional)"
 
+#: src/local/LocalApp.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Account"
 msgstr "Konto"
@@ -335,6 +390,10 @@ msgstr "Konto-ID"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Account label"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "Account resources"
 msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
@@ -353,6 +412,7 @@ msgstr "Aktionen für {0}"
 msgid "Actions for space"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -363,6 +423,8 @@ msgid "Active model"
 msgstr "Aktives Modell"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Shell.tsx
 msgid "Activity"
 msgstr "Aktivität"
@@ -372,6 +434,11 @@ msgstr "Aktivität"
 #: src/pages/ScratchpadSection.tsx
 msgid "Add"
 msgstr "Hinzufügen"
+
+#. placeholder {0}: bot.name
+#: src/local/LocalGroupDialog.tsx
+msgid "Add {0}"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
@@ -423,6 +490,7 @@ msgstr "Verbundenes Modell hinzufügen"
 msgid "Add connected models to use them as backups."
 msgstr "Füge verbundene Modelle hinzu, um sie als Backups zu verwenden."
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Add credential"
 msgstr ""
@@ -455,6 +523,10 @@ msgstr "OpenAPI hinzufügen"
 #: src/pages/PluginsOverlay.tsx
 msgid "Add remote MCP server"
 msgstr "Remote-MCP-Server hinzufügen"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Add script"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
@@ -547,6 +619,10 @@ msgstr "{0} ohne Nachfrage erlauben"
 msgid "Allow email actions without asking"
 msgstr "E-Mail-Aktionen ohne Nachfrage erlauben"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Allow network access"
+msgstr ""
+
 #: src/components/AskCard.tsx
 msgid "Allow once"
 msgstr "Einmal erlauben"
@@ -635,6 +711,12 @@ msgstr "API-Schlüssel"
 msgid "API key header"
 msgstr "API-Schlüssel-Header"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "App settings"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "Erscheinungsbild"
@@ -668,10 +750,20 @@ msgstr "archiviert"
 msgid "Archived"
 msgstr "Archiviert"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots"
+msgstr ""
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots keep their chats, memory, and files."
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Archived. Chat, memory, and files kept."
 msgstr "Archiviert. Chat, Erinnerungen und Dateien bleiben erhalten."
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Arguments"
 msgstr "Argumente"
@@ -679,6 +771,10 @@ msgstr "Argumente"
 #: src/pages/Artifacts.tsx
 #: src/pages/Shell.tsx
 msgid "Artifacts"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Ask a question, run a local tool, or work in your signed-in browser."
 msgstr ""
 
 #. placeholder {0}: rule.matchValue
@@ -716,6 +812,10 @@ msgstr "Vor dem Senden externer E-Mails nachfragen"
 msgid "Ask the server owner to configure this provider."
 msgstr ""
 
+#: src/local/LocalApp.tsx
+msgid "Assistant"
+msgstr ""
+
 #. placeholder {0}: preset.time
 #: src/pages/RoutineSchedule.tsx
 msgid "at {0}"
@@ -729,6 +829,10 @@ msgstr "um {timeSelect}"
 msgid "Attach file"
 msgstr "Datei anhängen"
 
+#: src/local/LocalComposer.tsx
+msgid "Attach files"
+msgstr ""
+
 #: src/components/computer/TerminalApp.tsx
 msgid "Attached {path}"
 msgstr "{path} angehängt"
@@ -737,6 +841,14 @@ msgstr "{path} angehängt"
 #: src/pages/shell/chat-context.tsx
 msgid "Attachment"
 msgstr "Anhang"
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Attachment not found"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Authentication"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Authentication failed."
@@ -758,6 +870,10 @@ msgstr "Autorisieren"
 #: src/pages/shell/message-cards.tsx
 msgid "Authorize this server so agents can use its tools. A popup opens."
 msgstr "Autorisiere diesen Server, damit Agents seine Tools nutzen können. Ein Pop-up öffnet sich."
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Auto"
+msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -790,6 +906,7 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "Zurück zur Anmeldung"
@@ -810,6 +927,7 @@ msgstr "Backup-Modelle gespeichert."
 msgid "Base URL"
 msgstr "Basis-URL"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Basic auth"
 msgstr ""
@@ -818,6 +936,7 @@ msgstr ""
 msgid "Basic auth ({username})"
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -850,6 +969,9 @@ msgstr "Computer von {0} wird gestartet"
 msgid "bot"
 msgstr "Bot"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalComposer.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -859,6 +981,22 @@ msgstr "Bot"
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
 msgid "Bot"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot color"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Bot memory and shared documents stay on this device and may be included in model requests."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot name"
 msgstr ""
 
 #: src/pages/Shell.tsx
@@ -877,6 +1015,7 @@ msgstr ""
 msgid "Bot's model"
 msgstr "Modell des Bots"
 
+#: src/local/LocalApp.tsx
 #: src/pages/Artifacts.tsx
 msgid "Bots"
 msgstr ""
@@ -898,9 +1037,15 @@ msgid "Browse MCP servers"
 msgstr ""
 
 #: src/components/computer/ComputerWorkspace.tsx
+#: src/local/LocalAppSettings.tsx
 msgid "Browser"
 msgstr "Browser"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Browser bridge unavailable"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Built-in"
 msgstr "Integriert"
@@ -939,6 +1084,14 @@ msgstr "Kann keine Bilder lesen"
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalChoicePromptDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -994,13 +1147,35 @@ msgstr ""
 msgid "Chart failed to render: {error}"
 msgstr "Diagramm konnte nicht angezeigt werden: {error}"
 
+#: src/local/LocalApp.tsx
+msgid "chat"
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "Chat apps"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalBotSettings.tsx
+msgid "Chat settings"
 msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Chat Settings"
 msgstr "Chat-Einstellungen"
+
+#. placeholder {0}: activeBot?.name ?? t`your assistant`
+#: src/local/LocalApp.tsx
+msgid "Chat with {0}"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats and bot settings stay on this device."
+msgstr ""
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/pages/HostComputerPrompt.tsx
@@ -1068,9 +1243,23 @@ msgstr ""
 msgid "Choose a new password"
 msgstr "Wähle ein neues Passwort"
 
+#: src/local/LocalChoicePromptDialog.tsx
+msgid "Choose an answer"
+msgstr ""
+
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose file"
 msgstr "Datei wählen"
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome connected"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome not connected"
+msgstr ""
 
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
@@ -1094,6 +1283,10 @@ msgstr ""
 msgid "Clearing…"
 msgstr "Wird geleert…"
 
+#: src/local/LocalApp.tsx
+msgid "Clicking in the browser"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Client ID"
 msgstr ""
@@ -1103,6 +1296,14 @@ msgid "Client secret"
 msgstr ""
 
 #: src/components/ErrorBoundary.tsx
+#: src/components/I18nBootstrap.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/PeerMessagesOverlay.tsx
@@ -1172,6 +1373,10 @@ msgstr "Benutzereinstellungen schließen"
 msgid "Close voice settings"
 msgstr "Stimmeinstellungen schließen"
 
+#: src/local/LocalApp.tsx
+msgid "Close window"
+msgstr ""
+
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Cloud"
 msgstr "Cloud"
@@ -1212,6 +1417,7 @@ msgid "Command"
 msgstr "Befehl"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Command variable"
 msgstr "Befehlsvariable"
@@ -1227,6 +1433,10 @@ msgstr ""
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Abschließen"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Completed"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/Shell.tsx
@@ -1274,6 +1484,11 @@ msgstr "Durch die Bereitstellung konfiguriert"
 msgid "Configured servers"
 msgstr "Konfigurierte Server"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Confirm delete"
@@ -1293,6 +1508,7 @@ msgid "Confirmations"
 msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalAppSettings.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -1352,6 +1568,10 @@ msgstr "Verbunden. Die Tools sind ab deiner nächsten Nachricht verfügbar."
 msgid "Connecting…"
 msgstr "Verbindung wird hergestellt…"
 
+#: src/local/LocalApp.tsx
+msgid "Connection problem"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Connection test failed."
 msgstr "Verbindungstest fehlgeschlagen."
@@ -1361,12 +1581,17 @@ msgstr "Verbindungstest fehlgeschlagen."
 msgid "Connection to {0} is still pending. You can close this and check again."
 msgstr "Die Verbindung zu {0} steht noch aus. Du kannst dieses Fenster schließen und später erneut nachsehen."
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Content"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Context limit"
 msgstr "Kontextlimit"
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Onboarding.tsx
 msgid "Continue"
 msgstr "Weiter"
@@ -1390,6 +1615,10 @@ msgstr "Mit E-Mail fortfahren"
 msgid "Copied"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Copied. No messages, cookies, or tokens are included."
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/Shell.tsx
@@ -1398,6 +1627,10 @@ msgstr "Kopieren"
 
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Copy .env example"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "Copy diagnostics"
 msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
@@ -1443,6 +1676,10 @@ msgstr ""
 #: src/pages/McpOAuthCallback.tsx
 msgid "Could not complete OAuth"
 msgstr "OAuth konnte nicht abgeschlossen werden"
+
+#: src/local/LocalApp.tsx
+msgid "Could not complete the request"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Could not complete the update. Try again."
@@ -1564,6 +1801,10 @@ msgstr "{0} konnte nicht heruntergeladen werden. Versuche es erneut."
 msgid "Could not download {name}. Try again."
 msgstr "{name} konnte nicht heruntergeladen werden. Versuche es erneut."
 
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not download attachment"
+msgstr ""
+
 #: src/components/computer/FilesApp.tsx
 msgid "Could not download file"
 msgstr "Datei konnte nicht heruntergeladen werden"
@@ -1591,6 +1832,10 @@ msgstr "Bestätigungsregeln konnten nicht geladen werden"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load artifacts."
+msgstr ""
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not load attachment"
 msgstr ""
 
 #: src/pages/ModelBackupsSettings.tsx
@@ -1868,6 +2113,9 @@ msgstr ""
 msgid "Couldn't update your timezone"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -1880,9 +2128,18 @@ msgstr "Erstellen"
 msgid "Create a section and move {0} into it."
 msgstr "Erstelle einen Abschnitt und verschiebe {0} dorthin."
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Create account"
 msgstr "Konto erstellen"
+
+#: src/local/LocalApp.tsx
+msgid "Create at least two bots first"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Create bot"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Create group"
@@ -1933,6 +2190,8 @@ msgstr "Zugangsdaten"
 msgid "credential saved"
 msgstr "Zugangsdaten gespeichert"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Credentials"
 msgstr ""
@@ -1945,6 +2204,7 @@ msgstr "Zugangsdaten werden verschlüsselt und dem Modell nie gesendet."
 msgid "Cron"
 msgstr "Cron"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Cron expression"
 msgstr "Cron-Ausdruck"
@@ -1954,6 +2214,11 @@ msgstr "Cron-Ausdruck"
 msgid "Current password"
 msgstr "Aktuelles Passwort"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Custom cron"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Custom header"
 msgstr ""
@@ -1966,6 +2231,7 @@ msgstr ""
 msgid "Customize bot avatar"
 msgstr "Bot-Avatar anpassen"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Dark"
 msgstr "Dunkel"
@@ -1988,6 +2254,7 @@ msgstr "Tage"
 msgid "Decline"
 msgstr "Ablehnen"
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -2008,10 +2275,19 @@ msgstr ""
 msgid "Default ({0})"
 msgstr "Standard ({0})"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Default model"
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "Standardbereich"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2090,6 +2366,9 @@ msgstr "Bereitstellungsstandard"
 msgid "Describe what this bot does"
 msgstr "Beschreibe, was dieser Bot macht"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Description"
@@ -2120,6 +2399,7 @@ msgstr ""
 msgid "Discard recording"
 msgstr "Aufnahme verwerfen"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2145,6 +2425,7 @@ msgstr "Verbindung wird getrennt…"
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Dismiss"
 msgstr "Verwerfen"
@@ -2193,9 +2474,11 @@ msgid "Download"
 msgstr ""
 
 #. placeholder {0}: basename(entry.path)
+#. placeholder {0}: block.name
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 #: src/components/computer/FilesApp.tsx
+#: src/local/LocalAttachmentView.tsx
 msgid "Download {0}"
 msgstr "{0} herunterladen"
 
@@ -2206,6 +2489,10 @@ msgstr "{name} herunterladen"
 #: src/pages/KnowledgeSection.tsx
 msgid "Download as markdown"
 msgstr "Als Markdown herunterladen"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Download as Markdown"
+msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Download Executor"
@@ -2243,6 +2530,7 @@ msgstr "Zuerst bearbeiten"
 msgid "Edit Profile"
 msgstr "Profil bearbeiten"
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Email"
 msgstr "E-Mail"
@@ -2294,6 +2582,26 @@ msgstr "Gib eine ganze Zahl von 1 bis 1000 für das Bilderlimit ein."
 msgid "Enter an API key before testing."
 msgstr "Gib vor dem Test einen API-Schlüssel ein."
 
+#: src/local/LocalAppSettings.tsx
+msgid "Enter sends the message"
+msgstr ""
+
+#: src/local/LocalComposer.tsx
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Entrypoints receive input.json and run in a fresh folder under skill-runs/."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "ericBot could not start"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "ericBot runs these locally while the app is open. Missed work runs once after the next launch."
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Shell.tsx
 msgid "Error"
@@ -2308,6 +2616,7 @@ msgstr "Alle"
 msgid "every {intervalAmountSelect} {intervalUnitSelect}"
 msgstr "alle {intervalAmountSelect} {intervalUnitSelect}"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every day"
@@ -2318,6 +2627,7 @@ msgstr "Jeden Tag"
 msgid "Every hour"
 msgstr "Jede Stunde"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every Monday"
 msgstr "Jeden Montag"
@@ -2377,6 +2687,7 @@ msgstr ""
 msgid "failed"
 msgstr "fehlgeschlagen"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Failed"
 msgstr "Fehlgeschlagen"
@@ -2472,6 +2783,7 @@ msgstr "MCP-Verbindung wird abgeschlossen…"
 msgid "Flag unexpected actions"
 msgstr ""
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Fleet management"
 msgstr ""
@@ -2502,6 +2814,7 @@ msgstr "Vollbild"
 msgid "Gateway ID"
 msgstr "Gateway-ID"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "Allgemein"
@@ -2522,11 +2835,14 @@ msgstr ""
 msgid "Git event"
 msgstr ""
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/Shell.tsx
 msgid "Group"
 msgstr "Gruppe"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "Group settings"
 msgstr "Gruppeneinstellungen"
@@ -2535,8 +2851,13 @@ msgstr "Gruppeneinstellungen"
 msgid "Group updates"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Groups"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Handing off to another bot"
 msgstr ""
 
 #: src/components/call/CallCard.tsx
@@ -2559,6 +2880,7 @@ msgstr ""
 msgid "Header \"{header}\""
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -2572,6 +2894,10 @@ msgstr "Header-Wert"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
 msgstr "Beispiel anhören"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Helper"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
@@ -2608,6 +2934,11 @@ msgstr "Zum Sprechen gedrückt halten"
 msgid "Hold to talk, release to send"
 msgstr "Zum Sprechen halten, zum Senden loslassen"
 
+#. placeholder {0}: handoff.hop
+#: src/local/LocalMessageView.tsx
+msgid "hop {0}"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "hour"
 msgstr "Stunde"
@@ -2624,6 +2955,10 @@ msgstr "Wie oft"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "How to check"
 msgstr "So wird geprüft"
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "HTTPS origin"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "I’m done"
@@ -2651,6 +2986,12 @@ msgstr ""
 
 #: src/lib/ticket-status.ts
 msgid "In review"
+msgstr ""
+
+#. placeholder {0}: pairing.port
+#. placeholder {1}: pairing.code
+#: src/local/LocalAppSettings.tsx
+msgid "In the extension, enter port <0>{0}</0> and code <1>{1}</1>."
 msgstr ""
 
 #: src/pages/BillingSettingsPanel.tsx
@@ -2687,6 +3028,8 @@ msgstr "Anweisungsverlauf"
 
 #: src/components/AskCard.tsx
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Instructions"
 msgstr "Anweisungen"
 
@@ -2757,13 +3100,24 @@ msgstr "Erinnerungen behalten"
 msgid "key"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Knowledge"
 msgstr "Wissen"
 
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Knowledge and skills"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "Sprache"
+
+#: src/local/LocalAppSettings.tsx
+msgid "Language, appearance, browser access, and defaults for this device."
+msgstr ""
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -2787,10 +3141,15 @@ msgstr "{app} gestartet"
 msgid "Leave"
 msgstr ""
 
+#: src/local/LocalBotSettings.tsx
+msgid "Let this bot create and manage bots it owns, plus their groups and routines."
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Lets this bot organize, retune and schedule the bots it creates. You approve each change."
 msgstr "Erlaubt diesem Bot, die von ihm erstellten Bots zu organisieren, anzupassen und zu planen. Du genehmigst jede Änderung."
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Light"
 msgstr "Hell"
@@ -2823,6 +3182,10 @@ msgstr "Hört zu"
 #: src/components/composer/HoldToTalk.tsx
 msgid "Listening…"
 msgstr "Hört zu…"
+
+#: src/local/LocalApp.tsx
+msgid "Listing local files"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Load earlier messages"
@@ -2884,6 +3247,7 @@ msgstr "Stimmanbieter werden geladen…"
 msgid "Loading…"
 msgstr "Wird geladen…"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Local"
 msgstr "Lokal"
@@ -2892,12 +3256,33 @@ msgstr "Lokal"
 msgid "Local access lets bots run commands without asking. Avoid it on shared or public servers."
 msgstr "Mit lokalem Zugriff können Bots ohne Rückfrage Befehle ausführen. Vermeide dies auf gemeinsam genutzten oder öffentlichen Servern."
 
+#: src/local/LocalApp.tsx
+msgid "Local assistant"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
+msgid "Local bot"
+msgstr ""
+
 #: src/pages/HostComputerPrompt.tsx
 msgid "Local computer access requires the latest desktop app."
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Local reference documents and reusable SKILL.md instructions. Organization-managed items are read-only."
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "Local run and tool history. Arguments and results stay on this device."
+msgstr ""
+
 #: src/pages/LocalSettings.tsx
 msgid "Local Server Settings"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Local-first workspace"
 msgstr ""
 
 #: src/pages/Paywall.tsx
@@ -2940,6 +3325,28 @@ msgstr "MCP-Server verwalten"
 msgid "Manage messaging settings"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed"
+msgstr ""
+
+#. placeholder {0}: managedManifest.organizationName
+#: src/local/LocalApp.tsx
+msgid "Managed by {0}"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed by your organization. Edit the source package to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Managed by your organization. Run it now or update the assigned preset on the server."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Managed by your organization. Update the assigned preset on the server to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Manual"
 msgstr ""
@@ -2968,6 +3375,10 @@ msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Maximize"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Maximize window"
 msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
@@ -3002,21 +3413,37 @@ msgstr "Mittel"
 msgid "Medium"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Members"
+msgstr ""
+
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
 msgid "Members ({0})"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Memory"
 msgstr "Erinnerungen"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Memory scope"
 msgstr "Erinnerungsbereich"
 
+#: src/local/LocalComposer.tsx
+msgid "Mention a bot"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Mention one or several members, or send a message to wake the first bot."
+msgstr ""
+
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Mentions"
 msgstr ""
@@ -3034,10 +3461,15 @@ msgstr "Nachricht"
 msgid "Message"
 msgstr "Nachricht"
 
+#: src/local/LocalComposer.tsx
+msgid "Message {activeBotName}"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Message {activeName}"
 msgstr "Nachricht an {activeName}"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Message composer"
 msgstr ""
@@ -3071,6 +3503,10 @@ msgstr ""
 msgid "Microphone failed"
 msgstr "Mikrofonfehler"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Mine"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Minimal"
@@ -3093,6 +3529,10 @@ msgstr ""
 msgid "Minimize call"
 msgstr "Anruf minimieren"
 
+#: src/local/LocalApp.tsx
+msgid "Minimize window"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "minute"
 msgstr "Minute"
@@ -3101,6 +3541,10 @@ msgstr "Minute"
 #: src/pages/RoutineSchedule.tsx
 msgid "minutes"
 msgstr "Minuten"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Missed"
+msgstr ""
 
 #: src/components/call/VoiceChatCard.tsx
 msgid "Missed call"
@@ -3125,6 +3569,14 @@ msgstr "Modell-ID"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Model options"
 msgstr "Modelloptionen"
+
+#: src/local/LocalApp.tsx
+msgid "Model quota exhausted"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Model service is busy"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Model spend uses your provider keys."
@@ -3169,6 +3621,10 @@ msgstr ""
 msgid "More computer actions"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Morning brief"
+msgstr ""
+
 #: src/pages/ModelBackupsSettings.tsx
 msgid "Move {full} down"
 msgstr "{full} nach unten verschieben"
@@ -3194,6 +3650,11 @@ msgid "Muted"
 msgstr "Stummgeschaltet"
 
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAuthScreen.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Auth.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3215,6 +3676,10 @@ msgstr "Gruppe benennen"
 msgid "Name this routine"
 msgstr ""
 
+#: src/local/LocalBotSettings.tsx
+msgid "Name, model, instructions, and identity for this bot."
+msgstr ""
+
 #: src/lib/roster-status.ts
 msgid "Needs an answer"
 msgstr ""
@@ -3232,10 +3697,21 @@ msgstr "Übernahme erforderlich"
 msgid "Needs you"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "New bot"
 msgstr "Neuer Bot"
 
+#: src/local/LocalApp.tsx
+msgid "New bot name"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "New document"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "New group"
 msgstr "Neue Gruppe"
@@ -3249,11 +3725,16 @@ msgstr "Neuer offener Arbeitspunkt"
 msgid "New password"
 msgstr "Neues Passwort"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "New routine"
+msgstr ""
+
 #: src/pages/BotContextMenu.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "New section"
 msgstr "Neuer Abschnitt"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "New skill"
 msgstr "Neuer Skill"
@@ -3266,6 +3747,14 @@ msgstr ""
 msgid "New ticket"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Next"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "No activity recorded yet."
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No agent connections yet."
 msgstr ""
@@ -3273,6 +3762,10 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "Keine Apps entsprechen deiner Suche."
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "No archived bots."
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."
@@ -3303,12 +3796,17 @@ msgstr ""
 msgid "No chat apps linked yet."
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "No credentials saved for this bot."
 msgstr ""
 
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No group chats yet."
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "No knowledge documents yet."
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3364,12 +3862,24 @@ msgstr ""
 msgid "No results"
 msgstr "Keine Ergebnisse"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No routines yet."
+msgstr ""
+
 #: src/pages/ActivityList.tsx
 msgid "No runs match these filters."
 msgstr ""
 
 #: src/pages/RoutineRunHistory.tsx
 msgid "No runs yet"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No runs yet."
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "No shared documents yet."
 msgstr ""
 
 #: src/pages/KnowledgeSection.tsx
@@ -3392,6 +3902,10 @@ msgstr ""
 msgid "No trigger"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Node"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "None yet"
 msgstr "Noch keine"
@@ -3412,6 +3926,10 @@ msgstr ""
 msgid "Not now"
 msgstr "Jetzt nicht"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Not scheduled"
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Nothing is still running"
 msgstr "Nichts läuft mehr"
@@ -3419,6 +3937,10 @@ msgstr "Nichts läuft mehr"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "Noch nichts gemerkt"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Nothing remembered yet."
+msgstr ""
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
@@ -3457,6 +3979,10 @@ msgstr ""
 #: src/pages/RoutineSchedule.tsx
 msgid "on the 1st at {0}"
 msgstr "am 1. um {0}"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "One time"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Only empty spaces can be deleted. Delete its bots and groups first."
@@ -3531,6 +4057,10 @@ msgstr "{path} geöffnet"
 msgid "Opened its thread."
 msgstr "Thread geöffnet."
 
+#: src/local/LocalApp.tsx
+msgid "Opening a browser page"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Opening chat…"
 msgstr "Chat wird geöffnet…"
@@ -3582,11 +4112,16 @@ msgstr ""
 msgid "PagerDuty incident"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Pair another"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Park"
 msgstr "Zurückstellen"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -3628,6 +4163,7 @@ msgstr "Füge deinen API-Schlüssel ein"
 msgid "Paste your API key, then test again."
 msgstr "Füge deinen API-Schlüssel ein und teste erneut."
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Paused"
 msgstr ""
@@ -3645,6 +4181,10 @@ msgstr "Foto"
 msgid "Pick {GROUP_MEMBER_MIN}–{GROUP_MEMBER_MAX}"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Pick 2–10 bots. Every member shares this group's history and can hand work to another member."
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Pick a model from the catalog."
 msgstr "Wähle ein Modell aus dem Katalog."
@@ -3660,6 +4200,10 @@ msgstr "Wähle ein Tool zum Prüfen"
 #: src/pages/BotContextMenu.tsx
 msgid "Pin"
 msgstr "Anheften"
+
+#: src/local/LocalApp.tsx
+msgid "Pinned"
+msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
 msgid "Play {name}"
@@ -3706,8 +4250,17 @@ msgstr ""
 msgid "Project ID"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Prompt"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
+#: src/local/LocalSecretsDialog.tsx
 msgid "Protected input"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Protected values stay on this device and are never returned to the model."
 msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
@@ -3723,6 +4276,10 @@ msgstr "Anbieter"
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "Pull Request"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Python"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Queued"
@@ -3744,6 +4301,14 @@ msgstr "Reaktionen"
 msgid "Read replies aloud"
 msgstr "Antworten vorlesen"
 
+#: src/local/LocalApp.tsx
+msgid "Reading a local file"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Reading the browser page"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Reasoning effort"
@@ -3760,6 +4325,10 @@ msgstr ""
 #: src/pages/ActivityList.tsx
 msgid "Recent"
 msgstr "Kürzlich"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Recent runs"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
@@ -3873,6 +4442,9 @@ msgid "Remove"
 msgstr "Entfernen"
 
 #. placeholder {0}: attachment.file.name
+#. placeholder {0}: bot.name
+#: src/local/LocalComposer.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Remove {0}"
 msgstr "{0} entfernen"
@@ -3894,11 +4466,16 @@ msgstr ""
 msgid "Remove change trigger"
 msgstr "Änderungsauslöser entfernen"
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "Remove credential"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr ""
 
 #. placeholder {0}: mention.name
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Remove mention {0}"
 msgstr "Erwähnung von {0} entfernen"
@@ -3909,6 +4486,10 @@ msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove schedule"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Remove script"
 msgstr ""
 
 #. placeholder {0}: selectedSkill.name
@@ -3976,8 +4557,16 @@ msgstr ""
 msgid "Replying to {0}"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Report an issue"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "Research & writing"
+msgstr ""
+
+#: src/local/LocalGroupDialog.tsx
+msgid "Research team"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
@@ -4018,6 +4607,7 @@ msgid "Restart to update"
 msgstr ""
 
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Restore"
 msgstr "Wiederherstellen"
@@ -4038,7 +4628,12 @@ msgstr "Wiederhergestellt"
 msgid "Restoring your workspace"
 msgstr ""
 
+#: src/local/LocalActivityDialog.tsx
+msgid "Result"
+msgstr ""
+
 #: src/components/AccountAccess.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelBackupsSettings.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4064,6 +4659,8 @@ msgid "Return to Rakazo"
 msgstr "Zurück zu Rakazo"
 
 #. placeholder {0}: doc.revision
+#. placeholder {0}: document.revision
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "rev {0}"
 msgstr "Rev. {0}"
@@ -4093,6 +4690,8 @@ msgstr ""
 msgid "Routine"
 msgstr "Routine"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Routines"
 msgstr "Routinen"
@@ -4101,6 +4700,7 @@ msgstr "Routinen"
 msgid "Routines that run while you're away"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"
 msgstr ""
@@ -4109,14 +4709,24 @@ msgstr ""
 msgid "Run history"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Run now"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "Run stopped"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Run time must be in the future."
 msgstr ""
 
 #: src/components/CloudAgentCard.tsx
+#: src/local/LocalActivityDialog.tsx
 msgid "running"
 msgstr "läuft"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Running"
 msgstr "Läuft"
@@ -4124,6 +4734,10 @@ msgstr "Läuft"
 #: src/pages/RoutineEditor.tsx
 msgid "Running · Stop"
 msgstr "Wird ausgeführt · Stoppen"
+
+#: src/local/LocalApp.tsx
+msgid "Running a local command"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "Running…"
@@ -4135,6 +4749,12 @@ msgstr ""
 
 #: src/components/AskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -4150,6 +4770,7 @@ msgstr "Speichern"
 msgid "Save backups"
 msgstr "Backups speichern"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Save credential"
 msgstr ""
@@ -4202,6 +4823,34 @@ msgstr "Wird gespeichert…"
 #: src/lib/call-session.ts
 msgid "Say yes or no, or answer in a sentence."
 msgstr "Antworte mit Ja oder Nein oder in einem Satz."
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Schedule"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Scheduled"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script content"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script path"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script runtime"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Scripts"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Scrolling the browser page"
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4266,6 +4915,7 @@ msgstr "Bot auswählen"
 msgid "Select a connected model"
 msgstr "Verbundenes Modell auswählen"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Send"
 msgstr "Senden"
@@ -4328,6 +4978,10 @@ msgstr "Servername"
 msgid "Server URL"
 msgstr "Server-URL"
 
+#: src/local/LocalApp.tsx
+msgid "Session expired"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4352,6 +5006,7 @@ msgstr "Einrichtungshilfe"
 msgid "Shape"
 msgstr "Form"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -4365,11 +5020,16 @@ msgstr ""
 msgid "Shared documents"
 msgstr "Geteilte Dokumente"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Shared memory"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared skills"
 msgstr "Geteilte Skills"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Shell"
 msgstr "Shell"
 
@@ -4418,6 +5078,7 @@ msgid "Sidebar density"
 msgstr ""
 
 #: src/lib/localized-provider-hint.ts
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
@@ -4443,6 +5104,10 @@ msgstr "Melde dich bei deinem bestehenden Konto an, um SSO zu verknüpfen"
 msgid "Sign in with the subscription, or test the API key instead."
 msgstr "Melde dich mit dem Abonnement an oder teste stattdessen den API-Schlüssel."
 
+#: src/local/LocalApp.tsx
+msgid "Sign out"
+msgstr ""
+
 #: src/pages/Auth.tsx
 #: src/pages/Welcome.tsx
 msgid "Sign up"
@@ -4457,6 +5122,10 @@ msgstr ""
 msgid "Skill {0}"
 msgstr "Skill {0}"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Skills"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 msgid "Skip"
@@ -4467,6 +5136,7 @@ msgid "Skip or deploy key"
 msgstr "Überspringen oder Deploy-Key"
 
 #. placeholder {0}: skipped.join(", ")
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Skipped {0}"
 msgstr "{0} übersprungen"
@@ -4491,6 +5161,11 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "Something went wrong. Try again."
 msgstr "Etwas ist schiefgelaufen. Versuche es erneut."
+
+#. placeholder {0}: sourceLabel(editing.source)
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Source: {0}"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 msgid "Space"
@@ -4540,6 +5215,11 @@ msgstr "Sprachmodell"
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO ist vorübergehend nicht verfügbar. Versuche es erneut."
 
+#. placeholder {0}: activeGroup.name
+#: src/local/LocalApp.tsx
+msgid "Start {0}"
+msgstr ""
+
 #: src/pages/Paywall.tsx
 msgid "Start {trialDays}-day free trial"
 msgstr ""
@@ -4568,6 +5248,7 @@ msgstr ""
 msgid "Steps"
 msgstr "Schritte"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Stop"
 msgstr "Stoppen"
@@ -4580,10 +5261,18 @@ msgstr "Vorlesen stoppen"
 msgid "Stop teaching"
 msgstr "Anlernen beenden"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Stopped"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
 msgid "Stopped."
 msgstr "Gestoppt."
+
+#: src/local/LocalApp.tsx
+msgid "Stopping…"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
@@ -4628,6 +5317,7 @@ msgstr ""
 msgid "Switching…"
 msgstr "Wird gewechselt…"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "System"
 msgstr "System"
@@ -4635,6 +5325,10 @@ msgstr "System"
 #: src/pages/Shell.tsx
 msgid "Take control"
 msgstr "Kontrolle übernehmen"
+
+#: src/local/LocalApp.tsx
+msgid "Taking over an existing tab"
+msgstr ""
 
 #: src/components/teach/TeachComputerOverlay.tsx
 msgid "Teach a task"
@@ -4688,6 +5382,14 @@ msgstr "Anmeldung testen"
 msgid "Testing…"
 msgstr "Wird getestet…"
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "The agent needs a credential. It will not be shown to the model or sent in chat."
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "The agent uses the Chrome profile where the extension is installed. Page text can enter model requests; cookies are never exported."
+msgstr ""
+
 #: src/components/SoftwareUpdateSection.tsx
 msgid "The API did not come back. Refresh this page."
 msgstr ""
@@ -4695,6 +5397,14 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."
 msgstr "Zeitüberschreitung der Verbindung."
+
+#: src/local/LocalApp.tsx
+msgid "The desktop bridge is unavailable."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "The local desktop bridge is unavailable."
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
@@ -4705,6 +5415,10 @@ msgstr "Der Modellanbieter hat einen Fehler zurückgegeben."
 msgid "The provider is rate-limiting requests."
 msgstr "Der Anbieter drosselt die Anfragen."
 
+#: src/local/types.ts
+msgid "The request could not be completed."
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "Der ausgewählte Erinnerungsanbieter ist in diesem Build nicht verfügbar."
@@ -4714,6 +5428,8 @@ msgid "These saved settings can't be read. Remove it and add it again."
 msgstr ""
 
 #: src/components/call/CallCard.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4723,6 +5439,14 @@ msgstr "Denkmodus"
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Thinking: {activeThinkingLabel}"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Thinking…"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "This bot"
 msgstr ""
 
 #: src/pages/Shell.tsx
@@ -4752,6 +5476,10 @@ msgstr "dieser Computer"
 #. placeholder {0}: pendingDelete.versionCount
 #: src/pages/Artifacts.tsx
 msgid "This deletes all {0} versions of this artifact. This can't be undone."
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "This device"
 msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
@@ -4790,6 +5518,10 @@ msgstr ""
 msgid "This reset link is invalid or expired"
 msgstr "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen"
 
+#: src/local/LocalMessageView.tsx
+msgid "This run did not finish"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "This server cannot be assigned without a bot."
 msgstr "Dieser Server kann ohne Bot nicht zugewiesen werden."
@@ -4810,14 +5542,23 @@ msgstr "Diese Abonnementanmeldung ist in Rakazo noch nicht verfügbar. Verwende 
 msgid "This week"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Time"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "Time of day"
 msgstr "Uhrzeit"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Timeout seconds"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Timezone"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Title"
@@ -4917,6 +5658,10 @@ msgstr ""
 #: src/components/AskCard.tsx
 msgid "Type your answer"
 msgstr "Gib deine Antwort ein"
+
+#: src/local/LocalApp.tsx
+msgid "Typing in the browser"
+msgstr ""
 
 #: src/pages/BotContextMenu.tsx
 msgid "Unassigned"
@@ -5065,6 +5810,14 @@ msgstr ""
 msgid "Use Protected input for passwords."
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Use the bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Use the default"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Use this model"
 msgstr "Dieses Modell verwenden"
@@ -5078,6 +5831,7 @@ msgid "Use your own key"
 msgstr "Eigenen Schlüssel verwenden"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Username"
 msgstr ""
@@ -5085,6 +5839,10 @@ msgstr ""
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Uses this server's own {hostCredentialSource} credentials to access {selectedProviderName}."
 msgstr "Verwendet die eigenen {hostCredentialSource}-Zugangsdaten dieses Servers für den Zugriff auf {selectedProviderName}."
+
+#: src/local/LocalApp.tsx
+msgid "Using {name}"
+msgstr ""
 
 #: src/pages/shell/bot-credentials.tsx
 msgid "Value"
@@ -5140,6 +5898,7 @@ msgstr ""
 msgid "Webhook"
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Website login"
 msgstr ""
@@ -5148,6 +5907,7 @@ msgstr ""
 msgid "week"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Weekdays"
@@ -5165,6 +5925,10 @@ msgstr ""
 msgid "What result will you demonstrate?"
 msgstr "Welches Ergebnis wirst du vorführen?"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "What should this bot do when the routine runs?"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "What should this routine do each time it runs?"
 msgstr ""
@@ -5172,6 +5936,10 @@ msgstr ""
 #: src/pages/shell/bot-panel.tsx
 msgid "What this bot is for"
 msgstr "Wofür dieser Bot gedacht ist"
+
+#: src/local/LocalGroupDialog.tsx
+msgid "What this group works on"
+msgstr ""
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "What to return"
@@ -5205,6 +5973,11 @@ msgstr "Wo sollen Bots ausgeführt werden?"
 msgid "Won't do"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMessageView.tsx
+msgid "Working"
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
 msgid "Working…"
@@ -5212,6 +5985,10 @@ msgstr "Wird verarbeitet…"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Writing a local file"
 msgstr ""
 
 #: src/components/computer/TerminalApp.tsx
@@ -5227,6 +6004,7 @@ msgstr ""
 msgid "Yesterday"
 msgstr "Gestern"
 
+#: src/local/LocalMessageView.tsx
 #: src/pages/Shell.tsx
 msgid "You"
 msgstr "Du"
@@ -5252,9 +6030,17 @@ msgstr "Du hast die Kontrolle"
 msgid "Your Anthropic"
 msgstr "Dein Anthropic"
 
+#: src/local/LocalApp.tsx
+msgid "your assistant"
+msgstr ""
+
 #: src/pages/Auth.tsx
 msgid "Your email address"
 msgstr "Deine E-Mail-Adresse"
+
+#: src/local/LocalAuthScreen.tsx
+msgid "Your local AI workspace"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

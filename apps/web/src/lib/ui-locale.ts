@@ -15,6 +15,9 @@ export const UI_LOCALES = [
 
 export type UiLocale = (typeof UI_LOCALES)[number];
 
+/** Locales covered by the local-first desktop renderer. */
+export const LOCAL_UI_LOCALES = ["zh-CN", "en"] as const satisfies readonly UiLocale[];
+
 export const UI_LOCALE_STORAGE_KEY = "rakazo.uiLocale";
 
 export const UI_LOCALE_LABELS: Record<UiLocale, string> = {

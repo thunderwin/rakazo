@@ -29,21 +29,49 @@ msgstr ""
 msgid "{0, plural, one {Waiting for sign-in — the link expires in about # minute.} other {Waiting for sign-in — the link expires in about # minutes.}}"
 msgstr ""
 
+#. placeholder {0}: login ? "Password" : "Value"
+#. placeholder {0}: type === "login" ? "Password" : "Value"
+#: src/local/LocalSecretsDialog.tsx
+msgid "{0}"
+msgstr ""
+
 #. placeholder {0}: file.name
 #: src/pages/Shell.tsx
 msgid "{0} (max {ATTACHMENT_MAX_COUNT} attachments)"
 msgstr "{0} (첨부 파일 최대 {ATTACHMENT_MAX_COUNT}개)"
 
 #. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (max {ATTACHMENT_MAX_COUNT} files)"
+msgstr ""
+
+#. placeholder {0}: file.name
+#. placeholder {1}: attachmentSizeLabel(ATTACHMENT_MAX_BYTES)
 #. placeholder {1}: attachmentSizeLabel(attachmentMaxBytes(bootstrapMe))
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "{0} (over {1})"
 msgstr "{0} ({1} 초과)"
+
+#. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (unsupported type)"
+msgstr ""
 
 #. placeholder {0}: preset.n
 #: src/pages/RoutineSchedule.tsx
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
+
+#. placeholder {0}: group.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots"
+msgstr ""
+
+#. placeholder {0}: activeGroup.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots · Shared group thread"
+msgstr ""
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -85,6 +113,16 @@ msgstr ""
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "{0} runs · {1} tokens"
 msgstr "{0}회 실행 · 토큰 {1}개"
+
+#. placeholder {0}: tools.length
+#: src/local/LocalMessageView.tsx
+msgid "{0} tool actions"
+msgstr ""
+
+#. placeholder {0}: run.tools.length
+#: src/local/LocalActivityDialog.tsx
+msgid "{0} tools"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/ExternalConversationSettings.tsx
@@ -285,6 +323,18 @@ msgstr "{workingBotName} 작업 중"
 msgid "@{0}"
 msgstr "@{0}"
 
+#: src/local/LocalComposer.tsx
+msgid "⌘/Ctrl+Enter to send"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "1 tool"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "1 tool action"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
 msgstr ""
@@ -292,6 +342,10 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "A command's output"
 msgstr "명령 출력"
+
+#: src/local/LocalApp.tsx
+msgid "A local assistant with access to approved tools."
+msgstr ""
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/ModelSettingsOverlay.tsx
@@ -320,6 +374,7 @@ msgstr ""
 msgid "Access token (optional)"
 msgstr "액세스 토큰(선택 사항)"
 
+#: src/local/LocalApp.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Account"
 msgstr "계정"
@@ -335,6 +390,10 @@ msgstr "계정 ID"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Account label"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "Account resources"
 msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
@@ -353,6 +412,7 @@ msgstr "{0} 작업 메뉴"
 msgid "Actions for space"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -363,6 +423,8 @@ msgid "Active model"
 msgstr "현재 모델"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Shell.tsx
 msgid "Activity"
 msgstr "활동"
@@ -372,6 +434,11 @@ msgstr "활동"
 #: src/pages/ScratchpadSection.tsx
 msgid "Add"
 msgstr "추가"
+
+#. placeholder {0}: bot.name
+#: src/local/LocalGroupDialog.tsx
+msgid "Add {0}"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
@@ -423,6 +490,7 @@ msgstr "연결된 모델 추가"
 msgid "Add connected models to use them as backups."
 msgstr "백업으로 사용할 연결된 모델을 추가하세요."
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Add credential"
 msgstr ""
@@ -455,6 +523,10 @@ msgstr "OpenAPI 추가"
 #: src/pages/PluginsOverlay.tsx
 msgid "Add remote MCP server"
 msgstr "원격 MCP 서버 추가"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Add script"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
@@ -547,6 +619,10 @@ msgstr "확인 없이 {0} 허용"
 msgid "Allow email actions without asking"
 msgstr "확인 없이 이메일 동작 허용"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Allow network access"
+msgstr ""
+
 #: src/components/AskCard.tsx
 msgid "Allow once"
 msgstr "한 번 허용"
@@ -635,6 +711,12 @@ msgstr "API 키"
 msgid "API key header"
 msgstr "API 키 헤더"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "App settings"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "모양"
@@ -668,10 +750,20 @@ msgstr "보관됨"
 msgid "Archived"
 msgstr "보관됨"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots"
+msgstr ""
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots keep their chats, memory, and files."
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Archived. Chat, memory, and files kept."
 msgstr "보관되었습니다. 대화, 기억, 파일은 유지됩니다."
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Arguments"
 msgstr "인자"
@@ -679,6 +771,10 @@ msgstr "인자"
 #: src/pages/Artifacts.tsx
 #: src/pages/Shell.tsx
 msgid "Artifacts"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Ask a question, run a local tool, or work in your signed-in browser."
 msgstr ""
 
 #. placeholder {0}: rule.matchValue
@@ -716,6 +812,10 @@ msgstr "외부 이메일을 보내기 전에 확인"
 msgid "Ask the server owner to configure this provider."
 msgstr ""
 
+#: src/local/LocalApp.tsx
+msgid "Assistant"
+msgstr ""
+
 #. placeholder {0}: preset.time
 #: src/pages/RoutineSchedule.tsx
 msgid "at {0}"
@@ -729,6 +829,10 @@ msgstr "{timeSelect}에"
 msgid "Attach file"
 msgstr "파일 첨부"
 
+#: src/local/LocalComposer.tsx
+msgid "Attach files"
+msgstr ""
+
 #: src/components/computer/TerminalApp.tsx
 msgid "Attached {path}"
 msgstr ""
@@ -737,6 +841,14 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Attachment"
 msgstr "첨부 파일"
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Attachment not found"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Authentication"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Authentication failed."
@@ -758,6 +870,10 @@ msgstr "인증하기"
 #: src/pages/shell/message-cards.tsx
 msgid "Authorize this server so agents can use its tools. A popup opens."
 msgstr "에이전트가 도구를 사용할 수 있도록 이 서버에 권한을 부여하세요. 팝업이 열립니다."
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Auto"
+msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -790,6 +906,7 @@ msgstr "아바타"
 msgid "Back"
 msgstr "뒤로"
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "로그인으로 돌아가기"
@@ -810,6 +927,7 @@ msgstr "백업 모델을 저장했습니다."
 msgid "Base URL"
 msgstr "서버 주소"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Basic auth"
 msgstr ""
@@ -818,6 +936,7 @@ msgstr ""
 msgid "Basic auth ({username})"
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -850,6 +969,9 @@ msgstr "{0}의 컴퓨터를 켜는 중"
 msgid "bot"
 msgstr "Bot"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalComposer.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -860,6 +982,22 @@ msgstr "봇"
 #: src/lib/browser-notifications.ts
 msgid "Bot"
 msgstr "Bot"
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot color"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Bot memory and shared documents stay on this device and may be included in model requests."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot name"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Bot screen"
@@ -877,6 +1015,7 @@ msgstr "연결할 Bot"
 msgid "Bot's model"
 msgstr "봇의 모델"
 
+#: src/local/LocalApp.tsx
 #: src/pages/Artifacts.tsx
 msgid "Bots"
 msgstr ""
@@ -898,9 +1037,15 @@ msgid "Browse MCP servers"
 msgstr ""
 
 #: src/components/computer/ComputerWorkspace.tsx
+#: src/local/LocalAppSettings.tsx
 msgid "Browser"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Browser bridge unavailable"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Built-in"
 msgstr "기본 제공"
@@ -939,6 +1084,14 @@ msgstr "이미지를 읽을 수 없음"
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalChoicePromptDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -994,13 +1147,35 @@ msgstr "채널"
 msgid "Chart failed to render: {error}"
 msgstr "차트를 표시하지 못했습니다: {error}"
 
+#: src/local/LocalApp.tsx
+msgid "chat"
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "Chat apps"
 msgstr "채팅 앱"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalBotSettings.tsx
+msgid "Chat settings"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Chat Settings"
 msgstr "채팅 설정"
+
+#. placeholder {0}: activeBot?.name ?? t`your assistant`
+#: src/local/LocalApp.tsx
+msgid "Chat with {0}"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats and bot settings stay on this device."
+msgstr ""
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/pages/HostComputerPrompt.tsx
@@ -1068,9 +1243,23 @@ msgstr "Bot 선택…"
 msgid "Choose a new password"
 msgstr "새 비밀번호 선택"
 
+#: src/local/LocalChoicePromptDialog.tsx
+msgid "Choose an answer"
+msgstr ""
+
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose file"
 msgstr "파일 선택"
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome connected"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome not connected"
+msgstr ""
 
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
@@ -1094,6 +1283,10 @@ msgstr ""
 msgid "Clearing…"
 msgstr "비우는 중…"
 
+#: src/local/LocalApp.tsx
+msgid "Clicking in the browser"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Client ID"
 msgstr ""
@@ -1103,6 +1296,14 @@ msgid "Client secret"
 msgstr ""
 
 #: src/components/ErrorBoundary.tsx
+#: src/components/I18nBootstrap.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/PeerMessagesOverlay.tsx
@@ -1172,6 +1373,10 @@ msgstr "계정 설정 닫기"
 msgid "Close voice settings"
 msgstr "음성 설정 닫기"
 
+#: src/local/LocalApp.tsx
+msgid "Close window"
+msgstr ""
+
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Cloud"
 msgstr "클라우드"
@@ -1212,6 +1417,7 @@ msgid "Command"
 msgstr "실행 명령"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Command variable"
 msgstr "명령 변수"
@@ -1227,6 +1433,10 @@ msgstr ""
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "완료"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Completed"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/Shell.tsx
@@ -1274,6 +1484,11 @@ msgstr "서버에서 설정됨"
 msgid "Configured servers"
 msgstr "연결된 서버"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Confirm delete"
@@ -1293,6 +1508,7 @@ msgid "Confirmations"
 msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalAppSettings.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -1352,6 +1568,10 @@ msgstr "연결되었습니다. 다음 메시지부터 이 도구를 사용할 �
 msgid "Connecting…"
 msgstr "연결 중…"
 
+#: src/local/LocalApp.tsx
+msgid "Connection problem"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Connection test failed."
 msgstr "연결 테스트에 실패했습니다."
@@ -1361,12 +1581,17 @@ msgstr "연결 테스트에 실패했습니다."
 msgid "Connection to {0} is still pending. You can close this and check again."
 msgstr "{0} 연결이 아직 진행 중입니다. 이 창을 닫고 나중에 다시 확인할 수 있습니다."
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Content"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Context limit"
 msgstr "컨텍스트 한도"
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Onboarding.tsx
 msgid "Continue"
 msgstr "계속"
@@ -1390,6 +1615,10 @@ msgstr "이메일로 계속하기"
 msgid "Copied"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Copied. No messages, cookies, or tokens are included."
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/Shell.tsx
@@ -1398,6 +1627,10 @@ msgstr "복사"
 
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Copy .env example"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "Copy diagnostics"
 msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
@@ -1443,6 +1676,10 @@ msgstr ""
 #: src/pages/McpOAuthCallback.tsx
 msgid "Could not complete OAuth"
 msgstr "OAuth 인증을 완료하지 못했습니다."
+
+#: src/local/LocalApp.tsx
+msgid "Could not complete the request"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Could not complete the update. Try again."
@@ -1564,6 +1801,10 @@ msgstr "{0}을 다운로드하지 못했습니다. 다시 시도해 주세요."
 msgid "Could not download {name}. Try again."
 msgstr "{name}을 다운로드하지 못했습니다. 다시 시도해 주세요."
 
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not download attachment"
+msgstr ""
+
 #: src/components/computer/FilesApp.tsx
 msgid "Could not download file"
 msgstr ""
@@ -1591,6 +1832,10 @@ msgstr "확인 규칙을 불러오지 못했습니다."
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load artifacts."
+msgstr ""
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not load attachment"
 msgstr ""
 
 #: src/pages/ModelBackupsSettings.tsx
@@ -1868,6 +2113,9 @@ msgstr "메시징 설정을 업데이트할 수 없습니다"
 msgid "Couldn't update your timezone"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -1880,9 +2128,18 @@ msgstr "만들기"
 msgid "Create a section and move {0} into it."
 msgstr "새 섹션을 만들고 {0}을 옮깁니다."
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Create account"
 msgstr "계정 만들기"
+
+#: src/local/LocalApp.tsx
+msgid "Create at least two bots first"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Create bot"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Create group"
@@ -1933,6 +2190,8 @@ msgstr "인증 정보"
 msgid "credential saved"
 msgstr "인증 정보 저장됨"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Credentials"
 msgstr ""
@@ -1945,6 +2204,7 @@ msgstr "인증 정보는 암호화되며 모델에 전송되지 않습니다."
 msgid "Cron"
 msgstr "Cron"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Cron expression"
 msgstr "Cron 표현식"
@@ -1954,6 +2214,11 @@ msgstr "Cron 표현식"
 msgid "Current password"
 msgstr "현재 비밀번호"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Custom cron"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Custom header"
 msgstr ""
@@ -1966,6 +2231,7 @@ msgstr "고객 지원"
 msgid "Customize bot avatar"
 msgstr "봇 아바타 맞춤설정"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Dark"
 msgstr "다크"
@@ -1988,6 +2254,7 @@ msgstr "일"
 msgid "Decline"
 msgstr "거절"
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -2008,10 +2275,19 @@ msgstr ""
 msgid "Default ({0})"
 msgstr "기본값 ({0})"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Default model"
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "기본 기억 범위"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2090,6 +2366,9 @@ msgstr "서버 기본값"
 msgid "Describe what this bot does"
 msgstr "이 Bot이 하는 일을 짧게 설명하세요"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Description"
@@ -2120,6 +2399,7 @@ msgstr ""
 msgid "Discard recording"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2145,6 +2425,7 @@ msgstr "연결 해제 중…"
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Dismiss"
 msgstr "닫기"
@@ -2193,9 +2474,11 @@ msgid "Download"
 msgstr ""
 
 #. placeholder {0}: basename(entry.path)
+#. placeholder {0}: block.name
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 #: src/components/computer/FilesApp.tsx
+#: src/local/LocalAttachmentView.tsx
 msgid "Download {0}"
 msgstr "{0} 다운로드"
 
@@ -2206,6 +2489,10 @@ msgstr "{name} 다운로드"
 #: src/pages/KnowledgeSection.tsx
 msgid "Download as markdown"
 msgstr "마크다운으로 다운로드"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Download as Markdown"
+msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Download Executor"
@@ -2243,6 +2530,7 @@ msgstr "수정 후 보내기"
 msgid "Edit Profile"
 msgstr "Bot 정보 수정"
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Email"
 msgstr "이메일"
@@ -2294,6 +2582,26 @@ msgstr "이미지 한도는 1에서 1000 사이의 정수로 입력하세요."
 msgid "Enter an API key before testing."
 msgstr "테스트하기 전에 API 키를 입력하세요."
 
+#: src/local/LocalAppSettings.tsx
+msgid "Enter sends the message"
+msgstr ""
+
+#: src/local/LocalComposer.tsx
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Entrypoints receive input.json and run in a fresh folder under skill-runs/."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "ericBot could not start"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "ericBot runs these locally while the app is open. Missed work runs once after the next launch."
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Shell.tsx
 msgid "Error"
@@ -2308,6 +2616,7 @@ msgstr "매"
 msgid "every {intervalAmountSelect} {intervalUnitSelect}"
 msgstr "{intervalAmountSelect} {intervalUnitSelect}마다"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every day"
@@ -2318,6 +2627,7 @@ msgstr "매일"
 msgid "Every hour"
 msgstr "매시간"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every Monday"
 msgstr "매주 월요일"
@@ -2377,6 +2687,7 @@ msgstr ""
 msgid "failed"
 msgstr "실패"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Failed"
 msgstr "실패"
@@ -2472,6 +2783,7 @@ msgstr "MCP 연결을 마무리하는 중…"
 msgid "Flag unexpected actions"
 msgstr "예상하지 못한 작업 표시"
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Fleet management"
 msgstr ""
@@ -2502,6 +2814,7 @@ msgstr "전체 화면"
 msgid "Gateway ID"
 msgstr "게이트웨이 ID"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "일반"
@@ -2522,11 +2835,14 @@ msgstr ""
 msgid "Git event"
 msgstr "Git 이벤트"
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/Shell.tsx
 msgid "Group"
 msgstr "그룹"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "Group settings"
 msgstr "그룹 설정"
@@ -2535,8 +2851,13 @@ msgstr "그룹 설정"
 msgid "Group updates"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Groups"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Handing off to another bot"
 msgstr ""
 
 #: src/components/call/CallCard.tsx
@@ -2559,6 +2880,7 @@ msgstr "header"
 msgid "Header \"{header}\""
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -2572,6 +2894,10 @@ msgstr "헤더 값"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
 msgstr "샘플 듣기"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Helper"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
@@ -2608,6 +2934,11 @@ msgstr ""
 msgid "Hold to talk, release to send"
 msgstr ""
 
+#. placeholder {0}: handoff.hop
+#: src/local/LocalMessageView.tsx
+msgid "hop {0}"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "hour"
 msgstr "시간"
@@ -2624,6 +2955,10 @@ msgstr "실행 주기"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "How to check"
 msgstr "완료 확인 방법"
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "HTTPS origin"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "I’m done"
@@ -2651,6 +2986,12 @@ msgstr ""
 
 #: src/lib/ticket-status.ts
 msgid "In review"
+msgstr ""
+
+#. placeholder {0}: pairing.port
+#. placeholder {1}: pairing.code
+#: src/local/LocalAppSettings.tsx
+msgid "In the extension, enter port <0>{0}</0> and code <1>{1}</1>."
 msgstr ""
 
 #: src/pages/BillingSettingsPanel.tsx
@@ -2687,6 +3028,8 @@ msgstr "지침 기록"
 
 #: src/components/AskCard.tsx
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Instructions"
 msgstr "지침"
 
@@ -2757,13 +3100,24 @@ msgstr "기억은 유지"
 msgid "key"
 msgstr "key"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Knowledge"
 msgstr "지식"
 
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Knowledge and skills"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "언어"
+
+#: src/local/LocalAppSettings.tsx
+msgid "Language, appearance, browser access, and defaults for this device."
+msgstr ""
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -2787,10 +3141,15 @@ msgstr ""
 msgid "Leave"
 msgstr "나가기"
 
+#: src/local/LocalBotSettings.tsx
+msgid "Let this bot create and manage bots it owns, plus their groups and routines."
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Lets this bot organize, retune and schedule the bots it creates. You approve each change."
 msgstr "이 봇이 자신이 만든 봇을 정리하고 조정하고 예약할 수 있습니다. 각 변경은 사용자가 승인합니다."
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Light"
 msgstr "라이트"
@@ -2822,6 +3181,10 @@ msgstr ""
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Listening…"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Listing local files"
 msgstr ""
 
 #: src/pages/Shell.tsx
@@ -2884,6 +3247,7 @@ msgstr "음성 서비스를 불러오는 중…"
 msgid "Loading…"
 msgstr "불러오는 중…"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Local"
 msgstr "로컬"
@@ -2892,12 +3256,33 @@ msgstr "로컬"
 msgid "Local access lets bots run commands without asking. Avoid it on shared or public servers."
 msgstr "로컬 접근을 허용하면 Bot이 묻지 않고 명령을 실행할 수 있습니다. 공유 서버나 공개 서버에서는 허용하지 마세요."
 
+#: src/local/LocalApp.tsx
+msgid "Local assistant"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
+msgid "Local bot"
+msgstr ""
+
 #: src/pages/HostComputerPrompt.tsx
 msgid "Local computer access requires the latest desktop app."
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Local reference documents and reusable SKILL.md instructions. Organization-managed items are read-only."
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "Local run and tool history. Arguments and results stay on this device."
+msgstr ""
+
 #: src/pages/LocalSettings.tsx
 msgid "Local Server Settings"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Local-first workspace"
 msgstr ""
 
 #: src/pages/Paywall.tsx
@@ -2940,6 +3325,28 @@ msgstr "MCP 서버 관리"
 msgid "Manage messaging settings"
 msgstr "메시징 설정 관리"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed"
+msgstr ""
+
+#. placeholder {0}: managedManifest.organizationName
+#: src/local/LocalApp.tsx
+msgid "Managed by {0}"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed by your organization. Edit the source package to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Managed by your organization. Run it now or update the assigned preset on the server."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Managed by your organization. Update the assigned preset on the server to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Manual"
 msgstr ""
@@ -2968,6 +3375,10 @@ msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Maximize"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Maximize window"
 msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
@@ -3002,21 +3413,37 @@ msgstr "보통"
 msgid "Medium"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Members"
+msgstr ""
+
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
 msgid "Members ({0})"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Memory"
 msgstr "기억"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Memory scope"
 msgstr "기억 사용 범위"
 
+#: src/local/LocalComposer.tsx
+msgid "Mention a bot"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Mention one or several members, or send a message to wake the first bot."
+msgstr ""
+
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Mentions"
 msgstr "멘션"
@@ -3034,10 +3461,15 @@ msgstr "메시지"
 msgid "Message"
 msgstr "메시지"
 
+#: src/local/LocalComposer.tsx
+msgid "Message {activeBotName}"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Message {activeName}"
 msgstr "{activeName}에게 메시지 보내기"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Message composer"
 msgstr "메시지 작성기"
@@ -3071,6 +3503,10 @@ msgstr "메시징"
 msgid "Microphone failed"
 msgstr "마이크를 사용할 수 없습니다."
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Mine"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Minimal"
@@ -3093,6 +3529,10 @@ msgstr ""
 msgid "Minimize call"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+msgid "Minimize window"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "minute"
 msgstr "분"
@@ -3101,6 +3541,10 @@ msgstr "분"
 #: src/pages/RoutineSchedule.tsx
 msgid "minutes"
 msgstr "분"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Missed"
+msgstr ""
 
 #: src/components/call/VoiceChatCard.tsx
 msgid "Missed call"
@@ -3125,6 +3569,14 @@ msgstr "모델 ID"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Model options"
 msgstr "모델 선택지"
+
+#: src/local/LocalApp.tsx
+msgid "Model quota exhausted"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Model service is busy"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Model spend uses your provider keys."
@@ -3169,6 +3621,10 @@ msgstr ""
 msgid "More computer actions"
 msgstr "컴퓨터 작업 더보기"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Morning brief"
+msgstr ""
+
 #: src/pages/ModelBackupsSettings.tsx
 msgid "Move {full} down"
 msgstr "{full} 아래로 이동"
@@ -3194,6 +3650,11 @@ msgid "Muted"
 msgstr ""
 
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAuthScreen.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Auth.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3215,6 +3676,10 @@ msgstr "그룹 이름"
 msgid "Name this routine"
 msgstr "이 루틴의 이름을 정하세요"
 
+#: src/local/LocalBotSettings.tsx
+msgid "Name, model, instructions, and identity for this bot."
+msgstr ""
+
 #: src/lib/roster-status.ts
 msgid "Needs an answer"
 msgstr ""
@@ -3232,10 +3697,21 @@ msgstr "인수 필요"
 msgid "Needs you"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "New bot"
 msgstr "새 Bot 만들기"
 
+#: src/local/LocalApp.tsx
+msgid "New bot name"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "New document"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "New group"
 msgstr "새 그룹 만들기"
@@ -3249,11 +3725,16 @@ msgstr "새 진행 작업"
 msgid "New password"
 msgstr "새 비밀번호"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "New routine"
+msgstr ""
+
 #: src/pages/BotContextMenu.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "New section"
 msgstr "새 섹션"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "New skill"
 msgstr "새 스킬"
@@ -3266,6 +3747,14 @@ msgstr "새 스페이스"
 msgid "New ticket"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Next"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "No activity recorded yet."
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No agent connections yet."
 msgstr "아직 Agent 연결이 없습니다."
@@ -3273,6 +3762,10 @@ msgstr "아직 Agent 연결이 없습니다."
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "검색 결과가 없습니다."
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "No archived bots."
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."
@@ -3303,6 +3796,7 @@ msgstr ""
 msgid "No chat apps linked yet."
 msgstr "아직 연결된 채팅 앱이 없습니다."
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "No credentials saved for this bot."
 msgstr ""
@@ -3310,6 +3804,10 @@ msgstr ""
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No group chats yet."
 msgstr "아직 그룹 채팅이 없습니다."
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "No knowledge documents yet."
+msgstr ""
 
 #: src/components/AskCard.tsx
 msgid "No longer active"
@@ -3364,6 +3862,10 @@ msgstr ""
 msgid "No results"
 msgstr "검색 결과가 없습니다"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No routines yet."
+msgstr ""
+
 #: src/pages/ActivityList.tsx
 msgid "No runs match these filters."
 msgstr ""
@@ -3371,6 +3873,14 @@ msgstr ""
 #: src/pages/RoutineRunHistory.tsx
 msgid "No runs yet"
 msgstr "아직 실행 기록이 없습니다"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No runs yet."
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "No shared documents yet."
+msgstr ""
 
 #: src/pages/KnowledgeSection.tsx
 msgid "No skills yet"
@@ -3392,6 +3902,10 @@ msgstr ""
 msgid "No trigger"
 msgstr "트리거 없음"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Node"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "None yet"
 msgstr "아직 없음"
@@ -3412,6 +3926,10 @@ msgstr "플러그인 카탈로그에 없음"
 msgid "Not now"
 msgstr "나중에"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Not scheduled"
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Nothing is still running"
 msgstr "실행 중인 작업 없음"
@@ -3419,6 +3937,10 @@ msgstr "실행 중인 작업 없음"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "아직 기억한 내용이 없습니다"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Nothing remembered yet."
+msgstr ""
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
@@ -3457,6 +3979,10 @@ msgstr "일정에 따라"
 #: src/pages/RoutineSchedule.tsx
 msgid "on the 1st at {0}"
 msgstr "매월 1일 {0}에"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "One time"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Only empty spaces can be deleted. Delete its bots and groups first."
@@ -3531,6 +4057,10 @@ msgstr ""
 msgid "Opened its thread."
 msgstr "대화가 만들어졌습니다."
 
+#: src/local/LocalApp.tsx
+msgid "Opening a browser page"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Opening chat…"
 msgstr "채팅 여는 중…"
@@ -3582,11 +4112,16 @@ msgstr ""
 msgid "PagerDuty incident"
 msgstr "PagerDuty 인시던트"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Pair another"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Park"
 msgstr "보류"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -3628,6 +4163,7 @@ msgstr "API 키를 붙여넣으세요"
 msgid "Paste your API key, then test again."
 msgstr "API 키를 붙여넣은 뒤 다시 테스트하세요."
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Paused"
 msgstr "일시 중지됨"
@@ -3645,6 +4181,10 @@ msgstr "사진"
 msgid "Pick {GROUP_MEMBER_MIN}–{GROUP_MEMBER_MAX}"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Pick 2–10 bots. Every member shares this group's history and can hand work to another member."
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Pick a model from the catalog."
 msgstr "모델 목록에서 모델을 선택하세요."
@@ -3660,6 +4200,10 @@ msgstr "확인할 도구 선택"
 #: src/pages/BotContextMenu.tsx
 msgid "Pin"
 msgstr "고정"
+
+#: src/local/LocalApp.tsx
+msgid "Pinned"
+msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
 msgid "Play {name}"
@@ -3706,8 +4250,17 @@ msgstr ""
 msgid "Project ID"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Prompt"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
+#: src/local/LocalSecretsDialog.tsx
 msgid "Protected input"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Protected values stay on this device and are never returned to the model."
 msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
@@ -3723,6 +4276,10 @@ msgstr "서비스"
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "풀 리퀘스트"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Python"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Queued"
@@ -3744,6 +4301,14 @@ msgstr "반응"
 msgid "Read replies aloud"
 msgstr "답변을 자동으로 읽기"
 
+#: src/local/LocalApp.tsx
+msgid "Reading a local file"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Reading the browser page"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Reasoning effort"
@@ -3760,6 +4325,10 @@ msgstr ""
 #: src/pages/ActivityList.tsx
 msgid "Recent"
 msgstr "최근"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Recent runs"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
@@ -3873,6 +4442,9 @@ msgid "Remove"
 msgstr "삭제"
 
 #. placeholder {0}: attachment.file.name
+#. placeholder {0}: bot.name
+#: src/local/LocalComposer.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Remove {0}"
 msgstr "{0} 삭제"
@@ -3894,11 +4466,16 @@ msgstr ""
 msgid "Remove change trigger"
 msgstr "변경 트리거 제거"
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "Remove credential"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr ""
 
 #. placeholder {0}: mention.name
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Remove mention {0}"
 msgstr "{0} 멘션 삭제"
@@ -3910,6 +4487,10 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "Remove schedule"
 msgstr "일정 제거"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Remove script"
+msgstr ""
 
 #. placeholder {0}: selectedSkill.name
 #: src/pages/Shell.tsx
@@ -3976,8 +4557,16 @@ msgstr ""
 msgid "Replying to {0}"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Report an issue"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "Research & writing"
+msgstr ""
+
+#: src/local/LocalGroupDialog.tsx
+msgid "Research team"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
@@ -4018,6 +4607,7 @@ msgid "Restart to update"
 msgstr ""
 
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Restore"
 msgstr "복원"
@@ -4038,7 +4628,12 @@ msgstr "복원됨"
 msgid "Restoring your workspace"
 msgstr ""
 
+#: src/local/LocalActivityDialog.tsx
+msgid "Result"
+msgstr ""
+
 #: src/components/AccountAccess.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelBackupsSettings.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4064,6 +4659,8 @@ msgid "Return to Rakazo"
 msgstr "Rakazo로 돌아가기"
 
 #. placeholder {0}: doc.revision
+#. placeholder {0}: document.revision
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "rev {0}"
 msgstr "리비전 {0}"
@@ -4093,6 +4690,8 @@ msgstr "key 교체"
 msgid "Routine"
 msgstr "자동 실행"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Routines"
 msgstr "자동 실행"
@@ -4101,6 +4700,7 @@ msgstr "자동 실행"
 msgid "Routines that run while you're away"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"
 msgstr "실행 시간"
@@ -4109,14 +4709,24 @@ msgstr "실행 시간"
 msgid "Run history"
 msgstr "실행 기록"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Run now"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "Run stopped"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Run time must be in the future."
 msgstr "실행 시간은 미래여야 합니다."
 
 #: src/components/CloudAgentCard.tsx
+#: src/local/LocalActivityDialog.tsx
 msgid "running"
 msgstr "실행 중"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Running"
 msgstr "실행 중"
@@ -4124,6 +4734,10 @@ msgstr "실행 중"
 #: src/pages/RoutineEditor.tsx
 msgid "Running · Stop"
 msgstr "실행 중 · 중지"
+
+#: src/local/LocalApp.tsx
+msgid "Running a local command"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "Running…"
@@ -4135,6 +4749,12 @@ msgstr ""
 
 #: src/components/AskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -4150,6 +4770,7 @@ msgstr "저장"
 msgid "Save backups"
 msgstr "백업 모델 저장"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Save credential"
 msgstr ""
@@ -4202,6 +4823,34 @@ msgstr "저장 중…"
 #: src/lib/call-session.ts
 msgid "Say yes or no, or answer in a sentence."
 msgstr "예 또는 아니요로 답하거나 문장으로 답해 주세요."
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Schedule"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Scheduled"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script content"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script path"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script runtime"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Scripts"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Scrolling the browser page"
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4266,6 +4915,7 @@ msgstr "대화할 Bot을 선택하세요"
 msgid "Select a connected model"
 msgstr "연결된 모델 선택"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Send"
 msgstr "보내기"
@@ -4328,6 +4978,10 @@ msgstr "서버 이름"
 msgid "Server URL"
 msgstr "서버 URL"
 
+#: src/local/LocalApp.tsx
+msgid "Session expired"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4352,6 +5006,7 @@ msgstr "설정 도움말"
 msgid "Shape"
 msgstr "모양"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -4365,11 +5020,16 @@ msgstr ""
 msgid "Shared documents"
 msgstr "공유 문서"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Shared memory"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared skills"
 msgstr "공유 스킬"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Shell"
 msgstr "셸"
 
@@ -4418,6 +5078,7 @@ msgid "Sidebar density"
 msgstr ""
 
 #: src/lib/localized-provider-hint.ts
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
@@ -4443,6 +5104,10 @@ msgstr "SSO를 연결하려면 기존 계정에 로그인하세요"
 msgid "Sign in with the subscription, or test the API key instead."
 msgstr "구독으로 로그인하거나 대신 API 키를 테스트하세요."
 
+#: src/local/LocalApp.tsx
+msgid "Sign out"
+msgstr ""
+
 #: src/pages/Auth.tsx
 #: src/pages/Welcome.tsx
 msgid "Sign up"
@@ -4457,6 +5122,10 @@ msgstr ""
 msgid "Skill {0}"
 msgstr "작업 기술 {0}"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Skills"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 msgid "Skip"
@@ -4467,6 +5136,7 @@ msgid "Skip or deploy key"
 msgstr "건너뛰거나 배포 키"
 
 #. placeholder {0}: skipped.join(", ")
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Skipped {0}"
 msgstr "{0} 건너뜀"
@@ -4491,6 +5161,11 @@ msgstr "소프트웨어 업데이트"
 #: src/lib/user-error.ts
 msgid "Something went wrong. Try again."
 msgstr "문제가 발생했습니다. 다시 시도하세요."
+
+#. placeholder {0}: sourceLabel(editing.source)
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Source: {0}"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 msgid "Space"
@@ -4540,6 +5215,11 @@ msgstr "음성 모델"
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO를 일시적으로 사용할 수 없습니다. 다시 시도하세요."
 
+#. placeholder {0}: activeGroup.name
+#: src/local/LocalApp.tsx
+msgid "Start {0}"
+msgstr ""
+
 #: src/pages/Paywall.tsx
 msgid "Start {trialDays}-day free trial"
 msgstr ""
@@ -4568,6 +5248,7 @@ msgstr ""
 msgid "Steps"
 msgstr "실행 단계"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Stop"
 msgstr "중지"
@@ -4580,10 +5261,18 @@ msgstr "읽기 중지"
 msgid "Stop teaching"
 msgstr "가르치기 종료"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Stopped"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
 msgid "Stopped."
 msgstr "중지되었습니다."
+
+#: src/local/LocalApp.tsx
+msgid "Stopping…"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
@@ -4628,6 +5317,7 @@ msgstr ""
 msgid "Switching…"
 msgstr "전환 중…"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "System"
 msgstr "시스템"
@@ -4635,6 +5325,10 @@ msgstr "시스템"
 #: src/pages/Shell.tsx
 msgid "Take control"
 msgstr "제어권 가져오기"
+
+#: src/local/LocalApp.tsx
+msgid "Taking over an existing tab"
+msgstr ""
 
 #: src/components/teach/TeachComputerOverlay.tsx
 msgid "Teach a task"
@@ -4688,6 +5382,14 @@ msgstr "로그인 테스트"
 msgid "Testing…"
 msgstr "테스트 중…"
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "The agent needs a credential. It will not be shown to the model or sent in chat."
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "The agent uses the Chrome profile where the extension is installed. Page text can enter model requests; cookies are never exported."
+msgstr ""
+
 #: src/components/SoftwareUpdateSection.tsx
 msgid "The API did not come back. Refresh this page."
 msgstr "API가 다시 작동하지 않습니다. 이 페이지를 새로 고침하세요."
@@ -4695,6 +5397,14 @@ msgstr "API가 다시 작동하지 않습니다. 이 페이지를 새로 고침�
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."
 msgstr "연결 시간이 초과되었습니다."
+
+#: src/local/LocalApp.tsx
+msgid "The desktop bridge is unavailable."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "The local desktop bridge is unavailable."
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
@@ -4705,6 +5415,10 @@ msgstr "모델 제공업체에서 오류를 반환했습니다."
 msgid "The provider is rate-limiting requests."
 msgstr "서비스가 요청 속도를 제한하고 있습니다."
 
+#: src/local/types.ts
+msgid "The request could not be completed."
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "선택한 기억 서비스는 현재 빌드에서 사용할 수 없습니다."
@@ -4714,6 +5428,8 @@ msgid "These saved settings can't be read. Remove it and add it again."
 msgstr ""
 
 #: src/components/call/CallCard.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4723,6 +5439,14 @@ msgstr "생각 깊이"
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Thinking: {activeThinkingLabel}"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Thinking…"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "This bot"
 msgstr ""
 
 #: src/pages/Shell.tsx
@@ -4752,6 +5476,10 @@ msgstr "이 컴퓨터"
 #. placeholder {0}: pendingDelete.versionCount
 #: src/pages/Artifacts.tsx
 msgid "This deletes all {0} versions of this artifact. This can't be undone."
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "This device"
 msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
@@ -4790,6 +5518,10 @@ msgstr ""
 msgid "This reset link is invalid or expired"
 msgstr "이 재설정 링크는 유효하지 않거나 만료되었습니다"
 
+#: src/local/LocalMessageView.tsx
+msgid "This run did not finish"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "This server cannot be assigned without a bot."
 msgstr "연결할 Bot이 없어 이 서버를 배정할 수 없습니다."
@@ -4810,14 +5542,23 @@ msgstr "이 구독 로그인 방식은 아직 Rakazo에서 지원되지 않습�
 msgid "This week"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Time"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "Time of day"
 msgstr "실행 시각"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Timeout seconds"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Timezone"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Title"
@@ -4917,6 +5658,10 @@ msgstr ""
 #: src/components/AskCard.tsx
 msgid "Type your answer"
 msgstr "답변을 입력하세요"
+
+#: src/local/LocalApp.tsx
+msgid "Typing in the browser"
+msgstr ""
 
 #: src/pages/BotContextMenu.tsx
 msgid "Unassigned"
@@ -5065,6 +5810,14 @@ msgstr ""
 msgid "Use Protected input for passwords."
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
+msgid "Use the bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Use the default"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Use this model"
 msgstr "이 모델 사용"
@@ -5078,6 +5831,7 @@ msgid "Use your own key"
 msgstr "내 키 사용"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Username"
 msgstr ""
@@ -5085,6 +5839,10 @@ msgstr ""
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Uses this server's own {hostCredentialSource} credentials to access {selectedProviderName}."
 msgstr "이 서버의 자체 {hostCredentialSource} 자격 증명으로 {selectedProviderName}에 액세스합니다."
+
+#: src/local/LocalApp.tsx
+msgid "Using {name}"
+msgstr ""
 
 #: src/pages/shell/bot-credentials.tsx
 msgid "Value"
@@ -5140,6 +5898,7 @@ msgstr ""
 msgid "Webhook"
 msgstr "웹훅"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Website login"
 msgstr ""
@@ -5148,6 +5907,7 @@ msgstr ""
 msgid "week"
 msgstr ""
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Weekdays"
@@ -5165,6 +5925,10 @@ msgstr ""
 msgid "What result will you demonstrate?"
 msgstr "어떤 작업을 직접 보여줄까요?"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "What should this bot do when the routine runs?"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "What should this routine do each time it runs?"
 msgstr "이 루틴이 실행될 때마다 무엇을 해야 하나요?"
@@ -5172,6 +5936,10 @@ msgstr "이 루틴이 실행될 때마다 무엇을 해야 하나요?"
 #: src/pages/shell/bot-panel.tsx
 msgid "What this bot is for"
 msgstr "이 Bot을 언제, 어떤 일에 사용할지 적어주세요"
+
+#: src/local/LocalGroupDialog.tsx
+msgid "What this group works on"
+msgstr ""
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "What to return"
@@ -5205,6 +5973,11 @@ msgstr "Bot을 어디에서 실행할까요?"
 msgid "Won't do"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMessageView.tsx
+msgid "Working"
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
 msgid "Working…"
@@ -5212,6 +5985,10 @@ msgstr "처리 중…"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Writing a local file"
 msgstr ""
 
 #: src/components/computer/TerminalApp.tsx
@@ -5227,6 +6004,7 @@ msgstr ""
 msgid "Yesterday"
 msgstr "어제"
 
+#: src/local/LocalMessageView.tsx
 #: src/pages/Shell.tsx
 msgid "You"
 msgstr "나"
@@ -5252,9 +6030,17 @@ msgstr "직접 조작 중"
 msgid "Your Anthropic"
 msgstr "사용 중인 Anthropic"
 
+#: src/local/LocalApp.tsx
+msgid "your assistant"
+msgstr ""
+
 #: src/pages/Auth.tsx
 msgid "Your email address"
 msgstr "이메일 주소"
+
+#: src/local/LocalAuthScreen.tsx
+msgid "Your local AI workspace"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import {
   BotAvatar,
   Button,
@@ -31,6 +32,7 @@ export function LocalGroupDialog({
   onSaved: (group: LocalGroup) => void;
   onDeleted?: (groupId: string) => void;
 }) {
+  const { t } = useLingui();
   const [name, setName] = useState(group?.name ?? "");
   const [description, setDescription] = useState(group?.description ?? "");
   const [selected, setSelected] = useState<string[]>(
@@ -97,10 +99,12 @@ export function LocalGroupDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(680px,calc(100vh-3rem))] bg-background shadow-2xl sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{group ? "Group settings" : "New group"}</DialogTitle>
+          <DialogTitle>{group ? t`Group settings` : t`New group`}</DialogTitle>
           <DialogDescription>
-            Pick 2–10 bots. Every member shares this group&apos;s history and can hand work to
-            another member.
+            <Trans>
+              Pick 2–10 bots. Every member shares this group&apos;s history and can hand work to
+              another member.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
 
@@ -109,13 +113,13 @@ export function LocalGroupDialog({
             htmlFor="local-group-name"
             className="grid gap-1.5 text-[12px] text-muted-foreground"
           >
-            Name
+            <Trans>Name</Trans>
             <Input
               id="local-group-name"
               value={name}
               disabled={managed}
               maxLength={120}
-              placeholder="Research team"
+              placeholder={t`Research team`}
               onChange={(event) => setName(event.target.value)}
             />
           </label>
@@ -123,13 +127,13 @@ export function LocalGroupDialog({
             htmlFor="local-group-description"
             className="grid gap-1.5 text-[12px] text-muted-foreground"
           >
-            Description
+            <Trans>Description</Trans>
             <Input
               id="local-group-description"
               value={description}
               disabled={managed}
               maxLength={2_000}
-              placeholder="What this group works on"
+              placeholder={t`What this group works on`}
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
@@ -137,7 +141,9 @@ export function LocalGroupDialog({
 
         <div className="min-h-0 overflow-hidden rounded-xl border border-border">
           <div className="flex items-center justify-between border-b border-border px-3 py-2 text-[12px] text-muted-foreground">
-            <span>Members</span>
+            <span>
+              <Trans>Members</Trans>
+            </span>
             <span>{selected.length}/10</span>
           </div>
           <div className="rk-scroll max-h-64 overflow-y-auto p-1.5">
@@ -152,13 +158,13 @@ export function LocalGroupDialog({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px]">{bot.name}</span>
                     <span className="block truncate text-[10.5px] text-muted-foreground">
-                      {bot.description || "Local bot"}
+                      {bot.description || t`Local bot`}
                     </span>
                   </span>
                   <Checkbox
                     checked={checked}
                     disabled={managed}
-                    aria-label={`${checked ? "Remove" : "Add"} ${bot.name}`}
+                    aria-label={checked ? t`Remove ${bot.name}` : t`Add ${bot.name}`}
                     onCheckedChange={() =>
                       setSelected((current) =>
                         checked
@@ -193,7 +199,7 @@ export function LocalGroupDialog({
                     disabled={saving}
                     onClick={() => void remove()}
                   >
-                    Confirm delete
+                    <Trans>Confirm delete</Trans>
                   </Button>
                   <Button
                     type="button"
@@ -201,7 +207,7 @@ export function LocalGroupDialog({
                     variant="ghost"
                     onClick={() => setConfirmDelete(false)}
                   >
-                    Cancel
+                    <Trans>Cancel</Trans>
                   </Button>
                 </div>
               ) : (
@@ -212,7 +218,7 @@ export function LocalGroupDialog({
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 size={13} />
-                  Delete
+                  <Trans>Delete</Trans>
                 </Button>
               )
             ) : null}
@@ -220,16 +226,16 @@ export function LocalGroupDialog({
           <div className="flex gap-1.5">
             {managed ? (
               <Button type="button" onClick={() => onOpenChange(false)}>
-                Close
+                <Trans>Close</Trans>
               </Button>
             ) : (
               <>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  <Trans>Cancel</Trans>
                 </Button>
                 <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
                   {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
-                  {group ? "Save" : "Create"}
+                  {group ? t`Save` : t`Create`}
                 </Button>
               </>
             )}

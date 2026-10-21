@@ -1,3 +1,5 @@
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import type {
   DesktopLocalRoutineInput,
   DesktopLocalRoutineRun,
@@ -17,17 +19,10 @@ import {
 } from "@rakazo/ui-web";
 import { ChevronLeft, LoaderCircle, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { i18n } from "../lib/i18n";
 import { type LocalBot, type LocalBridge, localErrorMessage } from "./types";
 
 type ScheduleMode = "daily" | "weekdays" | "weekly" | "once" | "custom";
-
-const MODE_LABELS: Record<ScheduleMode, string> = {
-  daily: "Every day",
-  weekdays: "Weekdays",
-  weekly: "Every Monday",
-  once: "One time",
-  custom: "Custom cron",
-};
 
 function scheduleFields(cron: string): { mode: ScheduleMode; time: string; custom: string } {
   const value = cron.trim();
@@ -64,8 +59,8 @@ function localDateTimeValue(value: string | null): string {
 }
 
 function dateLabel(value: string | null): string {
-  if (!value) return "Not scheduled";
-  return new Intl.DateTimeFormat(undefined, {
+  if (!value) return i18n._(msg`Not scheduled`);
+  return new Intl.DateTimeFormat(i18n.locale || undefined, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -74,7 +69,21 @@ function dateLabel(value: string | null): string {
 }
 
 function runLabel(run: DesktopLocalRoutineRun): string {
-  return `${run.status} · ${run.trigger} · ${dateLabel(run.startedAt)}`;
+  const status =
+    run.status === "running"
+      ? i18n._(msg`Running`)
+      : run.status === "completed"
+        ? i18n._(msg`Completed`)
+        : run.status === "failed"
+          ? i18n._(msg`Failed`)
+          : i18n._(msg`Stopped`);
+  const trigger =
+    run.trigger === "scheduled"
+      ? i18n._(msg`Scheduled`)
+      : run.trigger === "missed"
+        ? i18n._(msg`Missed`)
+        : i18n._(msg`Manual`);
+  return `${status} · ${trigger} · ${dateLabel(run.startedAt)}`;
 }
 
 export function LocalRoutinesDialog({
@@ -88,6 +97,14 @@ export function LocalRoutinesDialog({
   api: LocalBridge;
   bot: LocalBot;
 }) {
+  const { t } = useLingui();
+  const modeLabels: Record<ScheduleMode, string> = {
+    daily: t`Every day`,
+    weekdays: t`Weekdays`,
+    weekly: t`Every Monday`,
+    once: t`One time`,
+    custom: t`Custom cron`,
+  };
   const [routines, setRoutines] = useState<Routine[] | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [name, setName] = useState("");
@@ -253,10 +270,14 @@ export function LocalRoutinesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(800px,calc(100vh-3rem))] overflow-y-auto bg-background shadow-2xl sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Routines</DialogTitle>
+          <DialogTitle>
+            <Trans>Routines</Trans>
+          </DialogTitle>
           <DialogDescription>
-            ericBot runs these locally while the app is open. Missed work runs once after the next
-            launch.
+            <Trans>
+              ericBot runs these locally while the app is open. Missed work runs once after the next
+              launch.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
 
@@ -265,7 +286,7 @@ export function LocalRoutinesDialog({
             <div className="flex justify-end">
               <Button type="button" size="sm" onClick={beginNew}>
                 <Plus size={13} />
-                New routine
+                <Trans>New routine</Trans>
               </Button>
             </div>
             {routines === null ? (
@@ -275,7 +296,7 @@ export function LocalRoutinesDialog({
               </>
             ) : routines.length === 0 ? (
               <p className="py-10 text-center text-[13px] text-muted-foreground">
-                No routines yet.
+                <Trans>No routines yet.</Trans>
               </p>
             ) : (
               routines.map((routine) => (
@@ -292,11 +313,12 @@ export function LocalRoutinesDialog({
                         {routine.name}
                       </span>
                       <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
-                        {formatCron(routine.cron)} · Next {dateLabel(routine.nextRunAt)}
+                        {formatCron(routine.cron)} · <Trans>Next</Trans>{" "}
+                        {dateLabel(routine.nextRunAt)}
                       </span>
                     </span>
                     <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                      {routine.enabled ? "Active" : "Paused"}
+                      {routine.enabled ? t`Active` : t`Paused`}
                     </span>
                   </span>
                 </Button>
@@ -313,19 +335,19 @@ export function LocalRoutinesDialog({
               onClick={closeEditor}
             >
               <ChevronLeft size={13} />
-              Routines
+              <Trans>Routines</Trans>
             </Button>
             <label
               htmlFor="local-routine-name"
               className="grid gap-1.5 text-[12px] text-muted-foreground"
             >
-              Name
+              <Trans>Name</Trans>
               <Input
                 id="local-routine-name"
                 value={name}
                 disabled={managed}
                 maxLength={80}
-                placeholder="Morning brief"
+                placeholder={t`Morning brief`}
                 onChange={(event) => setName(event.target.value)}
               />
             </label>
@@ -333,14 +355,14 @@ export function LocalRoutinesDialog({
               htmlFor="local-routine-prompt"
               className="grid gap-1.5 text-[12px] text-muted-foreground"
             >
-              Prompt
+              <Trans>Prompt</Trans>
               <Textarea
                 id="local-routine-prompt"
                 value={prompt}
                 disabled={managed}
                 rows={5}
                 maxLength={100_000}
-                placeholder="What should this bot do when the routine runs?"
+                placeholder={t`What should this bot do when the routine runs?`}
                 onChange={(event) => setPrompt(event.target.value)}
               />
             </label>
@@ -348,7 +370,7 @@ export function LocalRoutinesDialog({
               htmlFor="local-routine-mode"
               className="grid gap-1.5 text-[12px] text-muted-foreground"
             >
-              Schedule
+              <Trans>Schedule</Trans>
               <select
                 id="local-routine-mode"
                 className="h-8 rounded-lg border border-border bg-input px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -356,9 +378,9 @@ export function LocalRoutinesDialog({
                 disabled={managed}
                 onChange={(event) => setMode(event.target.value as ScheduleMode)}
               >
-                {Object.entries(MODE_LABELS).map(([value, label]) => (
+                {(Object.keys(modeLabels) as ScheduleMode[]).map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {modeLabels[value]}
                   </option>
                 ))}
               </select>
@@ -368,7 +390,7 @@ export function LocalRoutinesDialog({
                 htmlFor="local-routine-run-at"
                 className="grid gap-1.5 text-[12px] text-muted-foreground"
               >
-                Run at
+                <Trans>Run at</Trans>
                 <Input
                   id="local-routine-run-at"
                   type="datetime-local"
@@ -382,7 +404,7 @@ export function LocalRoutinesDialog({
                 htmlFor="local-routine-cron"
                 className="grid gap-1.5 text-[12px] text-muted-foreground"
               >
-                Cron expression
+                <Trans>Cron expression</Trans>
                 <Input
                   id="local-routine-cron"
                   value={customCron}
@@ -397,7 +419,7 @@ export function LocalRoutinesDialog({
                 htmlFor="local-routine-time"
                 className="grid gap-1.5 text-[12px] text-muted-foreground"
               >
-                Time
+                <Trans>Time</Trans>
                 <Input
                   id="local-routine-time"
                   type="time"
@@ -415,14 +437,14 @@ export function LocalRoutinesDialog({
                 disabled={managed}
                 onChange={(event) => setEnabled(event.target.checked)}
               />
-              Active
+              <Trans>Active</Trans>
             </label>
 
             {editing ? (
               <section className="border-t border-border pt-3">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    Recent runs
+                    <Trans>Recent runs</Trans>
                   </h3>
                   <Button
                     type="button"
@@ -436,13 +458,15 @@ export function LocalRoutinesDialog({
                     ) : (
                       <Play size={12} />
                     )}
-                    Run now
+                    <Trans>Run now</Trans>
                   </Button>
                 </div>
                 {history === null ? (
                   <Skeleton className="h-10 w-full" />
                 ) : history.length === 0 ? (
-                  <p className="text-[12px] text-muted-foreground">No runs yet.</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    <Trans>No runs yet.</Trans>
+                  </p>
                 ) : (
                   <div className="grid gap-1">
                     {history.map((run) => (
@@ -468,17 +492,19 @@ export function LocalRoutinesDialog({
             <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
               {managed ? (
                 <p className="text-[11.5px] text-muted-foreground">
-                  Managed by your organization. Run it now or update the assigned preset on the
-                  server.
+                  <Trans>
+                    Managed by your organization. Run it now or update the assigned preset on the
+                    server.
+                  </Trans>
                 </p>
               ) : (
                 <>
                   <Button type="button" disabled={!valid || saving} onClick={() => void save()}>
                     {saving ? <LoaderCircle size={13} className="animate-spin" /> : null}
-                    {editingId === "new" ? "Create" : "Save"}
+                    {editingId === "new" ? t`Create` : t`Save`}
                   </Button>
                   <Button type="button" variant="ghost" onClick={closeEditor}>
-                    Cancel
+                    <Trans>Cancel</Trans>
                   </Button>
                   {editing ? (
                     <Button
@@ -489,7 +515,7 @@ export function LocalRoutinesDialog({
                       onClick={() => void remove()}
                     >
                       <Trash2 size={12} />
-                      {confirmDelete ? "Confirm delete" : "Delete"}
+                      {confirmDelete ? t`Confirm delete` : t`Delete`}
                     </Button>
                   ) : null}
                 </>

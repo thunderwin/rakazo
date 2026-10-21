@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { Button, Input } from "@rakazo/ui-web";
 import { Bot, LoaderCircle } from "lucide-react";
 import { type FormEvent, useState } from "react";
@@ -13,6 +14,7 @@ export function LocalAuthScreen({
   serverUrl: string;
   onSignedIn: () => Promise<void>;
 }) {
+  const { t } = useLingui();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -48,7 +50,9 @@ export function LocalAuthScreen({
           </span>
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">ericBot</h1>
-            <p className="text-[12.5px] text-muted-foreground">Your local AI workspace</p>
+            <p className="text-[12.5px] text-muted-foreground">
+              <Trans>Your local AI workspace</Trans>
+            </p>
           </div>
         </div>
 
@@ -58,7 +62,7 @@ export function LocalAuthScreen({
               htmlFor="local-auth-name"
               className="grid gap-1.5 text-[12.5px] text-muted-foreground"
             >
-              Name
+              <Trans>Name</Trans>
               <Input
                 id="local-auth-name"
                 value={name}
@@ -72,7 +76,7 @@ export function LocalAuthScreen({
             htmlFor="local-auth-email"
             className="grid gap-1.5 text-[12.5px] text-muted-foreground"
           >
-            Email
+            <Trans>Email</Trans>
             <Input
               id="local-auth-email"
               type="email"
@@ -86,7 +90,7 @@ export function LocalAuthScreen({
             htmlFor="local-auth-password"
             className="grid gap-1.5 text-[12.5px] text-muted-foreground"
           >
-            Password
+            <Trans>Password</Trans>
             <Input
               id="local-auth-password"
               type="password"
@@ -107,7 +111,7 @@ export function LocalAuthScreen({
           ) : null}
           <Button type="submit" className="mt-1 h-9 w-full" disabled={busy}>
             {busy ? <LoaderCircle size={14} className="animate-spin" /> : null}
-            {mode === "sign-in" ? "Sign in" : "Create account"}
+            {mode === "sign-in" ? t`Sign in` : t`Create account`}
           </Button>
         </div>
 
@@ -123,7 +127,7 @@ export function LocalAuthScreen({
               setError("");
             }}
           >
-            {mode === "sign-in" ? "Create account" : "Back to sign in"}
+            {mode === "sign-in" ? t`Create account` : t`Back to sign in`}
           </button>
         </div>
       </form>

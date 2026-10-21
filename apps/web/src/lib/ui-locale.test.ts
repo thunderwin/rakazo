@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  LOCAL_UI_LOCALES,
   normalizeUiLocale,
   persistUiLocale,
   resolveUiLocale,
   UI_LOCALE_STORAGE_KEY,
 } from "./ui-locale";
+
+it("exposes only complete desktop UI locales", () => {
+  expect(LOCAL_UI_LOCALES).toEqual(["zh-CN", "en"]);
+});
 
 describe("normalizeUiLocale", () => {
   it("maps regional tags onto supported locales", () => {

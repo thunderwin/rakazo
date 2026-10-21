@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import type { DesktopLocalMemoryDocument } from "@rakazo/contracts";
 import {
   Button,
@@ -54,6 +55,7 @@ function MemoryList({
   onCancel: () => void;
   onDelete: (document: DesktopLocalMemoryDocument) => void;
 }) {
+  const { t } = useLingui();
   if (documents.length === 0) {
     return <p className="py-8 text-center text-[13px] text-muted-foreground">{emptyText}</p>;
   }
@@ -79,7 +81,7 @@ function MemoryList({
                   {document.path}
                 </span>
                 <span className="shrink-0 text-[11px] text-muted-foreground">
-                  rev {document.revision}
+                  <Trans>rev {document.revision}</Trans>
                 </span>
               </span>
             </Button>
@@ -102,7 +104,7 @@ function MemoryList({
                     onClick={() => onSave(document)}
                   >
                     {busy ? <LoaderCircle size={12} className="animate-spin" /> : null}
-                    Save
+                    <Trans>Save</Trans>
                   </Button>
                   <Button
                     type="button"
@@ -111,7 +113,7 @@ function MemoryList({
                     disabled={busy}
                     onClick={onCancel}
                   >
-                    Cancel
+                    <Trans>Cancel</Trans>
                   </Button>
                   {document.path !== "MEMORY.md" ? (
                     <Button
@@ -123,7 +125,7 @@ function MemoryList({
                       onClick={() => onDelete(document)}
                     >
                       <Trash2 size={12} />
-                      {confirmingDelete ? "Confirm delete" : "Delete"}
+                      {confirmingDelete ? t`Confirm delete` : t`Delete`}
                     </Button>
                   ) : null}
                 </div>
@@ -141,12 +143,15 @@ export function LocalMemoryDialog({
   onOpenChange,
   api,
   bot,
+  scope,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   api: LocalBridge;
-  bot: LocalBot;
+  bot?: LocalBot;
+  scope?: MemoryScope;
 }) {
+  const { t } = useLingui();
   const [documents, setDocuments] = useState<DesktopLocalMemoryDocument[] | null>(null);
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -155,9 +160,10 @@ export function LocalMemoryDialog({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function fetchDocuments() {
+    if (scope === "bot" && !bot) throw new Error("Bot memory requires a bot");
     const next = await Promise.all([
-      api.memory.list({ botId: bot.id, scope: "bot" }),
-      api.memory.list({ scope: "user" }),
+      ...(scope === "user" || !bot ? [] : [api.memory.list({ botId: bot.id, scope: "bot" })]),
+      ...(scope === "bot" ? [] : [api.memory.list({ scope: "user" })]),
     ]);
     return next.flat();
   }
@@ -186,7 +192,7 @@ export function LocalMemoryDialog({
     return () => {
       cancelled = true;
     };
-  }, [api, bot.id, open]);
+  }, [api, bot?.id, open, scope]);
 
   function selectScope(scope: MemoryScope) {
     return documents?.filter((document) => document.scope === scope) ?? [];
@@ -271,14 +277,39 @@ export function LocalMemoryDialog({
     onDelete: (document: DesktopLocalMemoryDocument) => void remove(document),
   };
 
+  function memoryPane(memoryScope: MemoryScope, emptyText: string) {
+    const documentsForScope = selectScope(memoryScope);
+    return (
+      <>
+        <MemoryList documents={documentsForScope} emptyText={emptyText} {...listProps} />
+        {documentsForScope.length ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void exportDocuments(memoryScope)}
+          >
+            <Download size={12} />
+            <Trans>Download as Markdown</Trans>
+          </Button>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(760px,calc(100vh-3rem))] overflow-y-auto bg-background shadow-2xl sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Memory</DialogTitle>
+          <DialogTitle>
+            <Trans>Memory</Trans>
+          </DialogTitle>
           <DialogDescription>
-            Bot memory and shared documents stay on this device and may be included in model
-            requests.
+            <Trans>
+              Bot memory and shared documents stay on this device and may be included in model
+              requests.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
 
@@ -287,49 +318,22 @@ export function LocalMemoryDialog({
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
+        ) : scope ? (
+          <div className="grid gap-2">
+            {memoryPane(
+              scope,
+              scope === "bot" ? t`Nothing remembered yet.` : t`No shared documents yet.`,
+            )}
+          </div>
         ) : (
           <Tabs defaultValue="bot">
-            <TabsList aria-label="Memory scope">
-              <TabsTrigger value="bot">This bot</TabsTrigger>
-              <TabsTrigger value="user">Shared</TabsTrigger>
+            <TabsList aria-label={t`Memory scope`}>
+              <TabsTrigger value="bot">{t`This bot`}</TabsTrigger>
+              <TabsTrigger value="user">{t`Shared`}</TabsTrigger>
             </TabsList>
-            <TabsContent value="bot">
-              <MemoryList
-                documents={selectScope("bot")}
-                emptyText="Nothing remembered yet."
-                {...listProps}
-              />
-              {selectScope("bot").length ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => void exportDocuments("bot")}
-                >
-                  <Download size={12} />
-                  Download as Markdown
-                </Button>
-              ) : null}
-            </TabsContent>
+            <TabsContent value="bot">{memoryPane("bot", t`Nothing remembered yet.`)}</TabsContent>
             <TabsContent value="user">
-              <MemoryList
-                documents={selectScope("user")}
-                emptyText="No shared documents yet."
-                {...listProps}
-              />
-              {selectScope("user").length ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => void exportDocuments("user")}
-                >
-                  <Download size={12} />
-                  Download as Markdown
-                </Button>
-              ) : null}
+              {memoryPane("user", t`No shared documents yet.`)}
             </TabsContent>
           </Tabs>
         )}
@@ -341,7 +345,7 @@ export function LocalMemoryDialog({
         ) : null}
 
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-          Close
+          <Trans>Close</Trans>
         </Button>
       </DialogContent>
     </Dialog>

@@ -16,25 +16,35 @@ import {
 } from "@rakazo/ui-web";
 import { useEffect, useMemo, useState } from "react";
 
+export type CommandPaletteBot = Pick<Bot, "id" | "name" | "color"> &
+  Partial<Pick<Bot, "title" | "description" | "preview" | "status">>;
+
 function isApplePlatform() {
   if (typeof navigator === "undefined") return false;
   // platform is deprecated but still the most reliable Apple check in browsers.
-  return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+  return /Mac|iPhone|iPad|iPod/i.test(
+    navigator.platform || navigator.userAgent,
+  );
 }
 
-function botSearchText(bot: Bot) {
-  return `${bot.name} ${bot.title} ${bot.description} ${bot.preview}`.toLowerCase();
+function botSearchText(bot: CommandPaletteBot) {
+  return `${bot.name} ${bot.title ?? ""} ${bot.description ?? ""} ${bot.preview ?? ""}`.toLowerCase();
 }
 
-function botSubtitle(bot: Bot) {
-  return bot.description.trim() || bot.preview.trim() || bot.title.trim();
+function botSubtitle(bot: CommandPaletteBot) {
+  return (
+    (bot.description ?? "").trim() ||
+    (bot.preview ?? "").trim() ||
+    (bot.title ?? "").trim()
+  );
 }
 
-function botTitleTag(bot: Bot) {
-  const title = bot.title.trim();
+function botTitleTag(bot: CommandPaletteBot) {
+  const title = (bot.title ?? "").trim();
   if (!title) return null;
   // Title is already the subtitle when there is no description/preview.
-  if (!(bot.description.trim() || bot.preview.trim())) return null;
+  if (!((bot.description ?? "").trim() || (bot.preview ?? "").trim()))
+    return null;
   return title;
 }
 
@@ -46,7 +56,7 @@ export function CommandPalette({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  bots: Bot[];
+  bots: CommandPaletteBot[];
   onSelectBot: (botId: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -69,7 +79,12 @@ export function CommandPalette({
   useEffect(() => {
     if (!open) return;
     function onKey(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.repeat) {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.repeat
+      ) {
         return;
       }
       if (!/^[1-9]$/.test(event.key)) return;
@@ -122,10 +137,18 @@ export function CommandPalette({
                   }}
                   className="items-center gap-3 rounded-xl! px-2.5 py-2.5"
                 >
-                  <BotAvatar color={bot.color} identity={bot.id} size={32} status={bot.status} />
+                  <BotAvatar
+                    color={bot.color}
+                    identity={bot.id}
+                    size={32}
+                    status={bot.status}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate font-medium text-foreground" dir="auto">
+                      <span
+                        className="truncate font-medium text-foreground"
+                        dir="auto"
+                      >
                         {bot.name}
                       </span>
                       {titleTag ? (
@@ -138,7 +161,10 @@ export function CommandPalette({
                       ) : null}
                     </div>
                     {subtitle ? (
-                      <div className="mt-0.5 truncate text-[13px] text-muted-foreground" dir="auto">
+                      <div
+                        className="mt-0.5 truncate text-[13px] text-muted-foreground"
+                        dir="auto"
+                      >
                         {subtitle}
                       </div>
                     ) : null}

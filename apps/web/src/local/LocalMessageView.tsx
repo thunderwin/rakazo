@@ -1,6 +1,8 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { BotAvatar } from "@rakazo/ui-web";
 import { AlertTriangle, ArrowRight, Check, LoaderCircle, Wrench } from "lucide-react";
+import { i18n } from "../lib/i18n";
 import { LocalAttachmentView } from "./LocalAttachmentView";
 import { MentionText } from "./MentionText";
 import {
@@ -16,7 +18,7 @@ import {
 function timeLabel(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(i18n.locale || undefined, {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
@@ -33,6 +35,7 @@ export function LocalMessageView({
   bots: readonly LocalBot[];
   api: LocalBridge;
 }) {
+  const { t } = useLingui();
   const blocks = messageBlocks(message);
   const text = messageText(message);
   const errors = blocks.filter(
@@ -78,7 +81,7 @@ export function LocalMessageView({
           }`}
         >
           <span className="font-medium text-foreground/80">
-            {user ? "You" : (bot?.name ?? "Bot")}
+            {user ? t`You` : (bot?.name ?? t`Bot`)}
           </span>
           <time className="text-muted-foreground" dateTime={message.createdAt}>
             {timeLabel(message.createdAt)}
@@ -115,7 +118,11 @@ export function LocalMessageView({
           <details className="group/tools mt-2 w-fit max-w-full">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-0.5 text-[12.5px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <Check size={13} aria-hidden="true" />
-              {tools.length === 1 ? "1 tool action" : `${tools.length} tool actions`}
+              {tools.length === 1 ? (
+                <Trans>1 tool action</Trans>
+              ) : (
+                <Trans>{tools.length} tool actions</Trans>
+              )}
             </summary>
             <div className="mt-1 space-y-1 border-s border-border ps-3">
               {tools.map((tool, index) => (
@@ -140,11 +147,11 @@ export function LocalMessageView({
               className="mt-2 rounded-xl border border-border bg-muted/45 px-3 py-2.5"
             >
               <div className="flex items-center gap-2 text-[12.5px] font-medium">
-                <span>{from?.name ?? "Bot"}</span>
+                <span>{from?.name ?? t`Bot`}</span>
                 <ArrowRight size={13} className="text-muted-foreground" aria-hidden="true" />
-                <span>{to?.name ?? "Bot"}</span>
+                <span>{to?.name ?? t`Bot`}</span>
                 <span className="ml-auto text-[10.5px] font-normal text-muted-foreground">
-                  hop {handoff.hop}
+                  <Trans>hop {handoff.hop}</Trans>
                 </span>
               </div>
               <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-5 text-muted-foreground">
@@ -173,7 +180,7 @@ export function LocalMessageView({
                 />
                 <div className="min-w-0">
                   <p className="m-0 text-[13px] font-medium">
-                    {stopped ? "Run stopped" : "This run did not finish"}
+                    {stopped ? t`Run stopped` : t`This run did not finish`}
                   </p>
                   <p className="mt-0.5 text-[12.5px] text-muted-foreground">{error.message}</p>
                 </div>
@@ -195,21 +202,22 @@ export function LocalLiveMessage({
   text: string;
   status: string;
 }) {
+  const { t } = useLingui();
   return (
     <article className="flex w-full justify-start gap-3" data-message-role="live">
       {bot ? <BotAvatar color={bot.color} identity={bot.id} size={30} status="running" /> : null}
       <div className="min-w-0 max-w-[min(760px,84%)]">
         <div className="mb-1.5 flex items-center gap-2 text-[12px]">
-          <span className="font-medium text-foreground/80">{bot?.name ?? "Bot"}</span>
+          <span className="font-medium text-foreground/80">{bot?.name ?? t`Bot`}</span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
-            {status || "Working"}
+            {status || t`Working`}
           </span>
         </div>
         <div className="px-1 py-0.5 text-[15px] leading-6 text-foreground">
           {text ? <ChatMarkdown streaming>{text}</ChatMarkdown> : null}
           {!text ? (
-            <div className="flex items-center gap-1 py-1" role="status" aria-label="Thinking">
+            <div className="flex items-center gap-1 py-1" role="status" aria-label={t`Thinking`}>
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:120ms]" />
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:240ms]" />

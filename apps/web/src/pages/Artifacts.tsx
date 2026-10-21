@@ -1,6 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
-import type { Artifact, ArtifactVersion, Bot } from "@rakazo/contracts";
+import type {
+  Artifact,
+  ArtifactVersion,
+  ArtifactWithContent,
+  Bot,
+} from "@rakazo/contracts";
 import { isAttachmentImageMimeType } from "@rakazo/contracts";
 import {
   AlertDialog,
@@ -34,7 +39,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PdfViewer } from "../components/PdfViewer";
 import { SandboxedHtmlViewer } from "../components/SandboxedHtmlViewer";
-import { decodeArtifactBase64, downloadArtifactBytes } from "../lib/artifact-open";
+import {
+  decodeArtifactBase64,
+  downloadArtifactBytes,
+} from "../lib/artifact-open";
 import { takeInitialBootstrap } from "../lib/bootstrap";
 import { desktopBridge } from "../lib/desktop";
 import { formatRelativeTime } from "../lib/relative-time";
@@ -49,10 +57,36 @@ const VIEW_MODE_STORAGE_KEY = "rakazo:artifacts-view-mode";
 const LIST_PAGE_SIZE = 60;
 
 type ArtifactSummary = Artifact & { versionCount: number };
+type ArtifactOwner = Pick<Bot, "id" | "name" | "color"> &
+  Partial<Pick<Bot, "status">>;
+
+export interface ArtifactsDataSource {
+  listBots: () => Promise<ArtifactOwner[]>;
+  list: (input: {
+    botId?: string;
+    cursor?: string;
+    limit: number;
+  }) => Promise<{ items: ArtifactSummary[]; nextCursor: string | null }>;
+  listVersions: (familyId: string) => Promise<ArtifactVersion[]>;
+  get: (artifactId: string) => Promise<ArtifactWithContent>;
+  remove: (artifactId: string) => Promise<void>;
+}
+
+const serverArtifactsSource: ArtifactsDataSource = {
+  listBots: async () => (await takeInitialBootstrap()).bots,
+  list: (input) => rpc.artifacts.listSpace(input),
+  listVersions: (familyId) => rpc.artifacts.listVersions({ familyId }),
+  get: (artifactId) => rpc.artifacts.getById({ artifactId }),
+  remove: async (artifactId) => {
+    await rpc.artifacts.remove({ artifactId });
+  },
+};
 
 function readViewMode(): ViewMode {
   try {
-    return window.localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "list" ? "list" : "grid";
+    return window.localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "list"
+      ? "list"
+      : "grid";
   } catch {
     return "grid";
   }
@@ -66,7 +100,11 @@ function writeViewMode(mode: ViewMode): void {
   }
 }
 
-function matchesCalendarDateFilter(iso: string, filter: DateFilter, now: Date): boolean {
+function matchesCalendarDateFilter(
+  iso: string,
+  filter: DateFilter,
+  now: Date,
+): boolean {
   if (filter === "all") return true;
   const date = new Date(iso);
   if (filter === "today") return date.toDateString() === now.toDateString();
@@ -76,14 +114,30 @@ function matchesCalendarDateFilter(iso: string, filter: DateFilter, now: Date): 
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     return date >= startOfWeek;
   }
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
 }
 
-export function ArtifactsPage() {
-  const { artifactId } = useParams<{ artifactId?: string }>();
+export function ArtifactsPage({
+  source = serverArtifactsSource,
+  selectedArtifactId,
+  onSelectArtifact,
+  onBack,
+  showWindowChrome = true,
+}: {
+  source?: ArtifactsDataSource;
+  selectedArtifactId?: string;
+  onSelectArtifact?: (artifactId: string | null) => void;
+  onBack?: () => void;
+  showWindowChrome?: boolean;
+} = {}) {
+  const params = useParams<{ artifactId?: string }>();
+  const artifactId = selectedArtifactId ?? params.artifactId;
   const navigate = useNavigate();
   const { t } = useLingui();
-  const [bots, setBots] = useState<Bot[]>([]);
+  const [bots, setBots] = useState<ArtifactOwner[]>([]);
   const [items, setItems] = useState<ArtifactSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -96,13 +150,26 @@ export function ArtifactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [maximized, setMaximized] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<ArtifactSummary | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ArtifactSummary | null>(
+    null,
+  );
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    void takeInitialBootstrap().then((bootstrap) => setBots(bootstrap.bots));
-  }, []);
+    let cancelled = false;
+    void source
+      .listBots()
+      .then((next) => {
+        if (!cancelled) setBots(next);
+      })
+      .catch(() => {
+        if (!cancelled) setBots([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,8 +179,8 @@ export function ArtifactsPage() {
     setItems(null);
     setLoadError(null);
     setNextCursor(null);
-    void rpc.artifacts
-      .listSpace({ botId: activeBotId ?? undefined, limit: LIST_PAGE_SIZE })
+    void source
+      .list({ botId: activeBotId ?? undefined, limit: LIST_PAGE_SIZE })
       .then((page) => {
         if (cancelled) return;
         setItems(page.items);
@@ -127,7 +194,7 @@ export function ArtifactsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeBotId, t]);
+  }, [activeBotId, source]);
 
   async function loadMore() {
     if (!nextCursor || loadingMoreRef.current) return;
@@ -136,7 +203,7 @@ export function ArtifactsPage() {
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      const page = await rpc.artifacts.listSpace({
+      const page = await source.list({
         botId: activeBotId ?? undefined,
         cursor: nextCursor,
         limit: LIST_PAGE_SIZE,
@@ -158,14 +225,18 @@ export function ArtifactsPage() {
     setMaximized(false);
   }, [artifactId]);
 
-  const botsById = useMemo(() => new Map(bots.map((bot) => [bot.id, bot])), [bots]);
+  const botsById = useMemo(
+    () => new Map(bots.map((bot) => [bot.id, bot])),
+    [bots],
+  );
 
   const filteredItems = useMemo(() => {
     if (!items) return null;
     const now = new Date();
     const query = searchQuery.trim().toLowerCase();
     return items.filter((item) => {
-      if (!matchesCalendarDateFilter(item.createdAt, dateFilter, now)) return false;
+      if (!matchesCalendarDateFilter(item.createdAt, dateFilter, now))
+        return false;
       if (!query) return true;
       return (
         item.name.toLowerCase().includes(query) ||
@@ -174,7 +245,8 @@ export function ArtifactsPage() {
     });
   }, [items, searchQuery, dateFilter]);
 
-  const clientFilterActive = searchQuery.trim().length > 0 || dateFilter !== "all";
+  const clientFilterActive =
+    searchQuery.trim().length > 0 || dateFilter !== "all";
   const autoFetchedCursorRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -183,7 +255,8 @@ export function ArtifactsPage() {
 
   // Search and date filters only see loaded pages, so keep paging until something matches.
   useEffect(() => {
-    if (!clientFilterActive || !nextCursor || loadingMore || items === null) return;
+    if (!clientFilterActive || !nextCursor || loadingMore || items === null)
+      return;
     if (filteredItems && filteredItems.length > 0) return;
     if (autoFetchedCursorRef.current === nextCursor) return;
     autoFetchedCursorRef.current = nextCursor;
@@ -195,14 +268,25 @@ export function ArtifactsPage() {
     writeViewMode(mode);
   }
 
+  const openArtifact = (artifactIdToOpen: string) => {
+    if (onSelectArtifact) onSelectArtifact(artifactIdToOpen);
+    else navigate(`/app/artifacts/${artifactIdToOpen}`);
+  };
+  const closeArtifact = () => {
+    if (onSelectArtifact) onSelectArtifact(null);
+    else navigate("/app/artifacts");
+  };
   async function confirmDelete() {
     if (!pendingDelete) return;
     setDeleteBusy(true);
     setDeleteError(null);
     try {
-      await rpc.artifacts.remove({ artifactId: pendingDelete.id });
-      setItems((current) => current?.filter((item) => item.id !== pendingDelete.id) ?? current);
-      if (artifactId === pendingDelete.id) navigate("/app/artifacts");
+      await source.remove(pendingDelete.id);
+      setItems(
+        (current) =>
+          current?.filter((item) => item.id !== pendingDelete.id) ?? current,
+      );
+      if (artifactId === pendingDelete.id) closeArtifact();
       setPendingDelete(null);
     } catch (error) {
       setDeleteError(errorText(error, t`Could not delete this artifact.`));
@@ -218,14 +302,26 @@ export function ArtifactsPage() {
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-2">
             {/* This route is the window's leading edge, so Electron window controls sit in the header. */}
-            {desktopBridge() ? <WindowChrome /> : null}
-            <Link
-              to="/app"
-              className="app-no-drag flex shrink-0 items-center gap-0.5 rounded-lg py-1 pe-1.5 text-[13px] font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />
-              <Trans>Bots</Trans>
-            </Link>
+            {showWindowChrome && desktopBridge() ? <WindowChrome /> : null}
+            {onBack ? (
+              <button
+                type="button"
+                aria-label={t`Back`}
+                onClick={onBack}
+                className="app-no-drag flex shrink-0 items-center gap-0.5 rounded-lg py-1 pe-1.5 text-[13px] font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />
+                <Trans>Bots</Trans>
+              </button>
+            ) : (
+              <Link
+                to="/app"
+                className="app-no-drag flex shrink-0 items-center gap-0.5 rounded-lg py-1 pe-1.5 text-[13px] font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />
+                <Trans>Bots</Trans>
+              </Link>
+            )}
             <h1 className="text-xl font-semibold">
               <Trans>Artifacts</Trans>
             </h1>
@@ -285,14 +381,19 @@ export function ArtifactsPage() {
               aria-label={t`Filter by date`}
               className="w-auto text-[13px]"
               value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value as DateFilter)}
+              onChange={(event) =>
+                setDateFilter(event.target.value as DateFilter)
+              }
             >
               <NativeSelectOption value="all">{t`All time`}</NativeSelectOption>
               <NativeSelectOption value="today">{t`Today`}</NativeSelectOption>
               <NativeSelectOption value="week">{t`This week`}</NativeSelectOption>
               <NativeSelectOption value="month">{t`This month`}</NativeSelectOption>
             </NativeSelect>
-            <FilterChip active={activeBotId === null} onClick={() => setActiveBotId(null)}>
+            <FilterChip
+              active={activeBotId === null}
+              onClick={() => setActiveBotId(null)}
+            >
               <Trans>All bots</Trans>
             </FilterChip>
             {bots.map((bot) => (
@@ -317,6 +418,12 @@ export function ArtifactsPage() {
                 botsById={botsById}
                 selectedId={artifactId}
                 onRequestDelete={setPendingDelete}
+                onOpenArtifact={openArtifact}
+                artifactHref={
+                  onSelectArtifact
+                    ? undefined
+                    : (artifactId) => `/app/artifacts/${artifactId}`
+                }
                 nextCursor={nextCursor}
                 loadingMore={loadingMore}
                 onLoadMore={() => void loadMore()}
@@ -327,6 +434,7 @@ export function ArtifactsPage() {
               artifactId={artifactId}
               maximized={maximized}
               onToggleMaximize={() => setMaximized((value) => !value)}
+              source={source}
             />
           </>
         ) : (
@@ -336,6 +444,12 @@ export function ArtifactsPage() {
             viewMode={viewMode}
             botsById={botsById}
             onRequestDelete={setPendingDelete}
+            onOpenArtifact={openArtifact}
+            artifactHref={
+              onSelectArtifact
+                ? undefined
+                : (artifactId) => `/app/artifacts/${artifactId}`
+            }
             nextCursor={nextCursor}
             loadingMore={loadingMore}
             onLoadMore={() => void loadMore()}
@@ -358,15 +472,17 @@ export function ArtifactsPage() {
               <AlertDialogDescription>
                 {pendingDelete.versionCount > 1 ? (
                   <Trans>
-                    This deletes all {pendingDelete.versionCount} versions of this artifact. This
-                    can't be undone.
+                    This deletes all {pendingDelete.versionCount} versions of
+                    this artifact. This can't be undone.
                   </Trans>
                 ) : (
                   <Trans>This can't be undone.</Trans>
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {deleteError ? <p className="text-[13.5px] text-destructive">{deleteError}</p> : null}
+            {deleteError ? (
+              <p className="text-[13.5px] text-destructive">{deleteError}</p>
+            ) : null}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteBusy}>
                 <Trans>Cancel</Trans>
@@ -392,6 +508,8 @@ function BrowsingPane({
   viewMode,
   botsById,
   onRequestDelete,
+  onOpenArtifact,
+  artifactHref,
   nextCursor,
   loadingMore,
   onLoadMore,
@@ -399,8 +517,10 @@ function BrowsingPane({
   items: ArtifactSummary[] | null;
   loadError: string | null;
   viewMode: ViewMode;
-  botsById: Map<string, Bot>;
+  botsById: Map<string, ArtifactOwner>;
   onRequestDelete: (artifact: ArtifactSummary) => void;
+  onOpenArtifact: (artifactId: string) => void;
+  artifactHref?: (artifactId: string) => string;
   nextCursor: string | null;
   loadingMore: boolean;
   onLoadMore: () => void;
@@ -432,6 +552,8 @@ function BrowsingPane({
               artifact={item}
               bot={item.botId ? botsById.get(item.botId) : undefined}
               onRequestDelete={onRequestDelete}
+              onOpen={onOpenArtifact}
+              href={artifactHref?.(item.id)}
             />
           ))}
         </div>
@@ -443,16 +565,26 @@ function BrowsingPane({
               artifact={item}
               bot={item.botId ? botsById.get(item.botId) : undefined}
               onRequestDelete={onRequestDelete}
+              onOpen={onOpenArtifact}
+              href={artifactHref?.(item.id)}
             />
           ))}
         </div>
       )}
-      {nextCursor ? <LoadMoreButton loading={loadingMore} onClick={onLoadMore} /> : null}
+      {nextCursor ? (
+        <LoadMoreButton loading={loadingMore} onClick={onLoadMore} />
+      ) : null}
     </div>
   );
 }
 
-function LoadMoreButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+function LoadMoreButton({
+  loading,
+  onClick,
+}: {
+  loading: boolean;
+  onClick: () => void;
+}) {
   return (
     <div className="mt-4 flex justify-center">
       <Button variant="outline" size="sm" disabled={loading} onClick={onClick}>
@@ -502,15 +634,19 @@ function IndexPane({
   botsById,
   selectedId,
   onRequestDelete,
+  onOpenArtifact,
+  artifactHref,
   nextCursor,
   loadingMore,
   onLoadMore,
 }: {
   items: ArtifactSummary[] | null;
   loadError: string | null;
-  botsById: Map<string, Bot>;
+  botsById: Map<string, ArtifactOwner>;
   selectedId: string;
   onRequestDelete: (artifact: ArtifactSummary) => void;
+  onOpenArtifact: (artifactId: string) => void;
+  artifactHref?: (artifactId: string) => string;
   nextCursor: string | null;
   loadingMore: boolean;
   onLoadMore: () => void;
@@ -537,6 +673,8 @@ function IndexPane({
               bot={item.botId ? botsById.get(item.botId) : undefined}
               active={item.id === selectedId}
               onRequestDelete={onRequestDelete}
+              onOpen={onOpenArtifact}
+              href={artifactHref?.(item.id)}
             />
           ))}
           {nextCursor ? (
@@ -574,7 +712,7 @@ function FilterChip({
   );
 }
 
-function useBotColorHex(bot: Bot): string {
+function useBotColorHex(bot: ArtifactOwner): string {
   return useMemo(() => {
     const parsed = parseBotAvatar(bot.color, bot.id);
     const effectiveId = bot.id || parsed.color || "agent";
@@ -587,7 +725,7 @@ function BotFilterChip({
   active,
   onClick,
 }: {
-  bot: Bot;
+  bot: ArtifactOwner;
   active: boolean;
   onClick: () => void;
 }) {
@@ -596,14 +734,22 @@ function BotFilterChip({
     <button
       type="button"
       onClick={onClick}
-      style={{ backgroundColor: active ? `${hex}26` : undefined, borderColor: `${hex}66` }}
+      style={{
+        backgroundColor: active ? `${hex}26` : undefined,
+        borderColor: `${hex}66`,
+      }}
       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[13px] font-medium transition-colors ${
         active
           ? "text-foreground"
           : "text-muted-foreground hover:bg-accent/40 hover:text-accent-foreground"
       }`}
     >
-      <BotAvatar color={bot.color} identity={bot.id} size={16} status={bot.status} />
+      <BotAvatar
+        color={bot.color}
+        identity={bot.id}
+        size={16}
+        status={bot.status}
+      />
       <span className="max-w-[120px] truncate">{bot.name}</span>
     </button>
   );
@@ -628,9 +774,36 @@ function ViewModeButton({
       title={label}
       onClick={onClick}
       className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-        active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:text-foreground"
       }`}
     >
+      {children}
+    </button>
+  );
+}
+
+function ArtifactNavigation({
+  href,
+  onOpen,
+  className,
+  children,
+}: {
+  href?: string;
+  onOpen: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} className={className}>
       {children}
     </button>
   );
@@ -640,17 +813,22 @@ function ArtifactCard({
   artifact,
   bot,
   onRequestDelete,
+  onOpen,
+  href,
 }: {
   artifact: ArtifactSummary;
-  bot: Bot | undefined;
+  bot: ArtifactOwner | undefined;
+  onOpen: (artifactId: string) => void;
   onRequestDelete: (artifact: ArtifactSummary) => void;
+  href?: string;
 }) {
   const { t } = useLingui();
   return (
     <div className="group relative">
-      <Link
-        to={`/app/artifacts/${artifact.id}`}
-        className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 text-foreground hover:bg-accent/40"
+      <ArtifactNavigation
+        href={href}
+        onOpen={() => onOpen(artifact.id)}
+        className="flex w-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 text-start text-foreground hover:bg-accent/40"
       >
         <div className="flex items-start justify-between">
           <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-accent text-accent-foreground">
@@ -668,7 +846,9 @@ function ArtifactCard({
           </div>
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[15px] font-semibold">{artifact.name}</div>
+          <div className="truncate text-[15px] font-semibold">
+            {artifact.name}
+          </div>
           {artifact.description ? (
             <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
               {artifact.description}
@@ -678,15 +858,22 @@ function ArtifactCard({
         <div className="mt-auto flex items-center gap-2 text-[12px] text-muted-foreground">
           {bot ? (
             <>
-              <BotAvatar color={bot.color} identity={bot.id} size={20} status={bot.status} />
+              <BotAvatar
+                color={bot.color}
+                identity={bot.id}
+                size={20}
+                status={bot.status}
+              />
               <span className="min-w-0 flex-1 truncate">{bot.name}</span>
             </>
           ) : (
             <span className="flex-1" />
           )}
-          <span className="shrink-0">{formatRelativeTime(artifact.createdAt)}</span>
+          <span className="shrink-0">
+            {formatRelativeTime(artifact.createdAt)}
+          </span>
         </div>
-      </Link>
+      </ArtifactNavigation>
       <button
         type="button"
         aria-label={t`Delete ${artifact.name}`}
@@ -709,21 +896,33 @@ function ArtifactRow({
   bot,
   active,
   onRequestDelete,
+  onOpen,
+  href,
 }: {
   artifact: ArtifactSummary;
-  bot: Bot | undefined;
+  bot: ArtifactOwner | undefined;
   active?: boolean;
   onRequestDelete: (artifact: ArtifactSummary) => void;
+  onOpen: (artifactId: string) => void;
+  href?: string;
 }) {
   const { t } = useLingui();
   return (
-    <div className={`group relative ${active ? "bg-accent/60" : "hover:bg-accent/40"}`}>
-      <Link to={`/app/artifacts/${artifact.id}`} className="flex flex-col gap-1 px-4 py-3 pe-10">
+    <div
+      className={`group relative ${active ? "bg-accent/60" : "hover:bg-accent/40"}`}
+    >
+      <ArtifactNavigation
+        href={href}
+        onOpen={() => onOpen(artifact.id)}
+        className="flex w-full flex-col gap-1 px-4 py-3 pe-10 text-start"
+      >
         <div className="flex items-center gap-2">
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] bg-accent text-accent-foreground">
             <ArtifactMimeIcon mimeType={artifact.mimeType} small />
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{artifact.name}</span>
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">
+            {artifact.name}
+          </span>
           {artifact.versionCount > 1 ? (
             <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
               {`v${artifact.version}`}
@@ -738,14 +937,19 @@ function ArtifactRow({
         <div className="flex items-center gap-1.5 ps-8 text-[11.5px] text-muted-foreground">
           {bot ? (
             <>
-              <BotAvatar color={bot.color} identity={bot.id} size={14} status={bot.status} />
+              <BotAvatar
+                color={bot.color}
+                identity={bot.id}
+                size={14}
+                status={bot.status}
+              />
               <span className="max-w-[140px] truncate">{bot.name}</span>
               <span aria-hidden="true">·</span>
             </>
           ) : null}
           <span>{formatRelativeTime(artifact.createdAt)}</span>
         </div>
-      </Link>
+      </ArtifactNavigation>
       <button
         type="button"
         aria-label={t`Delete ${artifact.name}`}
@@ -763,7 +967,13 @@ function ArtifactRow({
   );
 }
 
-function ArtifactMimeIcon({ mimeType, small }: { mimeType: string; small?: boolean }) {
+function ArtifactMimeIcon({
+  mimeType,
+  small,
+}: {
+  mimeType: string;
+  small?: boolean;
+}) {
   const size = small ? 12 : 16;
   return (
     <svg
@@ -796,21 +1006,27 @@ function mimeLabel(mimeType: string): string {
   if (mimeType === "text/markdown") return "MD";
   if (mimeType === "application/pdf") return "PDF";
   const slash = mimeType.indexOf("/");
-  return (slash === -1 ? mimeType : mimeType.slice(slash + 1)).toUpperCase().slice(0, 6);
+  return (slash === -1 ? mimeType : mimeType.slice(slash + 1))
+    .toUpperCase()
+    .slice(0, 6);
 }
 
 function PreviewPane({
   artifactId,
   maximized,
   onToggleMaximize,
+  source,
 }: {
   artifactId: string;
   maximized: boolean;
   onToggleMaximize: () => void;
+  source: ArtifactsDataSource;
 }) {
   const { t } = useLingui();
   const [versions, setVersions] = useState<ArtifactVersion[] | null>(null);
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
+    null,
+  );
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ready"; artifact: Artifact; bytes: Uint8Array }
@@ -821,8 +1037,8 @@ function PreviewPane({
     let cancelled = false;
     setVersions(null);
     setSelectedVersionId(null);
-    void rpc.artifacts
-      .listVersions({ familyId: artifactId })
+    void source
+      .listVersions(artifactId)
       .then((list) => {
         if (cancelled) return;
         setVersions(list);
@@ -834,14 +1050,14 @@ function PreviewPane({
     return () => {
       cancelled = true;
     };
-  }, [artifactId]);
+  }, [artifactId, source]);
 
   useEffect(() => {
     if (!selectedVersionId) return;
     let cancelled = false;
     setState({ status: "loading" });
-    void rpc.artifacts
-      .getById({ artifactId: selectedVersionId })
+    void source
+      .get(selectedVersionId)
       .then((artifact) => {
         if (!cancelled) {
           setState({
@@ -862,7 +1078,7 @@ function PreviewPane({
     return () => {
       cancelled = true;
     };
-  }, [selectedVersionId, t]);
+  }, [selectedVersionId, source, t]);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
@@ -897,7 +1113,11 @@ function PreviewPane({
               variant="outline"
               size="sm"
               onClick={() =>
-                downloadArtifactBytes(state.artifact.name, state.artifact.mimeType, state.bytes)
+                downloadArtifactBytes(
+                  state.artifact.name,
+                  state.artifact.mimeType,
+                  state.bytes,
+                )
               }
             >
               <Download className="me-1.5" size={15} strokeWidth={1.9} />
@@ -947,7 +1167,13 @@ function PreviewPane({
   );
 }
 
-function ArtifactPreview({ artifact, bytes }: { artifact: Artifact; bytes: Uint8Array }) {
+function ArtifactPreview({
+  artifact,
+  bytes,
+}: {
+  artifact: Artifact;
+  bytes: Uint8Array;
+}) {
   if (artifact.mimeType === "text/html") {
     const html = new TextDecoder("utf-8").decode(bytes);
     return <SandboxedHtmlViewer html={html} title={artifact.name} />;
@@ -966,11 +1192,19 @@ function ArtifactPreview({ artifact, bytes }: { artifact: Artifact; bytes: Uint8
     return <PdfViewer bytes={bytes} title={artifact.name} />;
   }
   if (isAttachmentImageMimeType(artifact.mimeType)) {
-    return <ImagePreview bytes={bytes} mimeType={artifact.mimeType} name={artifact.name} />;
+    return (
+      <ImagePreview
+        bytes={bytes}
+        mimeType={artifact.mimeType}
+        name={artifact.name}
+      />
+    );
   }
   return (
     <div className="grid h-full place-items-center px-6 text-center text-sm text-muted-foreground/80">
-      <Trans>Preview isn't available for this file type — download it to view it.</Trans>
+      <Trans>
+        Preview isn't available for this file type — download it to view it.
+      </Trans>
     </div>
   );
 }
@@ -988,7 +1222,11 @@ function ImagePreview({
   if (!url) return null;
   return (
     <div className="grid h-full place-items-center overflow-auto bg-muted/40 p-4">
-      <img src={url} alt={name} className="max-h-full max-w-full rounded-lg shadow-sm" />
+      <img
+        src={url}
+        alt={name}
+        className="max-h-full max-w-full rounded-lg shadow-sm"
+      />
     </div>
   );
 }

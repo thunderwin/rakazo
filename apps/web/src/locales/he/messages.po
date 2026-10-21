@@ -29,21 +29,49 @@ msgstr "{0, plural, one {ממתין להתחברות — הקוד יפוג בע�
 msgid "{0, plural, one {Waiting for sign-in — the link expires in about # minute.} other {Waiting for sign-in — the link expires in about # minutes.}}"
 msgstr "{0, plural, one {ממתין להתחברות — הקישור יפוג בעוד כ-# דקה.} other {ממתין להתחברות — הקישור יפוג בעוד כ-# דקות.}}"
 
+#. placeholder {0}: login ? "Password" : "Value"
+#. placeholder {0}: type === "login" ? "Password" : "Value"
+#: src/local/LocalSecretsDialog.tsx
+msgid "{0}"
+msgstr ""
+
 #. placeholder {0}: file.name
 #: src/pages/Shell.tsx
 msgid "{0} (max {ATTACHMENT_MAX_COUNT} attachments)"
 msgstr "{0} (עד {ATTACHMENT_MAX_COUNT} קבצים מצורפים)"
 
 #. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (max {ATTACHMENT_MAX_COUNT} files)"
+msgstr ""
+
+#. placeholder {0}: file.name
+#. placeholder {1}: attachmentSizeLabel(ATTACHMENT_MAX_BYTES)
 #. placeholder {1}: attachmentSizeLabel(attachmentMaxBytes(bootstrapMe))
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "{0} (over {1})"
 msgstr "{0} (מעל {1})"
+
+#. placeholder {0}: file.name
+#: src/local/LocalComposer.tsx
+msgid "{0} (unsupported type)"
+msgstr ""
 
 #. placeholder {0}: preset.n
 #: src/pages/RoutineSchedule.tsx
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
+
+#. placeholder {0}: group.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots"
+msgstr ""
+
+#. placeholder {0}: activeGroup.members.length
+#: src/local/LocalApp.tsx
+msgid "{0} bots · Shared group thread"
+msgstr ""
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -85,6 +113,16 @@ msgstr "שעות סיכום של {0}"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "{0} runs · {1} tokens"
 msgstr "{0} הרצות · {1} טוקנים"
+
+#. placeholder {0}: tools.length
+#: src/local/LocalMessageView.tsx
+msgid "{0} tool actions"
+msgstr ""
+
+#. placeholder {0}: run.tools.length
+#: src/local/LocalActivityDialog.tsx
+msgid "{0} tools"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/ExternalConversationSettings.tsx
@@ -285,12 +323,28 @@ msgstr "{workingBotName} עובד"
 msgid "@{0}"
 msgstr "@{0}"
 
+#: src/local/LocalComposer.tsx
+msgid "⌘/Ctrl+Enter to send"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "1 tool"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "1 tool action"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
 msgstr "קצת מהכול"
 
 #: src/pages/RoutineEditor.tsx
 msgid "A command's output"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "A local assistant with access to approved tools."
 msgstr ""
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
@@ -320,6 +374,7 @@ msgstr "טוקן גישה"
 msgid "Access token (optional)"
 msgstr "טוקן גישה (אופציונלי)"
 
+#: src/local/LocalApp.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Account"
 msgstr "חשבון"
@@ -337,6 +392,10 @@ msgstr "מזהה חשבון"
 msgid "Account label"
 msgstr "תווית חשבון"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Account resources"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Accounts"
 msgstr "חשבונות"
@@ -353,6 +412,7 @@ msgstr "פעולות עבור {0}"
 msgid "Actions for space"
 msgstr "פעולות למרחב"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -363,6 +423,8 @@ msgid "Active model"
 msgstr "מודל פעיל"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Shell.tsx
 msgid "Activity"
 msgstr "פעילות"
@@ -372,6 +434,11 @@ msgstr "פעילות"
 #: src/pages/ScratchpadSection.tsx
 msgid "Add"
 msgstr "הוספה"
+
+#. placeholder {0}: bot.name
+#: src/local/LocalGroupDialog.tsx
+msgid "Add {0}"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
@@ -423,6 +490,7 @@ msgstr "הוספת מודל מחובר"
 msgid "Add connected models to use them as backups."
 msgstr "אפשר להוסיף מודלים מחוברים כדי להשתמש בהם כגיבוי."
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Add credential"
 msgstr "הוספת פרטי גישה"
@@ -455,6 +523,10 @@ msgstr "הוספת OpenAPI"
 #: src/pages/PluginsOverlay.tsx
 msgid "Add remote MCP server"
 msgstr "הוספת שרת MCP מרוחק"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Add script"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
@@ -547,6 +619,10 @@ msgstr "לאפשר {0} בלי לשאול"
 msgid "Allow email actions without asking"
 msgstr "לאפשר פעולות אימייל בלי לשאול"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Allow network access"
+msgstr ""
+
 #: src/components/AskCard.tsx
 msgid "Allow once"
 msgstr "אישור חד-פעמי"
@@ -635,6 +711,12 @@ msgstr "מפתח API"
 msgid "API key header"
 msgstr "header של מפתח API"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "App settings"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "מראה"
@@ -668,10 +750,20 @@ msgstr "בארכיון"
 msgid "Archived"
 msgstr "בארכיון"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots"
+msgstr ""
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "Archived bots keep their chats, memory, and files."
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Archived. Chat, memory, and files kept."
 msgstr "הועבר לארכיון. הצ׳אט, הזיכרון והקבצים נשמרו."
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Arguments"
 msgstr "ארגומנטים"
@@ -680,6 +772,10 @@ msgstr "ארגומנטים"
 #: src/pages/Shell.tsx
 msgid "Artifacts"
 msgstr "תוצרים"
+
+#: src/local/LocalApp.tsx
+msgid "Ask a question, run a local tool, or work in your signed-in browser."
+msgstr ""
 
 #. placeholder {0}: rule.matchValue
 #: src/components/ApprovalRulesSettings.tsx
@@ -716,6 +812,10 @@ msgstr "לשאול לפני שליחת אימייל חיצוני"
 msgid "Ask the server owner to configure this provider."
 msgstr "יש לבקש מבעלי השרת להגדיר את הספק הזה."
 
+#: src/local/LocalApp.tsx
+msgid "Assistant"
+msgstr ""
+
 #. placeholder {0}: preset.time
 #: src/pages/RoutineSchedule.tsx
 msgid "at {0}"
@@ -729,6 +829,10 @@ msgstr "בשעה {timeSelect}"
 msgid "Attach file"
 msgstr "צירוף קובץ"
 
+#: src/local/LocalComposer.tsx
+msgid "Attach files"
+msgstr ""
+
 #: src/components/computer/TerminalApp.tsx
 msgid "Attached {path}"
 msgstr "צורף {path}"
@@ -737,6 +841,14 @@ msgstr "צורף {path}"
 #: src/pages/shell/chat-context.tsx
 msgid "Attachment"
 msgstr "קובץ מצורף"
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Attachment not found"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Authentication"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Authentication failed."
@@ -758,6 +870,10 @@ msgstr "מתן הרשאה"
 #: src/pages/shell/message-cards.tsx
 msgid "Authorize this server so agents can use its tools. A popup opens."
 msgstr "יש לתת הרשאה לשרת הזה כדי שסוכנים יוכלו להשתמש בכלים שלו. ייפתח חלון קופץ."
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Auto"
+msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -790,6 +906,7 @@ msgstr "אווטארים"
 msgid "Back"
 msgstr "חזרה"
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "חזרה להתחברות"
@@ -810,6 +927,7 @@ msgstr "מודלי הגיבוי נשמרו."
 msgid "Base URL"
 msgstr "Base URL"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Basic auth"
 msgstr "Basic auth"
@@ -818,6 +936,7 @@ msgstr "Basic auth"
 msgid "Basic auth ({username})"
 msgstr "Basic auth ({username})"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -850,6 +969,9 @@ msgstr "מפעיל את המחשב של {0}"
 msgid "bot"
 msgstr "בוט"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalComposer.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -860,6 +982,22 @@ msgstr "בוט"
 #: src/lib/browser-notifications.ts
 msgid "Bot"
 msgstr "בוט"
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot color"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Bot memory and shared documents stay on this device and may be included in model requests."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Bot name"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Bot screen"
@@ -877,6 +1015,7 @@ msgstr "בוט לקישור"
 msgid "Bot's model"
 msgstr "המודל של הבוט"
 
+#: src/local/LocalApp.tsx
 #: src/pages/Artifacts.tsx
 msgid "Bots"
 msgstr "בוטים"
@@ -898,9 +1037,15 @@ msgid "Browse MCP servers"
 msgstr "עיון בשרתי MCP"
 
 #: src/components/computer/ComputerWorkspace.tsx
+#: src/local/LocalAppSettings.tsx
 msgid "Browser"
 msgstr "דפדפן"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Browser bridge unavailable"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Built-in"
 msgstr "מובנה"
@@ -939,6 +1084,14 @@ msgstr "לא ניתן לקרוא תמונות"
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalChoicePromptDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -994,13 +1147,35 @@ msgstr "ערוצים"
 msgid "Chart failed to render: {error}"
 msgstr "לא ניתן להציג את התרשים: {error}"
 
+#: src/local/LocalApp.tsx
+msgid "chat"
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "Chat apps"
 msgstr "אפליקציות צ׳אט"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalBotSettings.tsx
+msgid "Chat settings"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Chat Settings"
 msgstr "הגדרות צ׳אט"
+
+#. placeholder {0}: activeBot?.name ?? t`your assistant`
+#: src/local/LocalApp.tsx
+msgid "Chat with {0}"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Chats and bot settings stay on this device."
+msgstr ""
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/pages/HostComputerPrompt.tsx
@@ -1068,9 +1243,23 @@ msgstr "בחירת בוט…"
 msgid "Choose a new password"
 msgstr "בחירת סיסמה חדשה"
 
+#: src/local/LocalChoicePromptDialog.tsx
+msgid "Choose an answer"
+msgstr ""
+
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose file"
 msgstr "בחירת קובץ"
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome connected"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
+msgid "Chrome not connected"
+msgstr ""
 
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
@@ -1094,6 +1283,10 @@ msgstr "ניקוי המסנן {label}"
 msgid "Clearing…"
 msgstr "מנקה…"
 
+#: src/local/LocalApp.tsx
+msgid "Clicking in the browser"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Client ID"
 msgstr "Client ID"
@@ -1103,6 +1296,14 @@ msgid "Client secret"
 msgstr "Client secret"
 
 #: src/components/ErrorBoundary.tsx
+#: src/components/I18nBootstrap.tsx
+#: src/local/LocalActivityDialog.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/PeerMessagesOverlay.tsx
@@ -1172,6 +1373,10 @@ msgstr "סגירת הגדרות המשתמש"
 msgid "Close voice settings"
 msgstr "סגירת הגדרות הקול"
 
+#: src/local/LocalApp.tsx
+msgid "Close window"
+msgstr ""
+
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Cloud"
 msgstr "ענן"
@@ -1212,6 +1417,7 @@ msgid "Command"
 msgstr "פקודה"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Command variable"
 msgstr "משתנה פקודה"
@@ -1227,6 +1433,10 @@ msgstr "צפוף"
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "הושלם"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Completed"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/Shell.tsx
@@ -1274,6 +1484,11 @@ msgstr "מוגדר על ידי ההתקנה"
 msgid "Configured servers"
 msgstr "שרתים מוגדרים"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Confirm delete"
@@ -1293,6 +1508,7 @@ msgid "Confirmations"
 msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalAppSettings.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -1352,6 +1568,10 @@ msgstr "מחובר. הכלים שלו יהיו זמינים החל מההודע�
 msgid "Connecting…"
 msgstr "מתחבר…"
 
+#: src/local/LocalApp.tsx
+msgid "Connection problem"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Connection test failed."
 msgstr "בדיקת החיבור נכשלה."
@@ -1361,12 +1581,17 @@ msgstr "בדיקת החיבור נכשלה."
 msgid "Connection to {0} is still pending. You can close this and check again."
 msgstr "החיבור ל-{0} עדיין ממתין. אפשר לסגור את החלון ולבדוק שוב."
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Content"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Context limit"
 msgstr "מגבלת הקשר"
 
 #: src/components/integrations/IntegrationSetup.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Onboarding.tsx
 msgid "Continue"
 msgstr "המשך"
@@ -1390,6 +1615,10 @@ msgstr "המשך עם אימייל"
 msgid "Copied"
 msgstr "הועתק"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Copied. No messages, cookies, or tokens are included."
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/Shell.tsx
@@ -1399,6 +1628,10 @@ msgstr "העתקה"
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Copy .env example"
 msgstr "העתקת דוגמת .env"
+
+#: src/local/LocalAppSettings.tsx
+msgid "Copy diagnostics"
+msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Could not add"
@@ -1443,6 +1676,10 @@ msgstr "לא ניתן להשלים את הפעולה"
 #: src/pages/McpOAuthCallback.tsx
 msgid "Could not complete OAuth"
 msgstr "לא ניתן להשלים את OAuth"
+
+#: src/local/LocalApp.tsx
+msgid "Could not complete the request"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Could not complete the update. Try again."
@@ -1564,6 +1801,10 @@ msgstr "לא ניתן להוריד את {0}. אפשר לנסות שוב."
 msgid "Could not download {name}. Try again."
 msgstr "לא ניתן להוריד את {name}. אפשר לנסות שוב."
 
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not download attachment"
+msgstr ""
+
 #: src/components/computer/FilesApp.tsx
 msgid "Could not download file"
 msgstr "לא ניתן להוריד את הקובץ"
@@ -1592,6 +1833,10 @@ msgstr "לא ניתן לטעון את כללי האישור"
 #: src/pages/Artifacts.tsx
 msgid "Could not load artifacts."
 msgstr "לא ניתן לטעון את התוצרים."
+
+#: src/local/LocalAttachmentView.tsx
+msgid "Could not load attachment"
+msgstr ""
 
 #: src/pages/ModelBackupsSettings.tsx
 msgid "Could not load backup models"
@@ -1868,6 +2113,9 @@ msgstr "לא ניתן לעדכן את הגדרות ההודעות"
 msgid "Couldn't update your timezone"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/Shell.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -1880,9 +2128,18 @@ msgstr "יצירה"
 msgid "Create a section and move {0} into it."
 msgstr "יצירת קטע והעברת {0} אליו."
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Create account"
 msgstr "יצירת חשבון"
+
+#: src/local/LocalApp.tsx
+msgid "Create at least two bots first"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Create bot"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Create group"
@@ -1933,6 +2190,8 @@ msgstr "פרטי גישה"
 msgid "credential saved"
 msgstr "פרטי הגישה נשמרו"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Credentials"
 msgstr "פרטי גישה"
@@ -1945,6 +2204,7 @@ msgstr "פרטי הגישה מוצפנים ולעולם לא נשלחים למו
 msgid "Cron"
 msgstr "Cron"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Cron expression"
 msgstr "ביטוי Cron"
@@ -1954,6 +2214,11 @@ msgstr "ביטוי Cron"
 msgid "Current password"
 msgstr "סיסמה נוכחית"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Custom cron"
+msgstr ""
+
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Custom header"
 msgstr "כותרת מותאמת אישית"
@@ -1966,6 +2231,7 @@ msgstr "תמיכת לקוחות"
 msgid "Customize bot avatar"
 msgstr "התאמת תמונת הבוט"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Dark"
 msgstr "כהה"
@@ -1988,6 +2254,7 @@ msgstr "ימים"
 msgid "Decline"
 msgstr "דחייה"
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -2008,10 +2275,19 @@ msgstr "ברירת מחדל ({0})"
 msgid "Default ({0})"
 msgstr "ברירת מחדל ({0})"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Default model"
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "היקף ברירת מחדל"
 
+#: src/local/LocalArchivedBotsDialog.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2090,6 +2366,9 @@ msgstr "ברירת המחדל של ההתקנה"
 msgid "Describe what this bot does"
 msgstr "תיאור של מה שהבוט עושה"
 
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Description"
@@ -2120,6 +2399,7 @@ msgstr "כלים מושבתים"
 msgid "Discard recording"
 msgstr ""
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2145,6 +2425,7 @@ msgstr "מנתק…"
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Dismiss"
 msgstr "סגירה"
@@ -2193,9 +2474,11 @@ msgid "Download"
 msgstr "הורדה"
 
 #. placeholder {0}: basename(entry.path)
+#. placeholder {0}: block.name
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 #: src/components/computer/FilesApp.tsx
+#: src/local/LocalAttachmentView.tsx
 msgid "Download {0}"
 msgstr "הורדת {0}"
 
@@ -2206,6 +2489,10 @@ msgstr "הורדת {name}"
 #: src/pages/KnowledgeSection.tsx
 msgid "Download as markdown"
 msgstr "הורדה כ-Markdown"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Download as Markdown"
+msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Download Executor"
@@ -2243,6 +2530,7 @@ msgstr "עריכה קודם"
 msgid "Edit Profile"
 msgstr "עריכת פרופיל"
 
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 msgid "Email"
 msgstr "אימייל"
@@ -2294,6 +2582,26 @@ msgstr "יש להזין מספר שלם בין 1 ל-1000 עבור מגבלת ה�
 msgid "Enter an API key before testing."
 msgstr "יש להזין מפתח API לפני הבדיקה."
 
+#: src/local/LocalAppSettings.tsx
+msgid "Enter sends the message"
+msgstr ""
+
+#: src/local/LocalComposer.tsx
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Entrypoints receive input.json and run in a fresh folder under skill-runs/."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "ericBot could not start"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "ericBot runs these locally while the app is open. Missed work runs once after the next launch."
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Shell.tsx
 msgid "Error"
@@ -2308,6 +2616,7 @@ msgstr "כל"
 msgid "every {intervalAmountSelect} {intervalUnitSelect}"
 msgstr "כל {intervalAmountSelect} {intervalUnitSelect}"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every day"
@@ -2318,6 +2627,7 @@ msgstr "כל יום"
 msgid "Every hour"
 msgstr "כל שעה"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Every Monday"
 msgstr "כל יום שני"
@@ -2377,6 +2687,7 @@ msgstr "גבוה מאוד"
 msgid "failed"
 msgstr "נכשל"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Failed"
 msgstr "נכשל"
@@ -2472,6 +2783,7 @@ msgstr "משלים את חיבור ה-MCP…"
 msgid "Flag unexpected actions"
 msgstr "סימון פעולות לא צפויות"
 
+#: src/local/LocalBotSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Fleet management"
 msgstr ""
@@ -2502,6 +2814,7 @@ msgstr "מסך מלא"
 msgid "Gateway ID"
 msgstr "Gateway ID"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "כללי"
@@ -2522,11 +2835,14 @@ msgstr "מתכונן"
 msgid "Git event"
 msgstr "אירוע Git"
 
+#: src/local/LocalActivityDialog.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/Shell.tsx
 msgid "Group"
 msgstr "קבוצה"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "Group settings"
 msgstr "הגדרות קבוצה"
@@ -2535,9 +2851,14 @@ msgstr "הגדרות קבוצה"
 msgid "Group updates"
 msgstr "עדכוני קבוצה"
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Groups"
 msgstr "קבוצות"
+
+#: src/local/LocalApp.tsx
+msgid "Handing off to another bot"
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 msgid "Hang up"
@@ -2559,6 +2880,7 @@ msgstr "header"
 msgid "Header \"{header}\""
 msgstr "Header \"{header}\""
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -2572,6 +2894,10 @@ msgstr "ערך ה-header"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
 msgstr "השמעת דוגמה"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Helper"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
@@ -2608,6 +2934,11 @@ msgstr ""
 msgid "Hold to talk, release to send"
 msgstr ""
 
+#. placeholder {0}: handoff.hop
+#: src/local/LocalMessageView.tsx
+msgid "hop {0}"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "hour"
 msgstr "שעה"
@@ -2624,6 +2955,10 @@ msgstr "תדירות"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "How to check"
 msgstr "איך לבדוק"
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "HTTPS origin"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "I’m done"
@@ -2652,6 +2987,12 @@ msgstr "בתהליך"
 #: src/lib/ticket-status.ts
 msgid "In review"
 msgstr "בבדיקה"
+
+#. placeholder {0}: pairing.port
+#. placeholder {1}: pairing.code
+#: src/local/LocalAppSettings.tsx
+msgid "In the extension, enter port <0>{0}</0> and code <1>{1}</1>."
+msgstr ""
 
 #: src/pages/BillingSettingsPanel.tsx
 msgid "Inactive"
@@ -2687,6 +3028,8 @@ msgstr "היסטוריית הנחיות"
 
 #: src/components/AskCard.tsx
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Instructions"
 msgstr "הנחיות"
 
@@ -2757,13 +3100,24 @@ msgstr "שמירת הזיכרונות"
 msgid "key"
 msgstr "מפתח"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "Knowledge"
 msgstr "ידע"
 
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Knowledge and skills"
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "שפה"
+
+#: src/local/LocalAppSettings.tsx
+msgid "Language, appearance, browser access, and defaults for this device."
+msgstr ""
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -2787,10 +3141,15 @@ msgstr "{app} הופעלה"
 msgid "Leave"
 msgstr "יציאה"
 
+#: src/local/LocalBotSettings.tsx
+msgid "Let this bot create and manage bots it owns, plus their groups and routines."
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Lets this bot organize, retune and schedule the bots it creates. You approve each change."
 msgstr "מאפשר לבוט הזה לארגן, לכוונן ולתזמן את הבוטים שהוא יוצר. כל שינוי דורש את אישורך."
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Light"
 msgstr "בהיר"
@@ -2822,6 +3181,10 @@ msgstr "מאזין"
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Listening…"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Listing local files"
 msgstr ""
 
 #: src/pages/Shell.tsx
@@ -2884,6 +3247,7 @@ msgstr "טוען ספקי קול…"
 msgid "Loading…"
 msgstr "טוען…"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
 msgid "Local"
 msgstr "מקומי"
@@ -2892,13 +3256,34 @@ msgstr "מקומי"
 msgid "Local access lets bots run commands without asking. Avoid it on shared or public servers."
 msgstr "גישה מקומית מאפשרת לבוטים להריץ פקודות בלי לבקש אישור. לא מומלץ להפעיל אותה בשרתים משותפים או ציבוריים."
 
+#: src/local/LocalApp.tsx
+msgid "Local assistant"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
+msgid "Local bot"
+msgstr ""
+
 #: src/pages/HostComputerPrompt.tsx
 msgid "Local computer access requires the latest desktop app."
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Local reference documents and reusable SKILL.md instructions. Organization-managed items are read-only."
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "Local run and tool history. Arguments and results stay on this device."
 msgstr ""
 
 #: src/pages/LocalSettings.tsx
 msgid "Local Server Settings"
 msgstr "הגדרות השרת המקומי"
+
+#: src/local/LocalApp.tsx
+msgid "Local-first workspace"
+msgstr ""
 
 #: src/pages/Paywall.tsx
 #: src/pages/Shell.tsx
@@ -2940,6 +3325,28 @@ msgstr "ניהול שרתי MCP"
 msgid "Manage messaging settings"
 msgstr "ניהול הגדרות ההודעות"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed"
+msgstr ""
+
+#. placeholder {0}: managedManifest.organizationName
+#: src/local/LocalApp.tsx
+msgid "Managed by {0}"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Managed by your organization. Edit the source package to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Managed by your organization. Run it now or update the assigned preset on the server."
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Managed by your organization. Update the assigned preset on the server to change it."
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Manual"
 msgstr "ידני"
@@ -2969,6 +3376,10 @@ msgstr "מקסימלי"
 #: src/pages/Artifacts.tsx
 msgid "Maximize"
 msgstr "הגדלה"
+
+#: src/local/LocalApp.tsx
+msgid "Maximize window"
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
@@ -3002,21 +3413,37 @@ msgstr "בינוני"
 msgid "Medium"
 msgstr "בינוני"
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Members"
+msgstr ""
+
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
 msgid "Members ({0})"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Memory"
 msgstr "זיכרון"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Memory scope"
 msgstr "היקף הזיכרון"
 
+#: src/local/LocalComposer.tsx
+msgid "Mention a bot"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Mention one or several members, or send a message to wake the first bot."
+msgstr ""
+
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Mentions"
 msgstr "אזכורים"
@@ -3034,10 +3461,15 @@ msgstr "הודעה"
 msgid "Message"
 msgstr "הודעה"
 
+#: src/local/LocalComposer.tsx
+msgid "Message {activeBotName}"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Message {activeName}"
 msgstr "הודעה אל {activeName}"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Message composer"
 msgstr "חלון כתיבת הודעה"
@@ -3071,6 +3503,10 @@ msgstr "הודעות"
 msgid "Microphone failed"
 msgstr "המיקרופון נכשל"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Mine"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Minimal"
@@ -3093,6 +3529,10 @@ msgstr "מזעור הבוטים"
 msgid "Minimize call"
 msgstr ""
 
+#: src/local/LocalApp.tsx
+msgid "Minimize window"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "minute"
 msgstr "דקה"
@@ -3101,6 +3541,10 @@ msgstr "דקה"
 #: src/pages/RoutineSchedule.tsx
 msgid "minutes"
 msgstr "דקות"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Missed"
+msgstr ""
 
 #: src/components/call/VoiceChatCard.tsx
 msgid "Missed call"
@@ -3125,6 +3569,14 @@ msgstr "מזהה מודל"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Model options"
 msgstr "אפשרויות מודל"
+
+#: src/local/LocalApp.tsx
+msgid "Model quota exhausted"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Model service is busy"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Model spend uses your provider keys."
@@ -3169,6 +3621,10 @@ msgstr "עוד"
 msgid "More computer actions"
 msgstr "פעולות נוספות במחשב"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Morning brief"
+msgstr ""
+
 #: src/pages/ModelBackupsSettings.tsx
 msgid "Move {full} down"
 msgstr "הזזת {full} למטה"
@@ -3194,6 +3650,11 @@ msgid "Muted"
 msgstr ""
 
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAuthScreen.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/Auth.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3215,6 +3676,10 @@ msgstr "שם לקבוצה"
 msgid "Name this routine"
 msgstr "שם לרוטינה"
 
+#: src/local/LocalBotSettings.tsx
+msgid "Name, model, instructions, and identity for this bot."
+msgstr ""
+
 #: src/lib/roster-status.ts
 msgid "Needs an answer"
 msgstr "ממתין לתשובה"
@@ -3232,10 +3697,21 @@ msgstr "נדרשת השתלטות"
 msgid "Needs you"
 msgstr "נדרשת פעולה"
 
+#: src/local/LocalApp.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "New bot"
 msgstr "בוט חדש"
 
+#: src/local/LocalApp.tsx
+msgid "New bot name"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "New document"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/GroupPanel.tsx
 msgid "New group"
 msgstr "קבוצה חדשה"
@@ -3249,11 +3725,16 @@ msgstr "פריט עבודה פתוחה חדש"
 msgid "New password"
 msgstr "סיסמה חדשה"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "New routine"
+msgstr ""
+
 #: src/pages/BotContextMenu.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "New section"
 msgstr "מקטע חדש"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "New skill"
 msgstr "מיומנות חדשה"
@@ -3266,6 +3747,14 @@ msgstr "מרחב חדש"
 msgid "New ticket"
 msgstr "כרטיס חדש"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Next"
+msgstr ""
+
+#: src/local/LocalActivityDialog.tsx
+msgid "No activity recorded yet."
+msgstr ""
+
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No agent connections yet."
 msgstr "עדיין אין חיבורי סוכנים."
@@ -3273,6 +3762,10 @@ msgstr "עדיין אין חיבורי סוכנים."
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "אין אפליקציות שתואמות לחיפוש."
+
+#: src/local/LocalArchivedBotsDialog.tsx
+msgid "No archived bots."
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."
@@ -3303,6 +3796,7 @@ msgstr "אין בוטים תואמים"
 msgid "No chat apps linked yet."
 msgstr "עדיין לא קושרו אפליקציות צ׳אט."
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "No credentials saved for this bot."
 msgstr "לא נשמרו פרטי גישה לבוט הזה."
@@ -3310,6 +3804,10 @@ msgstr "לא נשמרו פרטי גישה לבוט הזה."
 #: src/pages/MessagingSettingsOverlay.tsx
 msgid "No group chats yet."
 msgstr "עדיין אין צ׳אטים קבוצתיים."
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "No knowledge documents yet."
+msgstr ""
 
 #: src/components/AskCard.tsx
 msgid "No longer active"
@@ -3364,6 +3862,10 @@ msgstr "לא נמצאו שרתי MCP מרוחקים"
 msgid "No results"
 msgstr "אין תוצאות"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No routines yet."
+msgstr ""
+
 #: src/pages/ActivityList.tsx
 msgid "No runs match these filters."
 msgstr "אין הרצות שתואמות למסננים האלה."
@@ -3371,6 +3873,14 @@ msgstr "אין הרצות שתואמות למסננים האלה."
 #: src/pages/RoutineRunHistory.tsx
 msgid "No runs yet"
 msgstr "עדיין אין הרצות"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "No runs yet."
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "No shared documents yet."
+msgstr ""
 
 #: src/pages/KnowledgeSection.tsx
 msgid "No skills yet"
@@ -3392,6 +3902,10 @@ msgstr "אין כלים זמינים."
 msgid "No trigger"
 msgstr "ללא טריגר"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Node"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "None yet"
 msgstr "עדיין אין"
@@ -3412,6 +3926,10 @@ msgstr "לא נמצא בקטלוג התוספים"
 msgid "Not now"
 msgstr "לא עכשיו"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Not scheduled"
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Nothing is still running"
 msgstr "שום דבר לא פועל"
@@ -3419,6 +3937,10 @@ msgstr "שום דבר לא פועל"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "עדיין אין זיכרונות"
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "Nothing remembered yet."
+msgstr ""
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
@@ -3457,6 +3979,10 @@ msgstr "לפי תזמון"
 #: src/pages/RoutineSchedule.tsx
 msgid "on the 1st at {0}"
 msgstr "ב-1 לחודש בשעה {0}"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "One time"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "Only empty spaces can be deleted. Delete its bots and groups first."
@@ -3531,6 +4057,10 @@ msgstr "נפתח {path}"
 msgid "Opened its thread."
 msgstr "השרשור שלו נפתח."
 
+#: src/local/LocalApp.tsx
+msgid "Opening a browser page"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Opening chat…"
 msgstr "פותח צ׳אט…"
@@ -3582,11 +4112,16 @@ msgstr "בעלים"
 msgid "PagerDuty incident"
 msgstr "תקרית PagerDuty"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Pair another"
+msgstr ""
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Park"
 msgstr "השהיה"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
 #: src/pages/shell/bot-credentials.tsx
@@ -3628,6 +4163,7 @@ msgstr "יש להדביק את מפתח ה-API"
 msgid "Paste your API key, then test again."
 msgstr "יש להדביק את מפתח ה-API ולבדוק שוב."
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Paused"
 msgstr "מושהה"
@@ -3645,6 +4181,10 @@ msgstr "תמונה"
 msgid "Pick {GROUP_MEMBER_MIN}–{GROUP_MEMBER_MAX}"
 msgstr ""
 
+#: src/local/LocalGroupDialog.tsx
+msgid "Pick 2–10 bots. Every member shares this group's history and can hand work to another member."
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Pick a model from the catalog."
 msgstr "יש לבחור מודל מהקטלוג."
@@ -3660,6 +4200,10 @@ msgstr ""
 #: src/pages/BotContextMenu.tsx
 msgid "Pin"
 msgstr "הצמדה"
+
+#: src/local/LocalApp.tsx
+msgid "Pinned"
+msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
 msgid "Play {name}"
@@ -3706,9 +4250,18 @@ msgstr "סביבת עבודה פרטית עם בוטים וקבוצות משלה
 msgid "Project ID"
 msgstr "מזהה פרויקט"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Prompt"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
+#: src/local/LocalSecretsDialog.tsx
 msgid "Protected input"
 msgstr "קלט מוגן"
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "Protected values stay on this device and are never returned to the model."
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
@@ -3723,6 +4276,10 @@ msgstr "ספקים"
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "Pull request"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Python"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Queued"
@@ -3744,6 +4301,14 @@ msgstr "אמוג׳י"
 msgid "Read replies aloud"
 msgstr "הקראת תשובות בקול"
 
+#: src/local/LocalApp.tsx
+msgid "Reading a local file"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Reading the browser page"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 msgid "Reasoning effort"
@@ -3760,6 +4325,10 @@ msgstr "שליפה בלבד"
 #: src/pages/ActivityList.tsx
 msgid "Recent"
 msgstr "אחרונים"
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Recent runs"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
@@ -3873,6 +4442,9 @@ msgid "Remove"
 msgstr "הסרה"
 
 #. placeholder {0}: attachment.file.name
+#. placeholder {0}: bot.name
+#: src/local/LocalComposer.tsx
+#: src/local/LocalGroupDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Remove {0}"
 msgstr "הסרת {0}"
@@ -3894,11 +4466,16 @@ msgstr "להסיר את {secretName}? הבוט הזה לא יוכל עוד לה�
 msgid "Remove change trigger"
 msgstr ""
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "Remove credential"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "הסרת אירוע Git"
 
 #. placeholder {0}: mention.name
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Remove mention {0}"
 msgstr "הסרת האזכור {0}"
@@ -3910,6 +4487,10 @@ msgstr "הסרת טריגר ההודעה"
 #: src/pages/RoutineEditor.tsx
 msgid "Remove schedule"
 msgstr "הסרת התזמון"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Remove script"
+msgstr ""
 
 #. placeholder {0}: selectedSkill.name
 #: src/pages/Shell.tsx
@@ -3976,9 +4557,17 @@ msgstr "התשובה בוטלה"
 msgid "Replying to {0}"
 msgstr "תשובה ל-{0}"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Report an issue"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "Research & writing"
 msgstr "מחקר וכתיבה"
+
+#: src/local/LocalGroupDialog.tsx
+msgid "Research team"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
@@ -4018,6 +4607,7 @@ msgid "Restart to update"
 msgstr "הפעלה מחדש לעדכון"
 
 #: src/components/InstructionSettings.tsx
+#: src/local/LocalArchivedBotsDialog.tsx
 #: src/pages/Shell.tsx
 msgid "Restore"
 msgstr "שחזור"
@@ -4038,7 +4628,12 @@ msgstr "שוחזר"
 msgid "Restoring your workspace"
 msgstr "משחזר את סביבת העבודה"
 
+#: src/local/LocalActivityDialog.tsx
+msgid "Result"
+msgstr ""
+
 #: src/components/AccountAccess.tsx
+#: src/local/LocalApp.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelBackupsSettings.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4064,6 +4659,8 @@ msgid "Return to Rakazo"
 msgstr "חזרה ל-Rakazo"
 
 #. placeholder {0}: doc.revision
+#. placeholder {0}: document.revision
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/KnowledgeSection.tsx
 msgid "rev {0}"
 msgstr "גרסה {0}"
@@ -4093,6 +4690,8 @@ msgstr "החלפת מפתח"
 msgid "Routine"
 msgstr "רוטינה"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Routines"
 msgstr "רוטינות"
@@ -4101,6 +4700,7 @@ msgstr "רוטינות"
 msgid "Routines that run while you're away"
 msgstr "רוטינות שרצות גם כשלא נמצאים"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"
 msgstr "הרצה ב-"
@@ -4109,14 +4709,24 @@ msgstr "הרצה ב-"
 msgid "Run history"
 msgstr "היסטוריית הרצות"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Run now"
+msgstr ""
+
+#: src/local/LocalMessageView.tsx
+msgid "Run stopped"
+msgstr ""
+
 #: src/pages/Shell.tsx
 msgid "Run time must be in the future."
 msgstr "זמן ההרצה חייב להיות בעתיד."
 
 #: src/components/CloudAgentCard.tsx
+#: src/local/LocalActivityDialog.tsx
 msgid "running"
 msgstr "פועל"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/ActivityList.tsx
 msgid "Running"
 msgstr "פועל"
@@ -4124,6 +4734,10 @@ msgstr "פועל"
 #: src/pages/RoutineEditor.tsx
 msgid "Running · Stop"
 msgstr "פועל · עצירה"
+
+#: src/local/LocalApp.tsx
+msgid "Running a local command"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "Running…"
@@ -4135,6 +4749,12 @@ msgstr "רץ כשהבוט הזה מקבל הודעה מאומתת מהספק ה�
 
 #: src/components/AskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
+#: src/local/LocalAppSettings.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalGroupDialog.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+#: src/local/LocalMemoryDialog.tsx
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -4150,6 +4770,7 @@ msgstr "שמירה"
 msgid "Save backups"
 msgstr "שמירת גיבויים"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Save credential"
 msgstr "שמירת פרטי הגישה"
@@ -4202,6 +4823,34 @@ msgstr "שומר…"
 #: src/lib/call-session.ts
 msgid "Say yes or no, or answer in a sentence."
 msgstr "אפשר לענות כן או לא, או במשפט."
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Schedule"
+msgstr ""
+
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Scheduled"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script content"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script path"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Script runtime"
+msgstr ""
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Scripts"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Scrolling the browser page"
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4266,6 +4915,7 @@ msgstr "בחירת בוט"
 msgid "Select a connected model"
 msgstr "בחירת מודל מחובר"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Send"
 msgstr "שליחה"
@@ -4328,6 +4978,10 @@ msgstr "שם השרת"
 msgid "Server URL"
 msgstr "URL של השרת"
 
+#: src/local/LocalApp.tsx
+msgid "Session expired"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/pages/MessagingSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -4352,6 +5006,7 @@ msgstr "עזרה בהגדרה"
 msgid "Shape"
 msgstr "צורה"
 
+#: src/local/LocalMemoryDialog.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -4365,11 +5020,16 @@ msgstr "צ׳אט משותף עם {GROUP_MEMBER_MIN}-{GROUP_MEMBER_MAX} בוטי�
 msgid "Shared documents"
 msgstr "מסמכים משותפים"
 
+#: src/local/LocalAppSettings.tsx
+msgid "Shared memory"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared skills"
 msgstr "מיומנויות משותפות"
 
 #: src/components/computer/TerminalApp.tsx
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 msgid "Shell"
 msgstr "Shell"
 
@@ -4418,6 +5078,7 @@ msgid "Sidebar density"
 msgstr "צפיפות סרגל הצד"
 
 #: src/lib/localized-provider-hint.ts
+#: src/local/LocalAuthScreen.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
@@ -4443,6 +5104,10 @@ msgstr "יש להתחבר לחשבון הקיים כדי לקשר SSO"
 msgid "Sign in with the subscription, or test the API key instead."
 msgstr "אפשר להתחבר עם המנוי, או לבדוק את מפתח ה-API במקום."
 
+#: src/local/LocalApp.tsx
+msgid "Sign out"
+msgstr ""
+
 #: src/pages/Auth.tsx
 #: src/pages/Welcome.tsx
 msgid "Sign up"
@@ -4457,6 +5122,10 @@ msgstr "אתר"
 msgid "Skill {0}"
 msgstr "מיומנות {0}"
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Skills"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/Shell.tsx
 msgid "Skip"
@@ -4467,6 +5136,7 @@ msgid "Skip or deploy key"
 msgstr "דילוג או מפתח התקנה"
 
 #. placeholder {0}: skipped.join(", ")
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Skipped {0}"
 msgstr "דולגו: {0}"
@@ -4491,6 +5161,11 @@ msgstr "עדכון תוכנה"
 #: src/lib/user-error.ts
 msgid "Something went wrong. Try again."
 msgstr "משהו השתבש. אפשר לנסות שוב."
+
+#. placeholder {0}: sourceLabel(editing.source)
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Source: {0}"
+msgstr ""
 
 #: src/pages/SettingsOverlay.tsx
 msgid "Space"
@@ -4540,6 +5215,11 @@ msgstr "מודל דיבור"
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO אינו זמין כרגע. אפשר לנסות שוב."
 
+#. placeholder {0}: activeGroup.name
+#: src/local/LocalApp.tsx
+msgid "Start {0}"
+msgstr ""
+
 #: src/pages/Paywall.tsx
 msgid "Start {trialDays}-day free trial"
 msgstr "התחלת תקופת ניסיון חינם של {trialDays} ימים"
@@ -4568,6 +5248,7 @@ msgstr "סטטוס"
 msgid "Steps"
 msgstr "שלבים"
 
+#: src/local/LocalComposer.tsx
 #: src/pages/Shell.tsx
 msgid "Stop"
 msgstr "עצירה"
@@ -4580,10 +5261,18 @@ msgstr "הפסקת ההקראה"
 msgid "Stop teaching"
 msgstr "הפסקת הלימוד"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Stopped"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
 msgid "Stopped."
 msgstr "נעצר."
+
+#: src/local/LocalApp.tsx
+msgid "Stopping…"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
@@ -4628,6 +5317,7 @@ msgstr "החלפת בוט"
 msgid "Switching…"
 msgstr "מחליף…"
 
+#: src/local/LocalAppSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "System"
 msgstr "מערכת"
@@ -4635,6 +5325,10 @@ msgstr "מערכת"
 #: src/pages/Shell.tsx
 msgid "Take control"
 msgstr "השתלטות"
+
+#: src/local/LocalApp.tsx
+msgid "Taking over an existing tab"
+msgstr ""
 
 #: src/components/teach/TeachComputerOverlay.tsx
 msgid "Teach a task"
@@ -4688,6 +5382,14 @@ msgstr "בדיקת התחברות"
 msgid "Testing…"
 msgstr "בודק…"
 
+#: src/local/LocalSecretsDialog.tsx
+msgid "The agent needs a credential. It will not be shown to the model or sent in chat."
+msgstr ""
+
+#: src/local/LocalAppSettings.tsx
+msgid "The agent uses the Chrome profile where the extension is installed. Page text can enter model requests; cookies are never exported."
+msgstr ""
+
 #: src/components/SoftwareUpdateSection.tsx
 msgid "The API did not come back. Refresh this page."
 msgstr "ה-API לא חזר לפעול. יש לרענן את הדף."
@@ -4695,6 +5397,14 @@ msgstr "ה-API לא חזר לפעול. יש לרענן את הדף."
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."
 msgstr "תם הזמן הקצוב לחיבור."
+
+#: src/local/LocalApp.tsx
+msgid "The desktop bridge is unavailable."
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "The local desktop bridge is unavailable."
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
@@ -4705,6 +5415,10 @@ msgstr "ספק המודל החזיר שגיאה."
 msgid "The provider is rate-limiting requests."
 msgstr "הספק מגביל את קצב הבקשות."
 
+#: src/local/types.ts
+msgid "The request could not be completed."
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "ספק הזיכרון שנבחר אינו זמין בגרסה הזו."
@@ -4714,6 +5428,8 @@ msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "לא ניתן לקרוא את ההגדרות השמורות. יש להסיר ולהוסיף מחדש."
 
 #: src/components/call/CallCard.tsx
+#: src/local/LocalBotSettings.tsx
+#: src/local/LocalMessageView.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4724,6 +5440,14 @@ msgstr "חשיבה"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Thinking: {activeThinkingLabel}"
 msgstr "חשיבה: {activeThinkingLabel}"
+
+#: src/local/LocalApp.tsx
+msgid "Thinking…"
+msgstr ""
+
+#: src/local/LocalMemoryDialog.tsx
+msgid "This bot"
+msgstr ""
 
 #: src/pages/Shell.tsx
 msgid "This bot runs on this computer, not a Linux desktop. Shell and files use your home folder."
@@ -4753,6 +5477,10 @@ msgstr "המחשב הזה"
 #: src/pages/Artifacts.tsx
 msgid "This deletes all {0} versions of this artifact. This can't be undone."
 msgstr "פעולה זו מוחקת את כל {0} הגרסאות של התוצר. לא ניתן לבטל אותה."
+
+#: src/local/LocalSecretsDialog.tsx
+msgid "This device"
+msgstr ""
 
 #: src/components/ArtifactFileCard.tsx
 msgid "This file is not valid UTF-8 text."
@@ -4790,6 +5518,10 @@ msgstr "פעולה זו מסירה את החיבור מכל המרחבים."
 msgid "This reset link is invalid or expired"
 msgstr "קישור האיפוס אינו תקין או שפג תוקפו"
 
+#: src/local/LocalMessageView.tsx
+msgid "This run did not finish"
+msgstr ""
+
 #: src/pages/shell/message-cards.tsx
 msgid "This server cannot be assigned without a bot."
 msgstr "לא ניתן להקצות את השרת הזה בלי בוט."
@@ -4810,14 +5542,23 @@ msgstr "התחברות עם המנוי הזה עדיין לא זמינה ב-Raka
 msgid "This week"
 msgstr "השבוע"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "Time"
+msgstr ""
+
 #: src/pages/RoutineSchedule.tsx
 msgid "Time of day"
 msgstr "שעה ביום"
+
+#: src/local/LocalKnowledgeSkillsDialog.tsx
+msgid "Timeout seconds"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Timezone"
 msgstr ""
 
+#: src/local/LocalKnowledgeSkillsDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Title"
@@ -4917,6 +5658,10 @@ msgstr "הקלדה בלי הקלטה"
 #: src/components/AskCard.tsx
 msgid "Type your answer"
 msgstr "יש להקליד תשובה"
+
+#: src/local/LocalApp.tsx
+msgid "Typing in the browser"
+msgstr ""
 
 #: src/pages/BotContextMenu.tsx
 msgid "Unassigned"
@@ -5065,6 +5810,14 @@ msgstr "שימוש בהנחיות ברירת המחדל"
 msgid "Use Protected input for passwords."
 msgstr "לסיסמאות יש להשתמש בקלט מוגן."
 
+#: src/local/LocalAppSettings.tsx
+msgid "Use the bot model"
+msgstr ""
+
+#: src/local/LocalBotSettings.tsx
+msgid "Use the default"
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Use this model"
 msgstr "שימוש במודל הזה"
@@ -5078,6 +5831,7 @@ msgid "Use your own key"
 msgstr "שימוש במפתח משלך"
 
 #: src/components/AskCard.tsx
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Username"
 msgstr "שם משתמש"
@@ -5085,6 +5839,10 @@ msgstr "שם משתמש"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Uses this server's own {hostCredentialSource} credentials to access {selectedProviderName}."
 msgstr "משתמש בפרטי הגישה של {hostCredentialSource} של השרת עצמו כדי לגשת ל-{selectedProviderName}."
+
+#: src/local/LocalApp.tsx
+msgid "Using {name}"
+msgstr ""
 
 #: src/pages/shell/bot-credentials.tsx
 msgid "Value"
@@ -5140,6 +5898,7 @@ msgstr "אפליקציות ווב, דסקטופ ומובייל"
 msgid "Webhook"
 msgstr "Webhook"
 
+#: src/local/LocalSecretsDialog.tsx
 #: src/pages/shell/bot-credentials.tsx
 msgid "Website login"
 msgstr "התחברות לאתר"
@@ -5148,6 +5907,7 @@ msgstr "התחברות לאתר"
 msgid "week"
 msgstr "שבוע"
 
+#: src/local/LocalRoutinesDialog.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 msgid "Weekdays"
@@ -5165,6 +5925,10 @@ msgstr "במה להתחיל קודם?"
 msgid "What result will you demonstrate?"
 msgstr "איזו תוצאה תודגם?"
 
+#: src/local/LocalRoutinesDialog.tsx
+msgid "What should this bot do when the routine runs?"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "What should this routine do each time it runs?"
 msgstr "מה הרוטינה הזו צריכה לעשות בכל הרצה?"
@@ -5172,6 +5936,10 @@ msgstr "מה הרוטינה הזו צריכה לעשות בכל הרצה?"
 #: src/pages/shell/bot-panel.tsx
 msgid "What this bot is for"
 msgstr "למה הבוט הזה משמש"
+
+#: src/local/LocalGroupDialog.tsx
+msgid "What this group works on"
+msgstr ""
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "What to return"
@@ -5205,6 +5973,11 @@ msgstr "איפה הבוטים ירוצו?"
 msgid "Won't do"
 msgstr "לא יבוצע"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalMessageView.tsx
+msgid "Working"
+msgstr ""
+
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
 msgid "Working…"
@@ -5212,6 +5985,10 @@ msgstr "עובד…"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
+msgstr ""
+
+#: src/local/LocalApp.tsx
+msgid "Writing a local file"
 msgstr ""
 
 #: src/components/computer/TerminalApp.tsx
@@ -5227,6 +6004,7 @@ msgstr "שנה"
 msgid "Yesterday"
 msgstr "אתמול"
 
+#: src/local/LocalMessageView.tsx
 #: src/pages/Shell.tsx
 msgid "You"
 msgstr "אני"
@@ -5252,9 +6030,17 @@ msgstr "השליטה אצלך"
 msgid "Your Anthropic"
 msgstr "Anthropic"
 
+#: src/local/LocalApp.tsx
+msgid "your assistant"
+msgstr ""
+
 #: src/pages/Auth.tsx
 msgid "Your email address"
 msgstr "כתובת האימייל"
+
+#: src/local/LocalAuthScreen.tsx
+msgid "Your local AI workspace"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

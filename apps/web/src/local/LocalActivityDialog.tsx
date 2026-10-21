@@ -1,3 +1,5 @@
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import type { DesktopActivityRun, DesktopActivityTool } from "@rakazo/contracts";
 import {
   Button,
@@ -10,17 +12,18 @@ import {
 } from "@rakazo/ui-web";
 import { AlertTriangle, Check, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { i18n } from "../lib/i18n";
 import type { LocalBridge } from "./types";
 
 function duration(start: string, end: string | null): string {
-  if (!end) return "running";
+  if (!end) return i18n._(msg`running`);
   const ms = new Date(end).getTime() - new Date(start).getTime();
   if (!Number.isFinite(ms) || ms < 0) return "";
   return ms < 1_000 ? `${ms} ms` : `${(ms / 1_000).toFixed(1)} s`;
 }
 
 function dateLabel(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(i18n.locale || undefined, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -50,14 +53,18 @@ function ToolRow({ tool }: { tool: DesktopActivityTool }) {
       </summary>
       <div className="grid gap-2 border-t border-border/60 p-2.5 text-[11.5px]">
         <div>
-          <p className="mb-1 font-medium text-muted-foreground">Arguments</p>
+          <p className="mb-1 font-medium text-muted-foreground">
+            <Trans>Arguments</Trans>
+          </p>
           <pre className="rk-scroll max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-2 font-mono">
             {JSON.stringify(tool.arguments, null, 2)}
           </pre>
         </div>
         {tool.result !== null ? (
           <div>
-            <p className="mb-1 font-medium text-muted-foreground">Result</p>
+            <p className="mb-1 font-medium text-muted-foreground">
+              <Trans>Result</Trans>
+            </p>
             <pre className="rk-scroll max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-2 font-mono">
               {JSON.stringify(tool.result, null, 2)}
             </pre>
@@ -82,6 +89,7 @@ export function LocalActivityDialog({
   botName: (botId: string) => string;
   groupName: (groupId: string | null) => string | undefined;
 }) {
+  const { t } = useLingui();
   const [runs, setRuns] = useState<DesktopActivityRun[] | null>(null);
   const [error, setError] = useState("");
 
@@ -109,9 +117,11 @@ export function LocalActivityDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(760px,calc(100vh-3rem))] overflow-y-auto bg-background shadow-2xl sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Activity</DialogTitle>
+          <DialogTitle>
+            <Trans>Activity</Trans>
+          </DialogTitle>
           <DialogDescription>
-            Local run and tool history. Arguments and results stay on this device.
+            <Trans>Local run and tool history. Arguments and results stay on this device.</Trans>
           </DialogDescription>
         </DialogHeader>
 
@@ -128,7 +138,7 @@ export function LocalActivityDialog({
           </div>
         ) : runs.length === 0 ? (
           <div className="py-10 text-center text-[13px] text-muted-foreground">
-            No activity recorded yet.
+            <Trans>No activity recorded yet.</Trans>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -138,11 +148,15 @@ export function LocalActivityDialog({
                   {statusIcon(run.status)}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium">
-                      {run.groupId ? (groupName(run.groupId) ?? "Group") : botName(run.botId)}
+                      {run.groupId ? (groupName(run.groupId) ?? t`Group`) : botName(run.botId)}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       {dateLabel(run.startedAt)} · {duration(run.startedAt, run.endedAt)} ·{" "}
-                      {run.tools.length === 1 ? "1 tool" : `${run.tools.length} tools`}
+                      {run.tools.length === 1 ? (
+                        <Trans>1 tool</Trans>
+                      ) : (
+                        <Trans>{run.tools.length} tools</Trans>
+                      )}
                     </p>
                   </div>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
@@ -167,7 +181,7 @@ export function LocalActivityDialog({
         )}
 
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-          Close
+          <Trans>Close</Trans>
         </Button>
       </DialogContent>
     </Dialog>

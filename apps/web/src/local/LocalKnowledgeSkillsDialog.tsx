@@ -1,4 +1,10 @@
-import type { DesktopLocalKnowledgeDocument, DesktopLocalSkill } from "@rakazo/contracts";
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
+import type {
+  DesktopLocalKnowledgeDocument,
+  DesktopLocalSkill,
+  DesktopLocalSkillScriptInput,
+} from "@rakazo/contracts";
 import { parseSkillMd } from "@rakazo/core";
 import {
   Button,
@@ -17,17 +23,19 @@ import {
 } from "@rakazo/ui-web";
 import { ChevronLeft, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { LocalBot, LocalBridge } from "./types";
+import { i18n } from "../lib/i18n";
+import type { LocalBridge } from "./types";
 import { localErrorMessage } from "./types";
 
 function sourceLabel(source: string): string {
-  if (source === "managed") return "Managed";
-  if (source === "builtin") return "Built-in";
-  if (source === "user") return "Mine";
-  return "Local";
+  if (source === "managed") return i18n._(msg`Managed`);
+  if (source === "builtin") return i18n._(msg`Built-in`);
+  if (source === "user") return i18n._(msg`Mine`);
+  return i18n._(msg`Local`);
 }
 
 function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
+  const { t } = useLingui();
   const [documents, setDocuments] = useState<DesktopLocalKnowledgeDocument[] | null>(null);
   const [editing, setEditing] = useState<DesktopLocalKnowledgeDocument | "new" | null>(null);
   const [title, setTitle] = useState("");
@@ -125,13 +133,13 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
           onClick={() => setEditing(null)}
         >
           <ChevronLeft size={13} />
-          Knowledge
+          <Trans>Knowledge</Trans>
         </Button>
         <label
           htmlFor="local-knowledge-title"
           className="grid gap-1.5 text-[12px] text-muted-foreground"
         >
-          Title
+          <Trans>Title</Trans>
           <Input
             id="local-knowledge-title"
             value={title}
@@ -144,7 +152,7 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
           htmlFor="local-knowledge-content"
           className="grid gap-1.5 text-[12px] text-muted-foreground"
         >
-          Content
+          <Trans>Content</Trans>
           <Textarea
             id="local-knowledge-content"
             value={content}
@@ -157,7 +165,7 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
         </label>
         {readOnly ? (
           <p className="text-[11.5px] text-muted-foreground">
-            Managed by your organization. Edit the source package to change it.
+            <Trans>Managed by your organization. Edit the source package to change it.</Trans>
           </p>
         ) : null}
         {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
@@ -169,10 +177,10 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
               onClick={() => void save()}
             >
               {busy ? <LoaderCircle size={13} className="animate-spin" /> : null}
-              {editing === "new" ? "Create" : "Save"}
+              {editing === "new" ? t`Create` : t`Save`}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             {editing !== "new" ? (
               <Button
@@ -183,7 +191,7 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
                 onClick={() => void remove()}
               >
                 <Trash2 size={12} />
-                {confirmDelete ? "Confirm delete" : "Delete"}
+                {confirmDelete ? t`Confirm delete` : t`Delete`}
               </Button>
             ) : null}
           </div>
@@ -197,14 +205,14 @@ function KnowledgePanel({ api, open }: { api: LocalBridge; open: boolean }) {
       <div className="flex justify-end">
         <Button type="button" size="sm" onClick={create}>
           <Plus size={13} />
-          New document
+          <Trans>New document</Trans>
         </Button>
       </div>
       {documents === null ? (
         <Skeleton className="h-14 w-full" />
       ) : documents.length === 0 ? (
         <p className="py-10 text-center text-[13px] text-muted-foreground">
-          No knowledge documents yet.
+          <Trans>No knowledge documents yet.</Trans>
         </p>
       ) : (
         documents.map((document) => (
@@ -241,12 +249,43 @@ function skillBody(skill: DesktopLocalSkill): string {
   return "error" in parsed ? skill.content : parsed.body;
 }
 
+type ScriptDraft = {
+  path: string;
+  content: string;
+  runtime: "auto" | "none" | "node" | "python3" | "sh";
+  timeoutSeconds: number;
+  network: boolean;
+};
+
+function scriptDrafts(skill: DesktopLocalSkill): ScriptDraft[] {
+  return skill.scripts.map((script) => ({
+    path: script.path,
+    content: script.content,
+    runtime: script.runtime ?? "none",
+    timeoutSeconds: script.timeoutSeconds,
+    network: script.network,
+  }));
+}
+
+function scriptInputs(scripts: ScriptDraft[]): DesktopLocalSkillScriptInput[] {
+  return scripts.map((script) => ({
+    path: script.path,
+    content: script.content,
+    runtime:
+      script.runtime === "auto" ? undefined : script.runtime === "none" ? null : script.runtime,
+    timeoutSeconds: script.timeoutSeconds,
+    network: script.network,
+  }));
+}
+
 function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
+  const { t } = useLingui();
   const [skills, setSkills] = useState<DesktopLocalSkill[] | null>(null);
   const [editing, setEditing] = useState<DesktopLocalSkill | "new" | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [body, setBody] = useState("");
+  const [scripts, setScripts] = useState<ScriptDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
@@ -275,6 +314,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
     setName("");
     setDescription("");
     setBody("");
+    setScripts([]);
     setConfirmDelete(false);
     setError("");
   }
@@ -284,6 +324,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
     setName(skill.name);
     setDescription(skill.description);
     setBody(skillBody(skill));
+    setScripts(scriptDrafts(skill));
     setConfirmDelete(false);
     setError("");
   }
@@ -299,11 +340,13 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
               name: name.trim(),
               description: description.trim(),
               body,
+              scripts: scriptInputs(scripts),
             })
           : await api.skills.update(editing.name, {
               newName: name.trim(),
               description: description.trim(),
               body,
+              scripts: scriptInputs(scripts),
             });
       setSkills((current) => {
         if (!current) return [saved];
@@ -351,13 +394,13 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
           onClick={() => setEditing(null)}
         >
           <ChevronLeft size={13} />
-          Skills
+          <Trans>Skills</Trans>
         </Button>
         <label
           htmlFor="local-skill-name"
           className="grid gap-1.5 text-[12px] text-muted-foreground"
         >
-          Name
+          <Trans>Name</Trans>
           <Input
             id="local-skill-name"
             value={name}
@@ -370,7 +413,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
           htmlFor="local-skill-description"
           className="grid gap-1.5 text-[12px] text-muted-foreground"
         >
-          Description
+          <Trans>Description</Trans>
           <Input
             id="local-skill-description"
             value={description}
@@ -383,7 +426,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
           htmlFor="local-skill-body"
           className="grid gap-1.5 text-[12px] text-muted-foreground"
         >
-          Instructions
+          <Trans>Instructions</Trans>
           <Textarea
             id="local-skill-body"
             value={body}
@@ -394,9 +437,153 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
             onChange={(event) => setBody(event.target.value)}
           />
         </label>
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[12px] font-medium text-foreground">
+                <Trans>Scripts</Trans>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                <Trans>
+                  Entrypoints receive input.json and run in a fresh folder under skill-runs/.
+                </Trans>
+              </p>
+            </div>
+            {!readOnly ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setScripts((current) => [
+                    ...current,
+                    {
+                      path: "scripts/main.js",
+                      content:
+                        'const fs = require("node:fs");\nconst input = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));\nconsole.log(input);\n',
+                      runtime: "auto",
+                      timeoutSeconds: 60,
+                      network: false,
+                    },
+                  ])
+                }
+              >
+                <Plus size={12} />
+                <Trans>Add script</Trans>
+              </Button>
+            ) : null}
+          </div>
+          {scripts.map((script, index) => (
+            <div
+              key={`${script.path}:${index}`}
+              className="grid gap-2 rounded-xl border border-border p-3"
+            >
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_90px_auto]">
+                <Input
+                  aria-label={t`Script path`}
+                  value={script.path}
+                  maxLength={200}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    setScripts((current) =>
+                      current.map((candidate, at) =>
+                        at === index ? { ...candidate, path: event.target.value } : candidate,
+                      ),
+                    )
+                  }
+                />
+                <select
+                  aria-label={t`Script runtime`}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-[12px]"
+                  value={script.runtime}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    setScripts((current) =>
+                      current.map((candidate, at) =>
+                        at === index
+                          ? { ...candidate, runtime: event.target.value as ScriptDraft["runtime"] }
+                          : candidate,
+                      ),
+                    )
+                  }
+                >
+                  <option value="auto">{t`Auto`}</option>
+                  <option value="none">{t`Helper`}</option>
+                  <option value="node">{t`Node`}</option>
+                  <option value="python3">{t`Python`}</option>
+                  <option value="sh">{t`Shell`}</option>
+                </select>
+                <Input
+                  aria-label={t`Timeout seconds`}
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={script.timeoutSeconds}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    setScripts((current) =>
+                      current.map((candidate, at) =>
+                        at === index
+                          ? {
+                              ...candidate,
+                              timeoutSeconds: Math.min(
+                                120,
+                                Math.max(1, Number(event.target.value) || 1),
+                              ),
+                            }
+                          : candidate,
+                      ),
+                    )
+                  }
+                />
+                {!readOnly ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t`Remove script`}
+                    onClick={() => setScripts((current) => current.filter((_, at) => at !== index))}
+                  >
+                    <Trash2 size={13} />
+                  </Button>
+                ) : null}
+              </div>
+              <label className="flex items-center gap-2 text-[11.5px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={script.network}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    setScripts((current) =>
+                      current.map((candidate, at) =>
+                        at === index ? { ...candidate, network: event.target.checked } : candidate,
+                      ),
+                    )
+                  }
+                />
+                <Trans>Allow network access</Trans>
+              </label>
+              <Textarea
+                aria-label={t`Script content`}
+                value={script.content}
+                rows={7}
+                maxLength={200_000}
+                disabled={readOnly}
+                className="font-mono text-[12px]"
+                onChange={(event) =>
+                  setScripts((current) =>
+                    current.map((candidate, at) =>
+                      at === index ? { ...candidate, content: event.target.value } : candidate,
+                    ),
+                  )
+                }
+              />
+            </div>
+          ))}
+        </div>
         {editing !== "new" ? (
           <p className="text-[11.5px] text-muted-foreground">
-            Source: {sourceLabel(editing.source)}
+            <Trans>Source: {sourceLabel(editing.source)}</Trans>
           </p>
         ) : null}
         {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
@@ -408,10 +595,10 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
               onClick={() => void save()}
             >
               {busy ? <LoaderCircle size={13} className="animate-spin" /> : null}
-              {editing === "new" ? "Create" : "Save"}
+              {editing === "new" ? t`Create` : t`Save`}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             {editing !== "new" ? (
               <Button
@@ -422,7 +609,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
                 onClick={() => void remove()}
               >
                 <Trash2 size={12} />
-                {confirmDelete ? "Confirm delete" : "Delete"}
+                {confirmDelete ? t`Confirm delete` : t`Delete`}
               </Button>
             ) : null}
           </div>
@@ -436,7 +623,7 @@ function SkillsPanel({ api, open }: { api: LocalBridge; open: boolean }) {
       <div className="flex justify-end">
         <Button type="button" size="sm" onClick={create}>
           <Plus size={13} />
-          New skill
+          <Trans>New skill</Trans>
         </Button>
       </div>
       {skills === null ? (
@@ -473,27 +660,34 @@ export function LocalKnowledgeSkillsDialog({
   open,
   onOpenChange,
   api,
-  bot: _bot,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   api: LocalBridge;
-  bot: LocalBot;
 }) {
+  const { t } = useLingui();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(820px,calc(100vh-3rem))] overflow-y-auto bg-background shadow-2xl sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Knowledge and skills</DialogTitle>
+          <DialogTitle>
+            <Trans>Knowledge and skills</Trans>
+          </DialogTitle>
           <DialogDescription>
-            Local reference documents and reusable SKILL.md instructions. Organization-managed items
-            are read-only.
+            <Trans>
+              Local reference documents and reusable SKILL.md instructions. Organization-managed
+              items are read-only.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="knowledge">
-          <TabsList aria-label="Knowledge and skills">
-            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
-            <TabsTrigger value="skills">Skills</TabsTrigger>
+          <TabsList aria-label={t`Knowledge and skills`}>
+            <TabsTrigger value="knowledge">
+              <Trans>Knowledge</Trans>
+            </TabsTrigger>
+            <TabsTrigger value="skills">
+              <Trans>Skills</Trans>
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="knowledge">
             <KnowledgePanel api={api} open={open} />
@@ -503,7 +697,7 @@ export function LocalKnowledgeSkillsDialog({
           </TabsContent>
         </Tabs>
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-          Close
+          <Trans>Close</Trans>
         </Button>
       </DialogContent>
     </Dialog>

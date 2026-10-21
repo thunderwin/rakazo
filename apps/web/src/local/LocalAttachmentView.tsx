@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { Button, Skeleton } from "@rakazo/ui-web";
 import { Download, FileText, ImageOff } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -26,6 +27,7 @@ function downloadBase64(name: string, mimeType: string, contentBase64: string) {
 }
 
 export function LocalAttachmentView({ block, api }: { block: ArtifactBlock; api: LocalBridge }) {
+  const { t } = useLingui();
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState("");
   const image = block.kind === "image";
@@ -38,26 +40,26 @@ export function LocalAttachmentView({ block, api }: { block: ArtifactBlock; api:
       .then((artifact) => {
         if (!cancelled) {
           if (artifact) setContent(artifact.contentBase64);
-          else setError("Attachment not found");
+          else setError(t`Attachment not found`);
         }
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load attachment");
+        if (!cancelled) setError(t`Could not load attachment`);
       });
     return () => {
       cancelled = true;
     };
-  }, [api, block.artifactId, image]);
+  }, [api, block.artifactId, image, t]);
 
   async function download() {
     setError("");
     try {
       const artifact = content ? null : await api.artifacts.read(block.artifactId);
       const contentBase64 = content ?? artifact?.contentBase64;
-      if (!contentBase64) throw new Error("Attachment not found");
+      if (!contentBase64) throw new Error(t`Attachment not found`);
       downloadBase64(block.name, block.mimeType, contentBase64);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not download attachment");
+      setError(cause instanceof Error ? cause.message : t`Could not download attachment`);
     }
   }
 
@@ -84,7 +86,7 @@ export function LocalAttachmentView({ block, api }: { block: ArtifactBlock; api:
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={`Download ${block.name}`}
+            aria-label={t`Download ${block.name}`}
             onClick={() => void download()}
           >
             <Download size={13} />
@@ -110,7 +112,7 @@ export function LocalAttachmentView({ block, api }: { block: ArtifactBlock; api:
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={`Download ${block.name}`}
+          aria-label={t`Download ${block.name}`}
           onClick={() => void download()}
         >
           <Download size={13} />
