@@ -143,7 +143,7 @@ API (Hono + oRPC) + Pi agent runtime
 - 本地工具（shell、文件、应用启动）
 - 浏览器扩展桥接
 - 本地调度器
-- 本地 SQLite、备份和导出
+- 本地 SQLite
 
 Local Agent Runtime 应作为独立进程或 Electron utility process 运行，避免阻塞渲染进程，
 也便于崩溃恢复和权限隔离。
@@ -185,8 +185,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   辅助功能权限；`request_takeover` 会暂停并邀请用户完成受保护步骤。
 - `add_mcp_server` 支持 streamable HTTP、SSE 和 stdio MCP server，发现的工具在下一轮以
   `mcp__<server>__<tool>` 暴露。
-- Scratchpad、Ticket 和任务目录写入本地 SQLite；Fleet 支持 section/pin、归档、恢复和永久
-  删除。
+- Scratchpad 和任务目录写入本地 SQLite；Fleet 支持 section/pin、归档、恢复和永久删除。
+  Ticket 数据和表保留，但看板入口及 Ticket 模型工具默认隐藏。
 - `save_memory` / `recall_memory` / `forget_memory` 和 `search_history` / `read_history`
   已迁移到本地 SQLite；历史搜索只限当前 Bot 或群聊线程。
 - Skills 可携带最多 20 个声明式脚本文件；`skill_run` 只执行声明入口，每次经用户批准，
@@ -202,8 +202,8 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
   UI 通过本地 IPC 使用 SQLite/runtime，不访问服务端 oRPC。
 - 本地 renderer 复用 `BotAvatar`、原版 mention picker/键盘逻辑、`ChatMarkdown` 和共享
   UI primitives；bot 名称、颜色、头像、mention chip、Markdown 和错误卡片保持统一身份。
-- Scratchpad、Ticket Board 和 Artifact Library 直接复用原版页面组件，通过可注入数据源
-  分别连接服务端 RPC 或本地 SQLite IPC；本地 Ticket 字段在适配器中映射到上游 UI 契约。
+- Scratchpad 直接复用原版页面组件和本地 SQLite IPC。Ticket Board 和 Artifact Library 的
+  组件、适配层和数据表保留，但默认不进入本地导航；聊天附件继续使用 artifact 存储。
 - run 事件已通过 IPC 流到本地 React UI，并支持按 run id 停止当前模型或工具执行。
 - 模型、工具或浏览器操作失败时仍保存已经生成的文本和工具调用，并附带错误块；
   `onRunEnd` 统一清理活动 run、审批缓存和浏览器 Agent Window。Stop 同样进入该清理路径。
@@ -239,9 +239,9 @@ Local Agent Runtime 应作为独立进程或 Electron utility process 运行，�
 要求：
 
 - 仅当前用户可读。
-- 敏感字段加密；备份也加密。
-- 升级时执行迁移并保留备份。
-- 提供导出/恢复；V1 不做云端同步。
+- session 和 credential vault 使用 OS secure storage 加密。
+- 升级时执行 schema migration。
+- V1 不提供 SQLite 整库加密、产品级导出/恢复或云端同步。
 - 本地数据库是唯一事实来源。
 
 当前 schema 已有 bots、threads、messages、chat_groups、group_members、group_threads、
@@ -254,8 +254,8 @@ Knowledge document 与 Agent Skills 另有本地 repository；当前 schema 已�
 `peer_messages` 表记录持久 bot 之间的请求、最终回复、状态和错误，用于本地协作
 审计；它不保存到服务器。
 
-账号间隔离目前是目录和数据库文件隔离，不是磁盘加密。同一 OS 用户仍可直接读取这些
-SQLite 文件；数据库和备份加密仍是待办项。
+账号间隔离是目录和数据库文件隔离，不是磁盘加密。同一 OS 用户仍可直接读取这些 SQLite
+文件；这是 V1 明确接受的残余风险，不是待办功能。
 
 ### 4.4 模型网关
 
@@ -353,7 +353,8 @@ V1 继续使用 Better Auth session token；设备注册和短期设备 token �
 | 崩溃/错误元数据           | 是               | 可上报             |
 | 对话正文（模型网关）      | 经过，不持久化   | 是                 |
 
-V1 不存在服务器端的跨设备恢复。用户换机或重装需要本地导出/导入。
+V1 不存在服务器端或产品级的跨设备恢复。用户换机或重装可能丢失本地数据；这是明确接受的
+local-first 限制。
 
 ## 7. 终端、电脑和浏览器
 
@@ -410,8 +411,8 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 5. 服务器 API 只保留 auth、New API 映射、model gateway、telemetry。
 6. 把 bot 模板和 prompt 打包到客户端，seed 到本地 SQLite。
 7. 浏览器扩展和 loopback bridge 已接入；商店发布和复杂站点兼容仍待完成。
-8. 本地备份、导出、迁移和崩溃恢复。
-9. 最后做打包、签名、自动更新和小范围测试。
+8. 本地迁移和崩溃恢复。
+9. 最后做打包、配置包更新和小范围测试。
 
 在 1-4 完成前，不要开始多设备、团队或移动端。
 
@@ -434,7 +435,7 @@ V1 不打包本地模型权重。模型走服务器网关，因此安装包不�
 - 客户端拥有用户级权限，必须默认最小权限并提供停止按钮。
 - 模型网关能看到 prompt/回复；隐私政策必须披露。
 - V1 的 session token 存 OS keychain；设备级撤销是后续工作。
-- 本地数据库加密；备份加密。
+- session 和 credential vault 使用 OS secure storage 加密。
 - 浏览器扩展只响应用户发起的本地任务，不后台遍历页面；模型读取仍受当前任务目标约束。
 - 网页、工具输出和其他 bot 的内容都按不可信数据处理。
 - shell、文件写入、应用启动和屏幕控制需要审批或白名单。

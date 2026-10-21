@@ -28,9 +28,8 @@ apps/web/src/local-main.tsx
 - `@rakazo/core` 的 mention 构建、候选过滤、键盘选择和 chip key。
 - `@rakazo/chat-ui/web` 的 `ChatMarkdown`，包括 GFM、代码块、表格和安全链接。
 - `GROK_COLOR_LIST` 和 `resolvePersonaColorDef` 的 bot 身份色系统。
-- 原版 `ScratchpadSection`、`BoardPage` 和 `ArtifactsPage`。这些组件增加可注入的
-  数据源；服务端入口继续使用原 RPC 数据源，本地入口只替换为 IPC 适配器，没有维护
-  第二套页面布局。
+- 原版 `ScratchpadSection`。Ticket Board 和 Artifact Library 组件、适配层及数据表继续
+  保留以降低上游合并成本，但默认不提供本地产品入口。
 
 旧 `local.html`、`local.js`、`local.css` 和对应手写测试已删除，不再维护第二套 UI。
 
@@ -39,11 +38,10 @@ apps/web/src/local-main.tsx
 ### 设置分层
 
 - 左下角账户菜单统一承载个人中心和全局操作；应用设置从该菜单打开，包含语言、
-  外观、默认模型、浏览器访问和诊断。Board、Artifacts 和 Activity 也属于全局功能，
-  从同一账户菜单打开。
+  外观、默认模型、浏览器访问和诊断。Activity 也从同一账户菜单打开。
 - 退出登录也只放在左下角账户菜单中，不占用聊天标题栏的上下文控制。
 - 聊天标题栏只保留当前 Bot 的 Routines、Memory 和 Chat settings；群聊中同一位置只打开
-  当前群组设置。全局 Artifacts、Board、Activity 不再混入 Bot 标题栏。
+  当前群组设置。全局 Activity 不混入 Bot 标题栏。
 - 应用设置在 Bot 和群聊状态下都可访问，不再与当前聊天配置混在同一个弹窗。
 
 ### 语言
@@ -110,17 +108,17 @@ apps/web/src/local-main.tsx
 - `web_search`、`web_fetch`、`render_plot`、`attach_file` 和配置媒体供应商后出现的
   `generate_image` 都通过本地 runtime 执行；图表和图片会作为消息附件显示。
 
-### Scratchpad、Ticket Board 和 Artifacts
+### Scratchpad、Workspace 和隐藏的兼容页面
 
 - 当前 Bot 的聊天设置复用原版 Scratchpad 区域，增删、完成和搁置都写入本地 SQLite。
-- 左下角账户菜单的 Board 打开原版 Ticket Board。列、任务弹窗、负责人、状态、优先级和
-  评论布局均复用上游组件；本地适配器把 `ownerBotId/reference` 映射为上游
-  `assigneeBotId/ref`。
-- 左下角账户菜单和“应用设置 → 账户资源”都可打开原版 Artifact Library。卡片/列表视图、搜索、
-  日期和 Bot 筛选、附件预览及删除操作复用上游组件。
-- 本地 Artifact 目前没有上游的版本族数据，因此 `versionCount` 固定为 1，版本选择器
-  不出现；这是数据能力差异，不是隐藏现有本地数据。删除会直接移除本地 SQLite 中的
-  artifact。
+- Bot 的文件直接位于本地 workspace。“应用设置 → 账户资源 → Open workspace”使用操作系统
+  文件管理器打开真实目录，不把文件库页面作为产品入口。
+- Ticket Board 和 Artifact Library 默认隐藏。它们不是 Grok Bot 类产品的核心协作方式；
+  App 关闭时任务停止，独立看板与聊天、handoff、Activity 重复。
+- 聊天附件、`render_plot`、`generate_image` 和 `generate_video` 继续使用 SQLite artifact
+  存储；隐藏的是浏览页面，不是附件数据层。
+- `board_tickets` 和 `ticket_*` 默认不暴露给模型。仅设置
+  `RAKAZO_ENABLE_TICKET_TOOLS=1` 时才注册为模型工具，用于兼容性调试。
 - `Cmd/Ctrl+K` 打开原版 Bot 切换命令面板，搜索、头像、快捷键和键盘选择复用上游组件；
   本地入口只把 `DesktopLocalBot` 映射成面板需要的最小 Bot 字段。
 
@@ -143,9 +141,9 @@ pnpm --filter @rakazo/desktop build
 不需要重启窗口。
 
 组件测试覆盖 mention 选择与发送、BotAvatar/Markdown 渲染、模型额度错误、Retry
-保留输入、群聊与 handoff 展示、Memory/Routine/附件展示、本地 Artifact Library 与
-Ticket Board 的挂载，以及设置/浏览器状态。桌面构建继续由 `@rakazo/desktop` 的
-`prebuild` 自动生成 `dist-local`。
+保留输入、群聊与 handoff 展示、Memory/Routine/附件展示、Board/Artifact 入口隐藏、
+workspace 打开以及设置/浏览器状态。桌面构建继续由 `@rakazo/desktop` 的 `prebuild`
+自动生成 `dist-local`。
 
 ## 5. 尚未迁移的前端
 

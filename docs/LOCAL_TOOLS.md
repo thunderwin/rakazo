@@ -1,6 +1,7 @@
 # 本地 Agent 工具
 
-> 状态：当前本地客户端注册 76 个工具名；与上游 `builtinAgentTools` 同名 64 个。
+> 状态：本地代码定义 76 个工具名；默认模型面暴露 70 个，隐藏 6 个 Ticket 工具。
+> 与上游 `builtinAgentTools` 同名 64 个。
 > 核实日期：2026-10-21。
 >
 > 对比基线：当前代码基于 `upstream/main@92214866`。2026-10-21 fetch 到的
@@ -171,7 +172,11 @@ Routine 工具不在群聊暴露。
 - `ticket_comment`
 
 Scratchpad 和 Ticket 保存在本地 SQLite；`task_catalog` 汇总当前 Bot 的 scratchpad、routines、
-Skills 和模型当前可见工具。Scratchpad/Ticket 的写入逐次经过本地审批。
+Skills 和模型当前可见工具。Scratchpad 的写入逐次经过本地审批。
+
+`board_tickets` 和全部 `ticket_*` 默认不进入模型工具列表，因为单设备单用户场景已经使用
+聊天、handoff、群聊和 Activity 表达协作与进度。仅设置
+`RAKAZO_ENABLE_TICKET_TOOLS=1` 时才暴露这些兼容工具。
 
 ### 浏览器（12）
 
@@ -196,7 +201,7 @@ Skills 和模型当前可见工具。Scratchpad/Ticket 的写入逐次经过本�
 按 2026-10-21 的 `builtinAgentTools` 对比：
 
 - 上游 71 个。
-- 本地 76 个。
+- 本地代码定义 76 个，默认暴露 70 个。
 - 同名 64 个。
 - 本地新增 12 个。
 - 上游有、本地没有 7 个。

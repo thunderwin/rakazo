@@ -166,10 +166,10 @@ docs/                        架构、V1 范围、fork 说明
 - Memory 文档/revision、routine repository/调度/history、本地附件 artifact、Knowledge、
   Skills、组织控制面、签名 Client Manifest 和客户端静默同步已实现。
 - **现状**：数据库文件本身未加密；session 和 credential vault 使用 Electron
-  `safeStorage`。迁移在启动时直接执行，尚无自动迁移前备份。
-- **底层已有**：`LocalDatabase.backupTo()` 可以生成一份未加密的 SQLite 副本，并有单元测试。
-- **产品缺口**：没有导出/恢复 IPC、文件选择、格式版本、完整性校验或加密备份。
-- **计划**：数据库加密、加密导出/恢复、迁移前备份与失败回滚；V1 不做云端同步。
+  `safeStorage`。迁移在启动时直接执行。
+- **产品决策**：V1 不做 SQLite 整库加密、产品级导出/恢复或云端同步；设备损坏或卸载
+  可能丢失本地数据，这是明确接受的 local-first 风险。
+- `LocalDatabase.backupTo()` 仅保留为底层测试能力，不暴露为产品功能。
 
 ### 6.3 浏览器状态
 
@@ -333,15 +333,14 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 - [ ] `pnpm check`
 - [ ] `pnpm test`
 - [ ] 登录、模型网关、建 bot、发消息、至少一个本地工具跑通
-- [ ] 本地数据库迁移和备份可用
 - [ ] 配置包签名和回滚可用
 - [ ] 品牌文案和默认服务器仍正确
 - [x] 安装包更新源指向 `thunderwin/rakazo`，appId 为 `com.ericbot.desktop`
 
 2026-10-21 前端审计结论：
 
-- `ScratchpadSection`、Ticket Board、command palette 和 MCP 管理页没有上游改动，可直接
-  继续作为适配器组件复用。
+- `ScratchpadSection`、Ticket Board、command palette 和 MCP 管理页没有上游改动。
+  Scratchpad 和 command palette 继续在本地使用；Ticket Board 保留适配层但隐藏入口。
 - `Artifacts.tsx` 有 155 行变化，主要是 shadcn `ToggleGroup`、`IconTooltip` 和交互组件
   替换；合并时需要保留本地 `ArtifactsDataSource` 适配层。
 - Shell、Settings、认证、侧栏、Model picker、chat Markdown 和 `packages/ui-web` 有较大
@@ -355,7 +354,7 @@ V1 服务器不需要为客户端用户运行 Agent 电脑，因此不需要 san
 - 模型供应商 key 只在服务器。
 - New API 负责用户额度、渠道和扣费；Rakazo 不信任客户端上报的额度，管理员
   access token 只存在服务器。
-- 本地数据库和备份加密。
+- session 和 credential vault 使用 OS secure storage 加密；SQLite 整库不作为 V1 功能。
 - 浏览器扩展只响应用户发起的本地任务，不后台遍历页面；页面正文进入模型前仍受任务意图约束。
 - 本地 `shell` 已改为逐次审批；仍需补齐任务停止入口和更细的工具策略。
 - 遥测只回传元数据，默认不回传对话正文和文件内容。
