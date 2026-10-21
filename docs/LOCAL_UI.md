@@ -39,9 +39,11 @@ apps/web/src/local-main.tsx
 ### 设置分层
 
 - 左下角账户菜单统一承载个人中心和全局操作；应用设置从该菜单打开，包含语言、
-  外观、默认模型、浏览器访问和诊断。
+  外观、默认模型、浏览器访问和诊断。Board、Artifacts 和 Activity 也属于全局功能，
+  从同一账户菜单打开。
 - 退出登录也只放在左下角账户菜单中，不占用聊天标题栏的上下文控制。
-- 聊天标题栏的设置按钮只管理当前 Bot；群聊中同一位置只打开当前群组设置。
+- 聊天标题栏只保留当前 Bot 的 Routines、Memory 和 Chat settings；群聊中同一位置只打开
+  当前群组设置。全局 Artifacts、Board、Activity 不再混入 Bot 标题栏。
 - 应用设置在 Bot 和群聊状态下都可访问，不再与当前聊天配置混在同一个弹窗。
 
 ### 语言
@@ -50,6 +52,7 @@ apps/web/src/local-main.tsx
   English，保存后立即生效，无需重启。
 - 选择保存在本地 `localStorage` 的 `rakazo.uiLocale`，下次启动优先使用该选择。
 - 本地界面目前只开放已完整覆盖的中文和英文，避免出现部分未翻译的界面。
+- 默认外观是日间模式；用户仍可在应用设置中选择跟随系统或深色。
 
 ### Bot 身份
 
@@ -110,10 +113,10 @@ apps/web/src/local-main.tsx
 ### Scratchpad、Ticket Board 和 Artifacts
 
 - 当前 Bot 的聊天设置复用原版 Scratchpad 区域，增删、完成和搁置都写入本地 SQLite。
-- 标题栏的 Board 按钮打开原版 Ticket Board。列、Ticket 弹窗、Owner、状态、优先级和
+- 左下角账户菜单的 Board 打开原版 Ticket Board。列、任务弹窗、负责人、状态、优先级和
   评论布局均复用上游组件；本地适配器把 `ownerBotId/reference` 映射为上游
   `assigneeBotId/ref`。
-- 标题栏和“应用设置 → 账户资源”都可打开原版 Artifact Library。卡片/列表视图、搜索、
+- 左下角账户菜单和“应用设置 → 账户资源”都可打开原版 Artifact Library。卡片/列表视图、搜索、
   日期和 Bot 筛选、附件预览及删除操作复用上游组件。
 - 本地 Artifact 目前没有上游的版本族数据，因此 `versionCount` 固定为 1，版本选择器
   不出现；这是数据能力差异，不是隐藏现有本地数据。删除会直接移除本地 SQLite 中的
