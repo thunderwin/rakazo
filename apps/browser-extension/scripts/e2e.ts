@@ -72,7 +72,6 @@ try {
     headless: false,
     ignoreDefaultArgs: ["--disable-extensions"],
     args: [
-      "--headless=new",
       "--no-first-run",
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
