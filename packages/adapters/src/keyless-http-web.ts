@@ -33,6 +33,8 @@ export type KeylessHttpWebOptions = {
   fetch?: typeof globalThis.fetch;
   resolveHostname?: ResolveHostname;
   searchBackend?: KeylessHtmlSearchBackend;
+  /** Ordered keyless search backends. The default tries DuckDuckGo, then Bing. */
+  searchBackends?: KeylessHtmlSearchBackend[];
   searchTimeoutMs?: number;
   fetchTimeoutMs?: number;
   maxBufferBytes?: number;
@@ -46,6 +48,13 @@ export const duckDuckGoHtmlSearchBackend: KeylessHtmlSearchBackend = {
   parse: parseDuckDuckGoResults,
 };
 
+/** Keyless Bing HTML fallback for networks where DuckDuckGo HTML is unavailable. */
+export const bingHtmlSearchBackend: KeylessHtmlSearchBackend = {
+  id: "bing-html",
+  endpoint: "https://www.bing.com/search",
+  parse: parseBingResults,
+};
+
 /**
  * Keyless HTTP web search + page fetch. No API key, no sandbox, no JS execution.
  * Search uses a pluggable HTML backend (default: DuckDuckGo HTML). Fetch uses
@@ -54,7 +63,7 @@ export const duckDuckGoHtmlSearchBackend: KeylessHtmlSearchBackend = {
 export class KeylessHttpWebProvider implements WebProvider {
   private readonly fetchImpl?: typeof globalThis.fetch;
   private readonly resolveHostname?: ResolveHostname;
-  private readonly searchBackend: KeylessHtmlSearchBackend;
+  private readonly searchBackends: KeylessHtmlSearchBackend[];
   private readonly searchTimeoutMs: number;
   private readonly fetchTimeoutMs: number;
   private readonly maxBufferBytes: number;
@@ -63,7 +72,11 @@ export class KeylessHttpWebProvider implements WebProvider {
   constructor(options: KeylessHttpWebOptions = {}) {
     this.fetchImpl = options.fetch;
     this.resolveHostname = options.resolveHostname;
-    this.searchBackend = options.searchBackend ?? duckDuckGoHtmlSearchBackend;
+    this.searchBackends =
+      options.searchBackends ??
+      (options.searchBackend
+        ? [options.searchBackend]
+        : [duckDuckGoHtmlSearchBackend, bingHtmlSearchBackend]);
     this.searchTimeoutMs = options.searchTimeoutMs ?? 15_000;
     this.fetchTimeoutMs = options.fetchTimeoutMs ?? 15_000;
     this.maxBufferBytes = options.maxBufferBytes ?? 5 * 1024 * 1024;
@@ -90,17 +103,27 @@ export class KeylessHttpWebProvider implements WebProvider {
     const query = request.query.trim();
     if (!query) throw new Error("query is required");
     const maxResults = clampMaxResults(request.maxResults);
-    const searchUrl = new URL(this.searchBackend.endpoint);
-    searchUrl.searchParams.set("q", query);
-    const { body } = await fetchSafeWebText(searchUrl.href, {
-      fetch: this.fetchImpl,
-      resolveHostname: this.resolveHostname,
-      timeoutMs: this.searchTimeoutMs,
-      maxBytes: 1024 * 1024,
-      userAgent: this.userAgent,
-      signal: request.signal ?? context.signal,
-    });
-    return this.searchBackend.parse(body, maxResults);
+    let lastError: unknown;
+    for (const backend of this.searchBackends) {
+      const searchUrl = new URL(backend.endpoint);
+      searchUrl.searchParams.set("q", query);
+      try {
+        const { body } = await fetchSafeWebText(searchUrl.href, {
+          fetch: this.fetchImpl,
+          resolveHostname: this.resolveHostname,
+          timeoutMs: this.searchTimeoutMs,
+          maxBytes: 1024 * 1024,
+          userAgent: this.userAgent,
+          signal: request.signal ?? context.signal,
+        });
+        const results = backend.parse(body, maxResults);
+        if (results.length > 0) return results;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+    return [];
   }
 
   async fetch(request: WebFetchRequest, context: AdapterContext): Promise<WebFetchResult> {
@@ -150,6 +173,37 @@ export function parseDuckDuckGoResults(html: string, maxResults: number): WebSea
     if (results.length >= maxResults) break;
   }
   return results;
+}
+
+export function parseBingResults(html: string, maxResults: number): WebSearchHit[] {
+  const dom = new JSDOM(html, { url: bingHtmlSearchBackend.endpoint });
+  const document = dom.window.document;
+  const results: WebSearchHit[] = [];
+  for (const node of Array.from(document.querySelectorAll("li.b_algo"))) {
+    const link = node.querySelector("h2 a");
+    if (!link) continue;
+    const title = normalizeWhitespace(link.textContent ?? "");
+    let url: string;
+    try {
+      url = unwrapBingUrl(link.getAttribute("href") ?? "");
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+      url = parsed.href;
+    } catch {
+      continue;
+    }
+    const snippet = normalizeWhitespace(node.querySelector(".b_caption p")?.textContent ?? "");
+    if (title && url) results.push({ title, url, snippet });
+    if (results.length >= maxResults) break;
+  }
+  return results;
+}
+
+function unwrapBingUrl(rawUrl: string): string {
+  const parsed = new URL(rawUrl, bingHtmlSearchBackend.endpoint);
+  const encoded = parsed.searchParams.get("u");
+  if (!encoded?.startsWith("a1")) return parsed.href;
+  return Buffer.from(encoded.slice(2), "base64url").toString("utf8");
 }
 
 function unwrapDuckDuckGoUrl(rawUrl: string): string {

@@ -321,6 +321,133 @@ const MIGRATIONS: Migration[] = [
         ON routines(managed_key) WHERE managed_key IS NOT NULL;
     `,
   },
+  {
+    version: 10,
+    sql: `
+      ALTER TABLE bots ADD COLUMN fleet_management INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE bots ADD COLUMN created_by_bot_id TEXT REFERENCES bots(id) ON DELETE SET NULL;
+      ALTER TABLE bots ADD COLUMN instructions_version INTEGER NOT NULL DEFAULT 1;
+
+      CREATE INDEX bots_created_by ON bots(created_by_bot_id);
+    `,
+  },
+  {
+    version: 11,
+    sql: `
+      ALTER TABLE agent_skills ADD COLUMN scripts TEXT NOT NULL DEFAULT '[]';
+    `,
+  },
+  {
+    version: 12,
+    sql: `
+      CREATE TABLE media_jobs (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        group_id TEXT REFERENCES chat_groups(id) ON DELETE CASCADE,
+        run_id TEXT NOT NULL,
+        execution_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('image', 'video')),
+        provider TEXT NOT NULL,
+        provider_job_id TEXT,
+        status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed')),
+        artifact_id TEXT REFERENCES artifacts(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(run_id, execution_id)
+      );
+
+      CREATE INDEX media_jobs_bot_updated
+        ON media_jobs(bot_id, updated_at DESC);
+    `,
+  },
+  {
+    version: 13,
+    sql: `
+      ALTER TABLE bots ADD COLUMN archived_at TEXT;
+      ALTER TABLE bots ADD COLUMN section TEXT;
+      ALTER TABLE bots ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+
+      ALTER TABLE chat_groups ADD COLUMN section TEXT;
+      ALTER TABLE chat_groups ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+
+      CREATE TABLE bot_instruction_versions (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        before TEXT NOT NULL,
+        after TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX bot_instruction_versions_bot_created
+        ON bot_instruction_versions(bot_id, created_at DESC);
+    `,
+  },
+  {
+    version: 14,
+    sql: `
+      CREATE TABLE mcp_servers (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        transport TEXT NOT NULL CHECK (transport IN ('streamable-http', 'sse', 'stdio')),
+        endpoint TEXT,
+        command TEXT,
+        args TEXT NOT NULL DEFAULT '[]',
+        secret_name TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(bot_id, slug)
+      );
+
+      CREATE INDEX mcp_servers_bot ON mcp_servers(bot_id, updated_at DESC);
+    `,
+  },
+  {
+    version: 15,
+    sql: `
+      CREATE TABLE scratchpad_items (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('open', 'parked', 'done')),
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX scratchpad_items_bot_status
+        ON scratchpad_items(bot_id, status, updated_at DESC);
+
+      CREATE TABLE tickets (
+        id TEXT PRIMARY KEY,
+        sequence INTEGER NOT NULL UNIQUE,
+        reference TEXT NOT NULL UNIQUE,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        owner_bot_id TEXT REFERENCES bots(id) ON DELETE SET NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        priority TEXT NOT NULL CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+        status TEXT NOT NULL CHECK (status IN ('todo', 'doing', 'review', 'blocked', 'done', 'closed')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX tickets_status_sequence ON tickets(status, sequence DESC);
+
+      CREATE TABLE ticket_comments (
+        id TEXT PRIMARY KEY,
+        ticket_id TEXT NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+        bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX ticket_comments_ticket_created
+        ON ticket_comments(ticket_id, created_at ASC);
+    `,
+  },
 ];
 
 export function migrate(db: Database.Database): void {

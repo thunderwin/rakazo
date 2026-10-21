@@ -1,17 +1,42 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import type { LocalSkill } from "../types.js";
+import type { LocalSkill, LocalSkillScript } from "../types.js";
 
 interface SkillRow {
   id: string;
   name: string;
   description: string;
   content: string;
+  scripts: string;
   source: "user" | "managed";
   package_id: string | null;
   version: number | null;
   created_at: string;
   updated_at: string;
+}
+
+function parseScripts(value: string): LocalSkillScript[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((script): script is LocalSkillScript => {
+      if (!script || typeof script !== "object" || Array.isArray(script)) return false;
+      const candidate = script as Record<string, unknown>;
+      return (
+        typeof candidate.path === "string" &&
+        typeof candidate.content === "string" &&
+        (candidate.runtime === null ||
+          candidate.runtime === "node" ||
+          candidate.runtime === "python3" ||
+          candidate.runtime === "sh") &&
+        typeof candidate.timeoutSeconds === "number" &&
+        typeof candidate.network === "boolean" &&
+        typeof candidate.sha256 === "string"
+      );
+    });
+  } catch {
+    return [];
+  }
 }
 
 function skillRow(row: SkillRow): LocalSkill {
@@ -20,6 +45,7 @@ function skillRow(row: SkillRow): LocalSkill {
     name: row.name,
     description: row.description,
     content: row.content,
+    scripts: parseScripts(row.scripts),
     source: row.source,
     packageId: row.package_id,
     version: row.version,
@@ -55,6 +81,7 @@ export class SkillRepository {
     name: string;
     description: string;
     content: string;
+    scripts?: LocalSkillScript[];
     source?: "user" | "managed";
     packageId?: string | null;
     version?: number | null;
@@ -64,14 +91,15 @@ export class SkillRepository {
     this.db
       .prepare(
         `INSERT INTO agent_skills
-          (id, name, description, content, source, package_id, version, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, name, description, content, scripts, source, package_id, version, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         input.name,
         input.description,
         input.content,
+        JSON.stringify(input.scripts ?? []),
         input.source ?? "user",
         input.packageId ?? null,
         input.version ?? null,
@@ -83,20 +111,26 @@ export class SkillRepository {
 
   update(
     id: string,
-    input: { name?: string; description?: string; content?: string },
+    input: {
+      name?: string;
+      description?: string;
+      content?: string;
+      scripts?: LocalSkillScript[];
+    },
   ): LocalSkill | null {
     const existing = this.get(id);
     if (existing?.source !== "user") return null;
     this.db
       .prepare(
         `UPDATE agent_skills
-         SET name = ?, description = ?, content = ?, updated_at = ?
+         SET name = ?, description = ?, content = ?, scripts = ?, updated_at = ?
          WHERE id = ? AND source = 'user'`,
       )
       .run(
         input.name ?? existing.name,
         input.description ?? existing.description,
         input.content ?? existing.content,
+        JSON.stringify(input.scripts ?? existing.scripts),
         new Date().toISOString(),
         id,
       );
@@ -113,15 +147,21 @@ export class SkillRepository {
   replaceManaged(input: {
     packageId: string;
     version: number;
-    skills: Array<{ key: string; name: string; description: string; content: string }>;
+    skills: Array<{
+      key: string;
+      name: string;
+      description: string;
+      content: string;
+      scripts?: Array<Omit<LocalSkillScript, "sha256"> & { sha256?: string }>;
+    }>;
   }): void {
     const now = new Date().toISOString();
     this.db.transaction(() => {
       this.db.prepare("DELETE FROM agent_skills WHERE source = 'managed'").run();
       const insert = this.db.prepare(
         `INSERT INTO agent_skills
-          (id, name, description, content, source, package_id, version, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'managed', ?, ?, ?, ?)`,
+          (id, name, description, content, scripts, source, package_id, version, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'managed', ?, ?, ?, ?)`,
       );
       for (const skill of input.skills) {
         insert.run(
@@ -129,6 +169,12 @@ export class SkillRepository {
           skill.name,
           skill.description,
           skill.content,
+          JSON.stringify(
+            (skill.scripts ?? []).map((script) => ({
+              ...script,
+              sha256: createHash("sha256").update(script.content, "utf8").digest("hex"),
+            })),
+          ),
           input.packageId,
           input.version,
           now,

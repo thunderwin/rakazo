@@ -45,6 +45,9 @@ describe("local memory", () => {
       revision: 1,
     });
     expect(memory.update(document.id, "Edited.", document.revision).revision).toBe(2);
+    expect(memory.recall(bot.id, "edited")).toEqual([
+      expect.objectContaining({ id: document.id, content: "Edited." }),
+    ]);
     expect(() => memory.update(document.id, "Stale.", document.revision)).toThrow(
       "Memory changed since it was read",
     );

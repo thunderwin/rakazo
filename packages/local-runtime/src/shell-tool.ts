@@ -7,6 +7,7 @@ const MAX_OUTPUT_CHARS = 1_000_000;
 export interface ShellCommandInput {
   command: string;
   cwd?: string;
+  env?: Record<string, string>;
   signal?: AbortSignal;
 }
 
@@ -28,7 +29,7 @@ export const runShellCommand: RunShellCommand = (input) =>
     const child = spawn(input.command, {
       shell: true,
       cwd: input.cwd,
-      env: process.env,
+      env: { ...process.env, ...input.env },
       windowsHide: true,
       signal: input.signal,
     });
@@ -47,6 +48,9 @@ export const runShellCommand: RunShellCommand = (input) =>
 export interface ShellToolOptions {
   workspaceDir: string;
   run?: RunShellCommand;
+  environment?: (
+    request: Parameters<LocalTool["execute"]>[0],
+  ) => Promise<Record<string, string>> | Record<string, string>;
 }
 
 export function createShellTool(options: ShellToolOptions): LocalTool {
@@ -65,14 +69,24 @@ export function createShellTool(options: ShellToolOptions): LocalTool {
         required: ["command"],
       },
     },
-    async execute({ args, signal }) {
+    async execute(request) {
+      const { args, signal } = request;
       const command = typeof args.command === "string" ? args.command.trim() : "";
       if (!command) throw new Error("Shell command cannot be empty");
       const target = await resolveWritableWorkspacePath(
         options.workspaceDir,
         typeof args.cwd === "string" ? args.cwd : ".",
       );
-      return run({ command, cwd: target.path, signal });
+      const environment = (await options.environment?.(request)) ?? {};
+      const result = await run({ command, cwd: target.path, env: environment, signal });
+      const values = Object.values(environment).filter(Boolean);
+      const redact = (value: string) =>
+        values.reduce((next, secret) => next.replaceAll(secret, "[redacted]"), value);
+      return {
+        ...result,
+        stdout: redact(result.stdout),
+        stderr: redact(result.stderr),
+      };
     },
   };
 }

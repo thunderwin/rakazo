@@ -4,9 +4,13 @@ import vm from "node:vm";
 import type { RakazoDesktop, RakazoSetup } from "@rakazo/contracts";
 import { describe, expect, it, vi } from "vitest";
 
-function runPreload(file: string, ipc: { invoke?: unknown; on?: unknown; off?: unknown } = {}) {
+function runPreload(
+  file: string,
+  ipc: { invoke?: unknown; on?: unknown; off?: unknown } = {},
+) {
   const invoke =
-    (ipc.invoke as ReturnType<typeof vi.fn>) ?? vi.fn(async (channel: string) => ({ channel }));
+    (ipc.invoke as ReturnType<typeof vi.fn>) ??
+    vi.fn(async (channel: string) => ({ channel }));
   const on = (ipc.on as ReturnType<typeof vi.fn>) ?? vi.fn();
   const off = (ipc.off as ReturnType<typeof vi.fn>) ?? vi.fn();
   const exposeInMainWorld = vi.fn();
@@ -15,8 +19,12 @@ function runPreload(file: string, ipc: { invoke?: unknown; on?: unknown; off?: u
   vm.runInNewContext(source, {
     process: { platform: "linux" },
     require(moduleName: string) {
-      if (moduleName !== "electron") throw new Error(`Unexpected preload import: ${moduleName}`);
-      return { contextBridge: { exposeInMainWorld }, ipcRenderer: { invoke, on, off } };
+      if (moduleName !== "electron")
+        throw new Error(`Unexpected preload import: ${moduleName}`);
+      return {
+        contextBridge: { exposeInMainWorld },
+        ipcRenderer: { invoke, on, off },
+      };
     },
   });
 
@@ -28,7 +36,10 @@ describe("desktop preload bridge", () => {
     const { invoke, exposeInMainWorld } = runPreload("preload.cjs");
 
     expect(exposeInMainWorld).toHaveBeenCalledTimes(1);
-    const [globalName, bridge] = exposeInMainWorld.mock.calls[0] as [string, RakazoDesktop];
+    const [globalName, bridge] = exposeInMainWorld.mock.calls[0] as [
+      string,
+      RakazoDesktop,
+    ];
     expect(globalName).toBe("rakazoDesktop");
     expect(bridge.platform).toBe("linux");
     expect(Object.keys(bridge).sort()).toEqual([
@@ -52,10 +63,14 @@ describe("desktop preload bridge", () => {
       "manifest",
       "memory",
       "messages",
+      "prompts",
       "routines",
       "runs",
+      "scratchpad",
+      "secrets",
       "settings",
       "skills",
+      "tickets",
     ]);
     expect(Object.keys(bridge.window).sort()).toEqual([
       "close",
@@ -63,7 +78,12 @@ describe("desktop preload bridge", () => {
       "state",
       "toggleMaximize",
     ]);
-    expect(Object.keys(bridge.update).sort()).toEqual(["check", "download", "install", "state"]);
+    expect(Object.keys(bridge.update).sort()).toEqual([
+      "check",
+      "download",
+      "install",
+      "state",
+    ]);
 
     await bridge.oauth.open?.("https://provider.example.com/authorize");
     await bridge.oauth.cancel?.("https://provider.example.com/authorize");
@@ -85,7 +105,10 @@ describe("desktop preload bridge", () => {
     await bridge.local?.messages.list("bot-1");
     await bridge.local?.messages.send("bot-1", "Hello");
     await bridge.local?.groups.list();
-    await bridge.local?.groups.create({ name: "Team", botIds: ["bot-1", "bot-2"] });
+    await bridge.local?.groups.create({
+      name: "Team",
+      botIds: ["bot-1", "bot-2"],
+    });
     await bridge.local?.groups.update("group-1", { name: "Team" });
     await bridge.local?.groups.remove("group-1");
     await bridge.local?.groups.messages.list("group-1");
@@ -118,7 +141,24 @@ describe("desktop preload bridge", () => {
       mimeType: "text/plain",
       contentBase64: "aGVsbG8=",
     });
+    await bridge.local?.artifacts.list({ botId: "bot-1", limit: 20 });
     await bridge.local?.artifacts.read("artifact-1");
+    await bridge.local?.artifacts.remove("artifact-1");
+    await bridge.local?.scratchpad.list("bot-1", true);
+    await bridge.local?.scratchpad.create("bot-1", { title: "Review" });
+    await bridge.local?.scratchpad.update("bot-1", "scratch-1", {
+      status: "done",
+    });
+    await bridge.local?.scratchpad.remove("bot-1", "scratch-1");
+    await bridge.local?.tickets.list({ ownerBotId: "bot-1" });
+    await bridge.local?.tickets.comments("ticket-1");
+    await bridge.local?.tickets.create({
+      botId: "bot-1",
+      ownerBotId: "bot-1",
+      title: "Review",
+    });
+    await bridge.local?.tickets.update("ticket-1", { status: "done" });
+    await bridge.local?.tickets.comment("ticket-1", "bot-1", "Ready");
     await bridge.local?.knowledge.list();
     await bridge.local?.knowledge.create({ title: "Guide", content: "Steps" });
     await bridge.local?.knowledge.update("knowledge-1", { content: "Updated" });
@@ -129,7 +169,9 @@ describe("desktop preload bridge", () => {
       description: "Review work",
       body: "Check it.",
     });
-    await bridge.local?.skills.update("Review", { description: "Review carefully" });
+    await bridge.local?.skills.update("Review", {
+      description: "Review carefully",
+    });
     await bridge.local?.skills.remove("Review");
     await bridge.local?.manifest.state();
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
@@ -177,7 +219,18 @@ describe("desktop preload bridge", () => {
       "desktop.local.routines.runNow",
       "desktop.local.routines.history",
       "desktop.local.artifacts.create",
+      "desktop.local.artifacts.list",
       "desktop.local.artifacts.read",
+      "desktop.local.artifacts.remove",
+      "desktop.local.scratchpad.list",
+      "desktop.local.scratchpad.create",
+      "desktop.local.scratchpad.update",
+      "desktop.local.scratchpad.remove",
+      "desktop.local.tickets.list",
+      "desktop.local.tickets.comments",
+      "desktop.local.tickets.create",
+      "desktop.local.tickets.update",
+      "desktop.local.tickets.comment",
       "desktop.local.knowledge.list",
       "desktop.local.knowledge.create",
       "desktop.local.knowledge.update",
@@ -192,22 +245,41 @@ describe("desktop preload bridge", () => {
 
   it("forwards captured codes without leaking the IPC event to the renderer", () => {
     const listeners: Array<(event: unknown, callback: unknown) => void> = [];
-    const on = vi.fn((_channel: string, handler: (event: unknown, callback: unknown) => void) => {
-      listeners.push(handler);
-    });
+    const on = vi.fn(
+      (
+        _channel: string,
+        handler: (event: unknown, callback: unknown) => void,
+      ) => {
+        listeners.push(handler);
+      },
+    );
     const off = vi.fn();
     const { exposeInMainWorld } = runPreload("preload.cjs", { on, off });
 
-    const [, bridge] = exposeInMainWorld.mock.calls[0] as [string, RakazoDesktop];
+    const [, bridge] = exposeInMainWorld.mock.calls[0] as [
+      string,
+      RakazoDesktop,
+    ];
     const received: unknown[] = [];
-    const unsubscribe = bridge.oauth.onCallback((callback) => received.push(callback));
+    const unsubscribe = bridge.oauth.onCallback((callback) =>
+      received.push(callback),
+    );
 
-    expect(on).toHaveBeenCalledWith("desktop.oauth.callback", expect.any(Function));
-    listeners[0]?.({ sender: "ipc-event" }, { code: "ac_123", state: "verifier_456" });
+    expect(on).toHaveBeenCalledWith(
+      "desktop.oauth.callback",
+      expect.any(Function),
+    );
+    listeners[0]?.(
+      { sender: "ipc-event" },
+      { code: "ac_123", state: "verifier_456" },
+    );
     expect(received).toEqual([{ code: "ac_123", state: "verifier_456" }]);
 
     unsubscribe();
-    expect(off).toHaveBeenCalledWith("desktop.oauth.callback", expect.any(Function));
+    expect(off).toHaveBeenCalledWith(
+      "desktop.oauth.callback",
+      expect.any(Function),
+    );
   });
 });
 
@@ -216,7 +288,10 @@ describe("setup preload bridge", () => {
     const { invoke, on, exposeInMainWorld } = runPreload("setup-preload.cjs");
 
     expect(exposeInMainWorld).toHaveBeenCalledTimes(1);
-    const [globalName, bridge] = exposeInMainWorld.mock.calls[0] as [string, RakazoSetup];
+    const [globalName, bridge] = exposeInMainWorld.mock.calls[0] as [
+      string,
+      RakazoSetup,
+    ];
     expect(globalName).toBe("rakazoSetup");
     expect(bridge.platform).toBe("linux");
     expect(Object.keys(bridge).sort()).toEqual([
@@ -228,7 +303,11 @@ describe("setup preload bridge", () => {
       "state",
       "test",
     ]);
-    expect(Object.keys(bridge.stack).sort()).toEqual(["onChange", "start", "state"]);
+    expect(Object.keys(bridge.stack).sort()).toEqual([
+      "onChange",
+      "start",
+      "state",
+    ]);
 
     await bridge.state();
     await bridge.test("http://127.0.0.1:5173");
@@ -250,7 +329,10 @@ describe("setup preload bridge", () => {
 
     const listener = vi.fn();
     bridge.stack.onChange(listener);
-    const [channel, handler] = on.mock.calls.at(-1) as [string, (...args: unknown[]) => void];
+    const [channel, handler] = on.mock.calls.at(-1) as [
+      string,
+      (...args: unknown[]) => void,
+    ];
     expect(channel).toBe("desktop.setup.stack.changed");
     handler({}, { phase: "pulling" });
     expect(listener).toHaveBeenCalledWith({ phase: "pulling" });

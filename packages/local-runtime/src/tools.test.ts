@@ -30,6 +30,9 @@ const bot = {
   modelId: null,
   thinkingLevel: null,
   disabledBuiltinTools: [],
+  fleetManagement: false,
+  createdByBotId: null,
+  instructionsVersion: 1,
   templateKey: null,
   templateVersion: null,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -57,6 +60,7 @@ describe("local shell tool", () => {
     expect(run).toHaveBeenCalledWith({
       command: "pwd",
       cwd: expect.stringMatching(/\/work$/),
+      env: {},
       signal: undefined,
     });
   });

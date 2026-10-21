@@ -47,6 +47,12 @@ export interface DesktopLocalBot {
   modelId: string | null;
   thinkingLevel: string | null;
   disabledBuiltinTools: string[];
+  fleetManagement: boolean;
+  createdByBotId: string | null;
+  instructionsVersion: number;
+  archivedAt?: string | null;
+  section?: string | null;
+  pinned?: boolean;
   templateKey: string | null;
   templateVersion: number | null;
   source?: "local" | "managed";
@@ -75,6 +81,8 @@ export interface DesktopLocalGroup {
   managedKey?: string | null;
   packageVersion?: number | null;
   members: DesktopLocalBot[];
+  section?: string | null;
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +187,39 @@ export interface DesktopLocalArtifactWithContent extends DesktopLocalArtifact {
   contentBase64: string;
 }
 
+export interface DesktopLocalScratchpadItem {
+  id: string;
+  botId: string;
+  title: string;
+  status: "open" | "parked" | "done";
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalTicketComment {
+  id: string;
+  ticketId: string;
+  botId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface DesktopLocalTicket {
+  id: string;
+  sequence: number;
+  reference: string;
+  botId: string;
+  ownerBotId: string | null;
+  title: string;
+  description: string;
+  priority: "low" | "normal" | "high" | "urgent";
+  status: "todo" | "doing" | "review" | "blocked" | "done" | "closed";
+  createdAt: string;
+  updatedAt: string;
+  comments?: DesktopLocalTicketComment[];
+}
+
 export interface DesktopLocalKnowledgeDocument {
   id: string;
   title: string;
@@ -195,10 +236,56 @@ export interface DesktopLocalSkill {
   name: string;
   description: string;
   content: string;
+  scripts: DesktopLocalSkillScript[];
   source: "user" | "builtin" | "managed";
   readOnly: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DesktopLocalSkillScript {
+  path: string;
+  content: string;
+  runtime: "node" | "python3" | "sh" | null;
+  timeoutSeconds: number;
+  network: boolean;
+  sha256: string;
+}
+
+export type DesktopLocalSecretAuth =
+  | { type: "bearer" }
+  | { type: "header"; name: string }
+  | { type: "basic"; username: string }
+  | { type: "login" }
+  | { type: "command" };
+
+export interface DesktopLocalSecret {
+  name: string;
+  origin: string;
+  auth: DesktopLocalSecretAuth;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesktopLocalSecretInput {
+  name: string;
+  origin?: string;
+  auth: DesktopLocalSecretAuth;
+  value: string;
+}
+
+export interface DesktopLocalSecretRequest {
+  requestId: string;
+  name: string;
+  origin: string;
+  auth: DesktopLocalSecretAuth;
+  reason?: string;
+}
+
+export interface DesktopLocalChoiceRequest {
+  requestId: string;
+  question: string;
+  options: string[];
 }
 
 export interface DesktopLocalCreateBotInput {
@@ -211,6 +298,7 @@ export interface DesktopLocalCreateBotInput {
   modelId?: string | null;
   thinkingLevel?: string | null;
   disabledBuiltinTools?: string[];
+  fleetManagement?: boolean;
 }
 
 export interface DesktopLocalUserSettings {
@@ -274,8 +362,14 @@ export interface RakazoDesktopLocal {
   };
   bots: {
     list: () => Promise<DesktopLocalBot[]>;
+    archived: () => Promise<DesktopLocalBot[]>;
+    restore: (botId: string) => Promise<DesktopLocalBot>;
+    deleteArchived: (botId: string) => Promise<void>;
     create: (input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;
-    update: (botId: string, input: DesktopLocalCreateBotInput) => Promise<DesktopLocalBot>;
+    update: (
+      botId: string,
+      input: DesktopLocalCreateBotInput,
+    ) => Promise<DesktopLocalBot>;
   };
   messages: {
     list: (botId: string) => Promise<DesktopLocalMessage[]>;
@@ -284,7 +378,13 @@ export interface RakazoDesktopLocal {
       text: string,
       artifactIds?: string[],
     ) => Promise<{
-      thread: { id: string; botId: string; title: string; createdAt: string; updatedAt: string };
+      thread: {
+        id: string;
+        botId: string;
+        title: string;
+        createdAt: string;
+        updatedAt: string;
+      };
       userMessage: DesktopLocalMessage;
       assistantMessage: DesktopLocalMessage | null;
       text: string;
@@ -341,7 +441,9 @@ export interface RakazoDesktopLocal {
   };
   settings: {
     get: () => Promise<DesktopLocalUserSettings>;
-    update: (input: Partial<DesktopLocalUserSettings>) => Promise<DesktopLocalUserSettings>;
+    update: (
+      input: Partial<DesktopLocalUserSettings>,
+    ) => Promise<DesktopLocalUserSettings>;
   };
   browser: {
     status: () => Promise<DesktopBrowserBridgeStatus>;
@@ -368,14 +470,20 @@ export interface RakazoDesktopLocal {
   };
   routines: {
     list: (botId: string) => Promise<DesktopLocalRoutine[]>;
-    create: (botId: string, input: DesktopLocalRoutineInput) => Promise<DesktopLocalRoutine>;
+    create: (
+      botId: string,
+      input: DesktopLocalRoutineInput,
+    ) => Promise<DesktopLocalRoutine>;
     update: (
       routineId: string,
       input: Partial<DesktopLocalRoutineInput>,
     ) => Promise<DesktopLocalRoutine>;
     remove: (routineId: string) => Promise<void>;
     runNow: (routineId: string) => Promise<DesktopLocalRoutineRun>;
-    history: (routineId: string, limit?: number) => Promise<DesktopLocalRoutineRun[]>;
+    history: (
+      routineId: string,
+      limit?: number,
+    ) => Promise<DesktopLocalRoutineRun[]>;
   };
   artifacts: {
     create: (input: {
@@ -385,11 +493,80 @@ export interface RakazoDesktopLocal {
       mimeType: string;
       contentBase64: string;
     }) => Promise<DesktopLocalArtifact>;
-    read: (artifactId: string) => Promise<DesktopLocalArtifactWithContent | null>;
+    list: (input?: {
+      botId?: string;
+      groupId?: string;
+      limit?: number;
+      cursor?: string;
+    }) => Promise<{
+      items: DesktopLocalArtifact[];
+      nextCursor: string | null;
+    }>;
+    read: (
+      artifactId: string,
+    ) => Promise<DesktopLocalArtifactWithContent | null>;
+    remove: (artifactId: string) => Promise<void>;
+  };
+  scratchpad: {
+    list: (
+      botId: string,
+      includeDone?: boolean,
+    ) => Promise<DesktopLocalScratchpadItem[]>;
+    create: (
+      botId: string,
+      input: {
+        title: string;
+        status?: DesktopLocalScratchpadItem["status"];
+        notes?: string;
+      },
+    ) => Promise<DesktopLocalScratchpadItem>;
+    update: (
+      botId: string,
+      itemId: string,
+      input: {
+        title?: string;
+        status?: DesktopLocalScratchpadItem["status"];
+        notes?: string;
+      },
+    ) => Promise<DesktopLocalScratchpadItem>;
+    remove: (botId: string, itemId: string) => Promise<void>;
+  };
+  tickets: {
+    list: (input?: {
+      status?: DesktopLocalTicket["status"];
+      ownerBotId?: string;
+      beforeSequence?: number;
+    }) => Promise<DesktopLocalTicket[]>;
+    comments: (ticketId: string) => Promise<DesktopLocalTicketComment[]>;
+    create: (input: {
+      botId: string;
+      ownerBotId?: string;
+      title: string;
+      description?: string;
+      priority?: DesktopLocalTicket["priority"];
+    }) => Promise<DesktopLocalTicket>;
+    update: (
+      ticketId: string,
+      input: {
+        title?: string;
+        description?: string;
+        priority?: DesktopLocalTicket["priority"];
+        status?: DesktopLocalTicket["status"];
+        ownerBotId?: string;
+      },
+    ) => Promise<DesktopLocalTicket>;
+    comment: (
+      ticketId: string,
+      botId: string,
+      body: string,
+    ) => Promise<DesktopLocalTicketComment>;
   };
   knowledge: {
     list: () => Promise<DesktopLocalKnowledgeDocument[]>;
-    create: (input: { title: string; content: string }) => Promise<DesktopLocalKnowledgeDocument>;
+    create: (input: {
+      title: string;
+      content: string;
+    }) => Promise<DesktopLocalKnowledgeDocument>;
     update: (
       documentId: string,
       input: { title?: string; content?: string },
@@ -402,6 +579,7 @@ export interface RakazoDesktopLocal {
       name: string;
       description: string;
       body: string;
+      scripts?: DesktopLocalSkillScriptInput[];
     }) => Promise<DesktopLocalSkill>;
     update: (
       name: string,
@@ -409,14 +587,46 @@ export interface RakazoDesktopLocal {
         newName?: string;
         description?: string;
         body?: string;
+        scripts?: DesktopLocalSkillScriptInput[];
       },
     ) => Promise<DesktopLocalSkill>;
     remove: (name: string) => Promise<void>;
   };
+  secrets: {
+    list: (botId: string) => Promise<DesktopLocalSecret[]>;
+    put: (
+      botId: string,
+      input: DesktopLocalSecretInput,
+    ) => Promise<DesktopLocalSecret>;
+    remove: (botId: string, name: string) => Promise<void>;
+    onRequest: (
+      listener: (request: DesktopLocalSecretRequest) => void,
+    ) => () => void;
+    respond: (
+      requestId: string,
+      response: { value: string; username?: string } | null,
+    ) => Promise<void>;
+  };
+  prompts: {
+    onChoiceRequest: (
+      listener: (request: DesktopLocalChoiceRequest) => void,
+    ) => () => void;
+    respondChoice: (requestId: string, answer: string | null) => Promise<void>;
+  };
   manifest: {
     state: () => Promise<DesktopManagedManifestState | null>;
-    onUpdated: (listener: (state: DesktopManagedManifestState | null) => void) => () => void;
+    onUpdated: (
+      listener: (state: DesktopManagedManifestState | null) => void,
+    ) => () => void;
   };
+}
+
+export interface DesktopLocalSkillScriptInput {
+  path: string;
+  content: string;
+  runtime?: "node" | "python3" | "sh" | null;
+  timeoutSeconds?: number;
+  network?: boolean;
 }
 
 export interface RakazoDesktop {
@@ -427,14 +637,21 @@ export interface RakazoDesktop {
   };
   /** Only the isolated local settings window is authorized to call this bridge. */
   localSettings?: {
-    request: (pathname: string, body: string) => Promise<{ status: number; body: string }>;
+    request: (
+      pathname: string,
+      body: string,
+    ) => Promise<{ status: number; body: string }>;
   };
   platform: string;
   window: {
     close: () => Promise<void>;
     minimize: () => Promise<void>;
     toggleMaximize: () => Promise<void>;
-    state: () => Promise<{ minimized: boolean; maximized: boolean; fullScreen: boolean }>;
+    state: () => Promise<{
+      minimized: boolean;
+      maximized: boolean;
+      fullScreen: boolean;
+    }>;
   };
   update: RakazoDesktopUpdate;
   /** Present only in the local-first window; main-process IPC validates the sender. */
@@ -450,7 +667,9 @@ export interface RakazoDesktop {
      * Authorization codes captured from the system browser or a legacy popup.
      * Returns an unsubscribe function.
      */
-    onCallback: (listener: (callback: RakazoDesktopOAuthCallback) => void) => () => void;
+    onCallback: (
+      listener: (callback: RakazoDesktopOAuthCallback) => void,
+    ) => () => void;
   };
 }
 

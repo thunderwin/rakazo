@@ -73,6 +73,9 @@ describe("desktop local runtime", () => {
       modelId: "model-a",
       thinkingLevel: "unsupported",
       disabledBuiltinTools: [],
+      fleetManagement: false,
+      createdByBotId: null,
+      instructionsVersion: 1,
       templateKey: null,
       templateVersion: null,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -180,6 +183,108 @@ describe("desktop local runtime", () => {
       expect.any(String),
       { maxElements: undefined, maxTextChars: undefined },
       undefined,
+    );
+    service.close();
+  });
+
+  it("renders a plot and persists it as a message artifact", async () => {
+    const userDataDir = await mkdtemp(path.join(tmpdir(), "rakazo-desktop-plot-"));
+    directories.push(userDataDir);
+    const plotEngine: LocalAgentEngine = {
+      async *run(request): AsyncIterable<LocalAgentEvent> {
+        expect(request.tools.map((tool) => tool.name)).toEqual(
+          expect.arrayContaining(["web_fetch", "web_search", "render_plot", "attach_file"]),
+        );
+        const result = await request.executeTool(
+          "render_plot",
+          {
+            data: [{ quarter: "Q1", sales: 12 }],
+            spec: {
+              title: "Sales",
+              marks: [{ type: "barY", options: { x: "quarter", y: "sales" } }],
+            },
+          },
+          "plot-1",
+        );
+        expect(result).toMatchObject({ ok: true, artifactId: expect.any(String) });
+        yield { type: "text", text: "Chart ready." };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = await createDesktopLocalRuntime({
+      userDataDir,
+      accountId: "plot-user",
+      engine: plotEngine,
+      approveTool: () => true,
+      resolveModel,
+    });
+    const bot = service.createBot({ name: "Analyst" });
+
+    await service.sendMessage(bot.id, "Chart this");
+    const assistant = service.listMessages(bot.id).at(-1);
+    expect(assistant?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "image",
+          artifactId: expect.any(String),
+          mimeType: "image/png",
+        }),
+      ]),
+    );
+    service.close();
+  });
+
+  it("runs a declared skill script through local approval", async () => {
+    const userDataDir = await mkdtemp(path.join(tmpdir(), "rakazo-desktop-skill-"));
+    directories.push(userDataDir);
+    const approveTool = vi.fn(() => true);
+    const skillEngine: LocalAgentEngine = {
+      async *run(request): AsyncIterable<LocalAgentEvent> {
+        const result = await request.executeTool(
+          "skill_run",
+          {
+            name: "Transform",
+            entrypoint: "scripts/main.js",
+            args: { value: 7 },
+          },
+          "skill-1",
+        );
+        expect(result).toMatchObject({ ok: true, stdout: '{"answer":14}\n' });
+        yield { type: "text", text: "Skill complete." };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = await createDesktopLocalRuntime({
+      userDataDir,
+      accountId: "skill-user",
+      engine: skillEngine,
+      approveTool,
+      resolveModel,
+    });
+    service.createSkill({
+      name: "Transform",
+      description: "Double a value.",
+      body: "Call the script with value.",
+      scripts: [
+        {
+          path: "scripts/main.js",
+          content:
+            'const fs = require("node:fs"); const input = JSON.parse(fs.readFileSync(process.argv[2], "utf8")); console.log(JSON.stringify({ answer: input.value * 2 }));',
+          runtime: "node",
+          network: false,
+        },
+      ],
+    });
+    const bot = service.createBot({ name: "Operator" });
+
+    await service.sendMessage(bot.id, "Run the transform");
+    expect(approveTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "skill_run",
+        args: expect.objectContaining({ name: "Transform", entrypoint: "scripts/main.js" }),
+      }),
     );
     service.close();
   });

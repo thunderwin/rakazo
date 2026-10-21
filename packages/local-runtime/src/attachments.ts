@@ -41,6 +41,21 @@ export class LocalAttachmentStore {
     });
   }
 
+  createBytes(input: {
+    botId?: string;
+    groupId?: string;
+    name: string;
+    mimeType: string;
+    content: Uint8Array;
+  }): LocalArtifact {
+    const name = path
+      .basename(input.name.trim().replaceAll("\\", "/"))
+      .slice(0, MAX_ARTIFACT_NAME_CHARS);
+    if (!name) throw new Error("Attachment name is required");
+    validateAttachmentMimeType(input.mimeType);
+    return this.artifacts.create({ ...input, name });
+  }
+
   read(id: string): (LocalArtifactWithContent & { contentBase64: string }) | null {
     const artifact = this.artifacts.read(id);
     return artifact

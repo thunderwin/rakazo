@@ -1,5 +1,5 @@
-import type { Bot } from "@rakazo/local-db";
-import type { LocalAgentTool } from "./agent.js";
+import type { Bot, LocalArtifact } from "@rakazo/local-db";
+import type { LocalAgentEvent, LocalAgentTool } from "./agent.js";
 
 export interface LocalToolExecutionRequest {
   botId?: string;
@@ -9,11 +9,17 @@ export interface LocalToolExecutionRequest {
   args: Record<string, unknown>;
   executionId: string;
   signal?: AbortSignal;
+  fleetManagementAllowed?: boolean;
   peerChain?: string[];
+  /** Tools attach generated files by publishing them to the current message. */
+  publishArtifact?: (artifact: LocalArtifact) => void;
+  publishEvent?: (event: LocalAgentEvent) => void;
 }
 
 export interface LocalTool {
   definition: LocalAgentTool;
+  /** Fleet tools are available only to bots with the capability enabled. */
+  availableFor?: (bot: Bot) => boolean;
   execute(request: LocalToolExecutionRequest): Promise<unknown>;
 }
 
@@ -27,7 +33,7 @@ export interface LocalToolApprovalRequest {
 export type ApproveLocalTool = (request: LocalToolApprovalRequest) => Promise<boolean> | boolean;
 
 export interface LocalToolProvider {
-  definitionsFor(bot: Bot): LocalAgentTool[];
+  definitionsFor(bot: Bot): LocalAgentTool[] | Promise<LocalAgentTool[]>;
   execute(request: LocalToolExecutionRequest): Promise<unknown>;
 }
 
@@ -45,7 +51,11 @@ export class LocalToolRegistry implements LocalToolProvider {
   definitionsFor(bot: Bot): LocalAgentTool[] {
     const disabled = new Set(bot.disabledBuiltinTools);
     return [...this.tools.values()]
-      .filter((tool) => !disabled.has(tool.definition.name))
+      .filter(
+        (tool) =>
+          !disabled.has(tool.definition.name) &&
+          (tool.availableFor ? tool.availableFor(bot) : true),
+      )
       .map((tool) => tool.definition);
   }
 

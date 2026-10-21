@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { messageBlockForArtifact, promptTextForAttachments } from "@rakazo/core";
-import type { Bot, CreateBotInput, JsonValue, LocalMessage, Thread } from "@rakazo/local-db";
+import type {
+  Bot,
+  CreateBotInput,
+  JsonValue,
+  LocalArtifact,
+  LocalMessage,
+  Thread,
+} from "@rakazo/local-db";
 import type {
   LocalAgentEngine,
   LocalAgentEvent,
@@ -9,6 +16,7 @@ import type {
   LocalAgentRunContext,
 } from "./agent.js";
 import type { LocalAttachment } from "./attachments.js";
+import { fleetManagementInstruction } from "./fleet-tools.js";
 import type { LocalConversationStore } from "./store.js";
 import type { LocalToolProvider } from "./tools.js";
 
@@ -129,6 +137,7 @@ export class LocalRuntime {
 
     const bot = this.store.getBot(botId);
     if (!bot) throw new Error("Bot not found");
+    if (bot.archivedAt) throw new Error("This bot is archived");
     const thread = this.store.getOrCreateThread(bot.id);
     const history = this.store
       .listMessages(thread.id, { limit: 100 })
@@ -147,10 +156,14 @@ export class LocalRuntime {
     });
 
     const runId = randomUUID();
-    const toolDefinitions = this.tools.definitionsFor(bot);
+    const fleetEnabled = bot.fleetManagement && options.fleetManagementAllowed !== false;
+    const toolDefinitions = await this.tools.definitionsFor(
+      fleetEnabled ? bot : { ...bot, fleetManagement: false },
+    );
     let responseText = "";
     const events: LocalAgentEvent[] = [];
     const toolCalls: SendMessageResult["toolCalls"] = [];
+    const generatedArtifacts: LocalArtifact[] = [];
     let runError: Error | null = null;
     let assistantMessage: LocalMessage | null = null;
 
@@ -177,7 +190,12 @@ export class LocalRuntime {
               runId,
               sourceMessageId: userMessage.id,
               prompt: this.skills?.expandPrompt(taskPrompt) ?? taskPrompt,
-              instructions: [bot.instructions.trim(), memoryContext, skillCatalog]
+              instructions: [
+                bot.instructions.trim(),
+                fleetEnabled ? fleetManagementInstruction() : undefined,
+                memoryContext,
+                skillCatalog,
+              ]
                 .filter((instruction): instruction is string => Boolean(instruction))
                 .join("\n\n"),
               history,
@@ -209,7 +227,13 @@ export class LocalRuntime {
                   args,
                   executionId,
                   signal: options.signal,
+                  fleetManagementAllowed: options.fleetManagementAllowed,
                   peerChain: options.peerChain,
+                  publishArtifact: (artifact) => generatedArtifacts.push(artifact),
+                  publishEvent: (event) => {
+                    events.push(event);
+                    void Promise.resolve(this.onEvent?.(event, runId)).catch(() => undefined);
+                  },
                 }),
             },
             options,
@@ -241,6 +265,7 @@ export class LocalRuntime {
           : null;
       const blocks = [
         ...(responseText.length > 0 ? [{ kind: "text" as const, text: responseText }] : []),
+        ...generatedArtifacts.map((artifact) => messageBlockForArtifact(artifact)),
         ...toolCalls.map((toolCall) => ({
           kind: "tool_call" as const,
           executionId: toolCall.executionId,

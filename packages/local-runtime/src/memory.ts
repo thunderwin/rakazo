@@ -8,14 +8,20 @@ import type {
 } from "@rakazo/local-db";
 import { MemoryRevisionConflictError } from "@rakazo/local-db";
 import type { LocalAgentTool } from "./agent.js";
-import type { LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
+import type { LocalTool, LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
 
 const MAX_MEMORY_PATH_CHARS = 200;
 const MAX_SHARED_MEMORY_CHARS = 4_000;
 const MAX_AGENT_MEMORY_BYTES = 32 * 1024;
 const MEMORY_INDEX_PATH = "MEMORY.md";
 
-export const PRIVATE_MEMORY_TOOL_NAMES = new Set(["remember", "save_shared_memory"]);
+export const PRIVATE_MEMORY_TOOL_NAMES = new Set([
+  "remember",
+  "save_shared_memory",
+  "save_memory",
+  "recall_memory",
+  "forget_memory",
+]);
 
 const memoryTools: LocalAgentTool[] = [
   {
@@ -46,7 +52,57 @@ const memoryTools: LocalAgentTool[] = [
       required: ["path", "content"],
     },
   },
+  {
+    name: "save_memory",
+    requiresApproval: false,
+    description:
+      "Save a durable memory document for this bot. Pass content, and optionally a path such as notes/project.md.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        content: { type: "string" },
+        path: { type: "string" },
+      },
+      required: ["content"],
+    },
+  },
+  {
+    name: "recall_memory",
+    readOnly: true,
+    requiresApproval: false,
+    description:
+      "Search this bot's private memory and the account's shared memory. Returns matching documents and snippets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 20 },
+      },
+      required: ["query"],
+    },
+  },
 ];
+const providerMemoryToolNames = new Set(memoryTools.map((tool) => tool.name));
+
+const forgetMemoryTool: LocalAgentTool = {
+  name: "forget_memory",
+  requiresApproval: true,
+  description: "Delete one non-index memory document by id after user approval.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string" } },
+    required: ["id"],
+  },
+};
+
+export function createLocalForgetMemoryTool(
+  forget: (request: LocalToolExecutionRequest) => Promise<unknown>,
+): LocalTool {
+  return {
+    definition: forgetMemoryTool,
+    execute: forget,
+  };
+}
 
 function memoryPath(value: unknown, fallback?: string): string {
   const path = typeof value === "string" ? value.trim() : "";
@@ -197,6 +253,41 @@ export class LocalMemory {
     return { ok: true, path: saved.path, revision: saved.revision };
   }
 
+  recall(botId: string, query: string, limit = 5): LocalMemoryDocument[] {
+    const terms = [
+      ...new Set(
+        query
+          .toLocaleLowerCase()
+          .split(/[^\p{L}\p{N}_-]+/u)
+          .map((term) => term.trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (terms.length === 0) return [];
+    return this.repository
+      .list()
+      .filter((document) => document.scope === "user" || document.botId === botId)
+      .map((document) => {
+        const text = `${document.path}\n${document.content}`.toLocaleLowerCase();
+        return {
+          document,
+          score: terms.reduce(
+            (score, term) =>
+              score + (text.includes(term) ? 1 + Math.min(8, text.split(term).length - 1) : 0),
+            0,
+          ),
+        };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          Date.parse(right.document.updatedAt) - Date.parse(left.document.updatedAt),
+      )
+      .slice(0, Math.max(1, Math.min(20, Math.trunc(limit))))
+      .map((entry) => entry.document);
+  }
+
   update(id: string, content: string, expectedRevision?: number): LocalMemoryDocument {
     const existing = this.repository.get(id);
     if (!existing) throw new Error("Memory document not found");
@@ -226,10 +317,12 @@ export class LocalMemoryToolProvider implements LocalToolProvider {
     private readonly memory: LocalMemory,
   ) {}
 
-  definitionsFor(bot: Bot): LocalAgentTool[] {
+  async definitionsFor(bot: Bot): Promise<LocalAgentTool[]> {
     const disabled = new Set(bot.disabledBuiltinTools);
     return [
-      ...this.tools.definitionsFor(bot).filter((tool) => !PRIVATE_MEMORY_TOOL_NAMES.has(tool.name)),
+      ...(await this.tools.definitionsFor(bot)).filter(
+        (tool) => !providerMemoryToolNames.has(tool.name),
+      ),
       ...memoryTools.filter((tool) => !disabled.has(tool.name)),
     ];
   }
@@ -247,6 +340,28 @@ export class LocalMemoryToolProvider implements LocalToolProvider {
         ...(request.runId ? { sourceRunId: request.runId } : {}),
         ...(request.threadId ? { sourceThreadId: request.threadId } : {}),
       });
+    }
+    if (request.name === "save_memory") {
+      if (!request.botId) throw new Error("save_memory requires a bot");
+      return this.memory.remember(request.botId, request.args, {
+        ...(request.runId ? { sourceRunId: request.runId } : {}),
+        ...(request.threadId ? { sourceThreadId: request.threadId } : {}),
+      });
+    }
+    if (request.name === "recall_memory") {
+      if (!request.botId) throw new Error("recall_memory requires a bot");
+      const query = typeof request.args.query === "string" ? request.args.query : "";
+      const limit = typeof request.args.limit === "number" ? request.args.limit : 5;
+      return {
+        results: this.memory.recall(request.botId, query, limit).map((document) => ({
+          id: document.id,
+          scope: document.scope,
+          path: document.path,
+          content: document.content,
+          revision: document.revision,
+          updatedAt: document.updatedAt,
+        })),
+      };
     }
     return this.tools.execute(request);
   }

@@ -41,7 +41,8 @@ export class ArtifactRepository {
     if ((input.botId ? 1 : 0) + (input.groupId ? 1 : 0) !== 1) {
       throw new Error("An artifact must belong to one bot or one group");
     }
-    if (input.content.byteLength === 0) throw new Error("Artifact content is empty");
+    if (input.content.byteLength === 0)
+      throw new Error("Artifact content is empty");
     const record: LocalArtifact = {
       id: randomUUID(),
       botId: input.botId ?? null,
@@ -71,16 +72,64 @@ export class ArtifactRepository {
   }
 
   get(id: string): LocalArtifact | null {
-    const row = this.db.prepare("SELECT * FROM artifacts WHERE id = ?").get(id) as
-      | ArtifactRow
-      | undefined;
+    const row = this.db
+      .prepare("SELECT * FROM artifacts WHERE id = ?")
+      .get(id) as ArtifactRow | undefined;
     return row ? artifactRow(row) : null;
   }
 
+  list(
+    input: {
+      botId?: string;
+      groupId?: string;
+      limit?: number;
+      cursor?: string;
+    } = {},
+  ): { items: LocalArtifact[]; nextCursor: string | null } {
+    const limit = Math.min(Math.max(input.limit ?? 60, 1), 200);
+    const clauses: string[] = [];
+    const values: unknown[] = [];
+    if (input.botId) {
+      clauses.push("bot_id = ?");
+      values.push(input.botId);
+    }
+    if (input.groupId) {
+      clauses.push("group_id = ?");
+      values.push(input.groupId);
+    }
+    if (input.cursor) {
+      const cursor = this.db
+        .prepare("SELECT created_at FROM artifacts WHERE id = ?")
+        .get(input.cursor) as { created_at: string } | undefined;
+      if (!cursor) return { items: [], nextCursor: null };
+      clauses.push("(created_at < ? OR (created_at = ? AND id < ?))");
+      values.push(cursor.created_at, cursor.created_at, input.cursor);
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM artifacts
+         ${clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : ""}
+         ORDER BY created_at DESC, id DESC
+         LIMIT ?`,
+      )
+      .all(...values, limit + 1) as ArtifactRow[];
+    const page = rows.slice(0, limit).map(artifactRow);
+    return {
+      items: page,
+      nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+    };
+  }
+
+  remove(id: string): boolean {
+    return (
+      this.db.prepare("DELETE FROM artifacts WHERE id = ?").run(id).changes > 0
+    );
+  }
+
   read(id: string): LocalArtifactWithContent | null {
-    const row = this.db.prepare("SELECT * FROM artifacts WHERE id = ?").get(id) as
-      | ArtifactContentRow
-      | undefined;
+    const row = this.db
+      .prepare("SELECT * FROM artifacts WHERE id = ?")
+      .get(id) as ArtifactContentRow | undefined;
     return row
       ? {
           ...artifactRow(row),

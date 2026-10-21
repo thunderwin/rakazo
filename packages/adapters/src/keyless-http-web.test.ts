@@ -4,6 +4,7 @@ import { FakeWebProvider } from "./fake-web.js";
 import {
   extractReadableText,
   KeylessHttpWebProvider,
+  parseBingResults,
   parseDuckDuckGoResults,
 } from "./keyless-http-web.js";
 import { clampMaxChars, clampMaxResults } from "./web-limits.js";
@@ -84,6 +85,33 @@ describe("keyless HTTP web provider", () => {
       return `<div class="result"><a class="result__a" href="https://example.test/${i}">T${i}</a><div class="result__snippet">S${i}</div></div>`;
     }).join("");
     expect(parseDuckDuckGoResults(html, 3)).toHaveLength(3);
+  });
+
+  it("parses Bing redirect URLs without exposing search tracking links", () => {
+    const target = Buffer.from("https://example.test/result", "utf8").toString("base64url");
+    const html = `<li class="b_algo"><h2><a href="https://www.bing.com/ck/a?u=a1${target}">Result</a></h2><div class="b_caption"><p>Snippet</p></div></li>`;
+    expect(parseBingResults(html, 1)).toEqual([
+      { title: "Result", url: "https://example.test/result", snippet: "Snippet" },
+    ]);
+  });
+
+  it("falls back to Bing when the first keyless search backend fails", async () => {
+    const target = Buffer.from("https://example.test/result", "utf8").toString("base64url");
+    const bing = `<li class="b_algo"><h2><a href="https://www.bing.com/ck/a?u=a1${target}">Result</a></h2><div class="b_caption"><p>Snippet</p></div></li>`;
+    let calls = 0;
+    const fetchMock: typeof fetch = async () => {
+      calls += 1;
+      if (calls === 1) throw new Error("DuckDuckGo unavailable");
+      return new Response(bing, { status: 200, headers: { "content-type": "text/html" } });
+    };
+    const provider = new KeylessHttpWebProvider({
+      fetch: fetchMock,
+      resolveHostname: publicResolver,
+    });
+    await expect(provider.search({ query: "result", maxResults: 1 }, ctx)).resolves.toEqual([
+      { title: "Result", url: "https://example.test/result", snippet: "Snippet" },
+    ]);
+    expect(calls).toBe(2);
   });
 });
 

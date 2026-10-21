@@ -53,7 +53,7 @@ describe("local database", () => {
     first.close();
     const second = openLocalDatabase(file);
     expect(second.sqlite.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 9,
+      count: 15,
     });
     second.close();
   });
@@ -92,6 +92,18 @@ describe("local database", () => {
       modelProvider: null,
       modelId: null,
       disabledBuiltinTools: ["shell"],
+      fleetManagement: false,
+      createdByBotId: null,
+      instructionsVersion: 1,
+    });
+
+    expect(
+      db.bots.update(bot.id, {
+        instructions: "Verify primary sources.",
+      }),
+    ).toMatchObject({
+      instructions: "Verify primary sources.",
+      instructionsVersion: 2,
     });
     expect(db.bots.update("missing", { name: "Nope" })).toBeNull();
     db.close();

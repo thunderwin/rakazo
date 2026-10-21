@@ -27,7 +27,9 @@ export class RecordingToolProvider implements LocalToolProvider {
     private readonly runs: RunRepository,
   ) {}
 
-  definitionsFor(bot: Parameters<LocalToolProvider["definitionsFor"]>[0]): LocalAgentTool[] {
+  definitionsFor(
+    bot: Parameters<LocalToolProvider["definitionsFor"]>[0],
+  ): LocalAgentTool[] | Promise<LocalAgentTool[]> {
     return this.tools.definitionsFor(bot);
   }
 

@@ -5,7 +5,13 @@ export { BotRepository } from "./repositories/bots.js";
 export { GroupMessageRepository } from "./repositories/group-messages.js";
 export { GroupThreadRepository } from "./repositories/group-threads.js";
 export { GroupRepository } from "./repositories/groups.js";
+export {
+  InstructionVersionRepository,
+  type LocalInstructionVersion,
+} from "./repositories/instruction-versions.js";
 export { KnowledgeRepository } from "./repositories/knowledge.js";
+export { McpServerRepository } from "./repositories/mcp-servers.js";
+export { MediaJobRepository } from "./repositories/media-jobs.js";
 export {
   MemoryRepository,
   MemoryRevisionConflictError,
@@ -17,6 +23,7 @@ export { RunRepository } from "./repositories/runs.js";
 export { SettingsRepository } from "./repositories/settings.js";
 export { SkillRepository } from "./repositories/skills.js";
 export { ThreadRepository } from "./repositories/threads.js";
+export { WorkRepository } from "./repositories/work.js";
 export type {
   AppendGroupMessageInput,
   AppendMessageInput,
@@ -34,6 +41,10 @@ export type {
   LocalGroup,
   LocalGroupWithMembers,
   LocalKnowledgeDocument,
+  LocalMcpServer,
+  LocalMediaJob,
+  LocalMediaJobKind,
+  LocalMediaJobStatus,
   LocalMemoryDocument,
   LocalMemoryScope,
   LocalMessage,
@@ -41,6 +52,8 @@ export type {
   LocalRunRecord,
   LocalRunStatus,
   LocalSkill,
+  LocalSkillRuntime,
+  LocalSkillScript,
   LocalToolRunRecord,
   LocalToolRunStatus,
   ManagedContentSource,
@@ -49,5 +62,11 @@ export type {
   RoutineRun,
   RoutineRunStatus,
   RoutineRunTrigger,
+  ScratchpadItem,
+  ScratchpadStatus,
   Thread,
+  Ticket,
+  TicketComment,
+  TicketPriority,
+  TicketStatus,
 } from "./types.js";

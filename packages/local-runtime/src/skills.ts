@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import path from "node:path";
 import {
   BUILTIN_AGENT_SKILLS,
   buildSkillMd,
@@ -9,13 +11,31 @@ import {
   type SkillRecord,
   type SkillSource,
 } from "@rakazo/core";
-import type { Bot, LocalSkill, SkillRepository } from "@rakazo/local-db";
+import type {
+  Bot,
+  LocalSkill,
+  LocalSkillRuntime,
+  LocalSkillScript,
+  SkillRepository,
+} from "@rakazo/local-db";
 import type { LocalAgentTool } from "./agent.js";
-import type { LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
+import { runSkillScript } from "./skill-runtime.js";
+import type { LocalTool, LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
 
 const MAX_SKILL_CONTENT_CHARS = 100_000;
 const MAX_SKILL_NAME_CHARS = 80;
 const MAX_SKILL_DESCRIPTION_CHARS = 2_000;
+const MAX_SKILL_SCRIPTS = 20;
+const MAX_SKILL_SCRIPT_CHARS = 200_000;
+const MAX_SKILL_SCRIPTS_TOTAL_CHARS = 1_000_000;
+
+export interface LocalSkillScriptInput {
+  path: string;
+  content: string;
+  runtime?: LocalSkillRuntime | null;
+  timeoutSeconds?: number;
+  network?: boolean;
+}
 
 const skillTools: LocalAgentTool[] = [
   {
@@ -42,6 +62,21 @@ const skillTools: LocalAgentTool[] = [
         description: { type: "string", description: "When the skill should be used." },
         body: { type: "string", description: "Markdown steps and guidance." },
         content: { type: "string", description: "Optional complete SKILL.md content." },
+        scripts: {
+          type: "array",
+          description: "Optional script files bundled with the skill.",
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string", description: "Relative path, for example scripts/main.py." },
+              content: { type: "string" },
+              runtime: { type: ["string", "null"], enum: ["node", "python3", "sh", null] },
+              timeoutSeconds: { type: "number" },
+              network: { type: "boolean" },
+            },
+            required: ["path", "content"],
+          },
+        },
       },
     },
   },
@@ -57,6 +92,21 @@ const skillTools: LocalAgentTool[] = [
         description: { type: "string" },
         body: { type: "string" },
         content: { type: "string" },
+        scripts: {
+          type: "array",
+          description: "Replacement script files for this skill.",
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string" },
+              content: { type: "string" },
+              runtime: { type: ["string", "null"], enum: ["node", "python3", "sh", null] },
+              timeoutSeconds: { type: "number" },
+              network: { type: "boolean" },
+            },
+            required: ["path", "content"],
+          },
+        },
       },
       required: ["name"],
     },
@@ -73,11 +123,43 @@ const skillTools: LocalAgentTool[] = [
   },
 ];
 
+const skillRunTool: LocalAgentTool = {
+  name: "skill_run",
+  requiresApproval: true,
+  description:
+    "Run one declared entrypoint from a skill after reading the skill. Entrypoints receive the JSON args in input.json and run in a fresh workspace skill-runs folder. Each call requires user approval.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Exact skill name from the catalog." },
+      entrypoint: {
+        type: "string",
+        description: "Declared script path, for example scripts/main.py.",
+      },
+      args: {
+        type: "object",
+        description: "JSON object written to input.json in the run folder.",
+      },
+    },
+    required: ["name", "entrypoint"],
+  },
+};
+
+export function createLocalSkillRunTool(
+  run: (request: LocalToolExecutionRequest) => Promise<unknown>,
+): LocalTool {
+  return {
+    definition: skillRunTool,
+    execute: run,
+  };
+}
+
 export interface LocalSkillView {
   id: string;
   name: string;
   description: string;
   content: string;
+  scripts: LocalSkillScript[];
   source: SkillSource;
   readOnly: boolean;
   createdAt: string;
@@ -91,6 +173,7 @@ function builtinViews(): LocalSkillView[] {
     name: skill.name,
     description: skill.description,
     content: skill.content,
+    scripts: [],
     source: "builtin",
     readOnly: true,
     createdAt: now,
@@ -104,6 +187,7 @@ function storedView(skill: LocalSkill): LocalSkillView {
     name: skill.name,
     description: skill.description,
     content: skill.content,
+    scripts: skill.scripts,
     source: skill.source,
     readOnly: isSkillReadOnly(skill.source),
     createdAt: skill.createdAt,
@@ -118,6 +202,69 @@ function assertFields(name: string, description: string): void {
   if (description.length > MAX_SKILL_DESCRIPTION_CHARS) {
     throw new Error("Skill description is too long");
   }
+}
+
+function assertScriptPath(value: string): string {
+  const normalized = value.trim().replaceAll("\\", "/");
+  if (!normalized || normalized.length > 200) throw new Error("Skill script path is invalid");
+  if (
+    path.posix.isAbsolute(normalized) ||
+    normalized.split("/").some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new Error("Skill script path must stay inside the skill folder");
+  }
+  if (!/\.(?:js|mjs|cjs|py|sh)$/i.test(normalized)) {
+    throw new Error("Skill script must use a .js, .mjs, .cjs, .py, or .sh extension");
+  }
+  return normalized;
+}
+
+function runtimeForPath(value: string): LocalSkillRuntime | null {
+  if (/\.(?:js|mjs|cjs)$/i.test(value)) return "node";
+  if (/\.py$/i.test(value)) return "python3";
+  if (/\.sh$/i.test(value)) return "sh";
+  return null;
+}
+
+function normalizeScripts(input: readonly LocalSkillScriptInput[] | undefined): LocalSkillScript[] {
+  const scripts = input ?? [];
+  if (scripts.length > MAX_SKILL_SCRIPTS) throw new Error("A skill can have at most 20 scripts");
+  const paths = new Set<string>();
+  let totalChars = 0;
+  return scripts.map((script) => {
+    const scriptPath = assertScriptPath(script.path);
+    if (paths.has(scriptPath)) throw new Error(`Duplicate skill script path: ${scriptPath}`);
+    paths.add(scriptPath);
+    if (typeof script.content !== "string" || script.content.length > MAX_SKILL_SCRIPT_CHARS) {
+      throw new Error(`Skill script ${scriptPath} is too large`);
+    }
+    totalChars += script.content.length;
+    if (totalChars > MAX_SKILL_SCRIPTS_TOTAL_CHARS) {
+      throw new Error("Skill scripts are too large");
+    }
+    const inferred = runtimeForPath(scriptPath);
+    const runtime = script.runtime === undefined ? inferred : script.runtime;
+    if (runtime !== null && runtime !== inferred) {
+      throw new Error(`Skill script ${scriptPath} does not match runtime ${runtime}`);
+    }
+    return {
+      path: scriptPath,
+      content: script.content,
+      runtime,
+      timeoutSeconds: Math.min(120, Math.max(1, Math.trunc(script.timeoutSeconds ?? 60))),
+      network: script.network === true,
+      sha256: createHash("sha256").update(script.content, "utf8").digest("hex"),
+    };
+  });
+}
+
+function scriptSummary(scripts: readonly LocalSkillScript[]): string[] {
+  return scripts
+    .filter((script) => script.runtime)
+    .map(
+      (script) =>
+        `  - ${script.path} (${script.runtime}, ${script.timeoutSeconds}s, network ${script.network ? "on" : "off"})`,
+    );
 }
 
 export class LocalSkills implements LocalSkillCatalog {
@@ -144,6 +291,7 @@ export class LocalSkills implements LocalSkillCatalog {
     description?: string;
     body?: string;
     content?: string;
+    scripts?: LocalSkillScriptInput[];
   }): LocalSkillView {
     let name = input.name?.trim() ?? "";
     let description = input.description?.trim() ?? "";
@@ -161,7 +309,14 @@ export class LocalSkills implements LocalSkillCatalog {
     assertFields(name, description);
     if (content.length > MAX_SKILL_CONTENT_CHARS) throw new Error("Skill content is too large");
     if (this.findByName(name)) throw new Error(`A skill named "${name}" already exists`);
-    return storedView(this.repository.create({ name, description, content }));
+    return storedView(
+      this.repository.create({
+        name,
+        description,
+        content,
+        scripts: normalizeScripts(input.scripts),
+      }),
+    );
   }
 
   update(
@@ -171,6 +326,7 @@ export class LocalSkills implements LocalSkillCatalog {
       description?: string;
       body?: string;
       content?: string;
+      scripts?: LocalSkillScriptInput[];
     },
   ): LocalSkillView {
     const existing = this.findByName(name);
@@ -207,6 +363,7 @@ export class LocalSkills implements LocalSkillCatalog {
       name: nextName,
       description: nextDescription,
       content: nextContent,
+      scripts: input.scripts === undefined ? existing.scripts : normalizeScripts(input.scripts),
     });
     if (!updated) throw new Error("Could not update skill");
     return storedView(updated);
@@ -221,6 +378,26 @@ export class LocalSkills implements LocalSkillCatalog {
     return this.repository.remove(existing.id);
   }
 
+  replaceManaged(input: {
+    packageId: string;
+    version: number;
+    skills: Array<{
+      key: string;
+      name: string;
+      description: string;
+      content: string;
+      scripts?: LocalSkillScriptInput[];
+    }>;
+  }): void {
+    this.repository.replaceManaged({
+      ...input,
+      skills: input.skills.map((skill) => ({
+        ...skill,
+        scripts: normalizeScripts(skill.scripts),
+      })),
+    });
+  }
+
   expandPrompt(prompt: string): string {
     return expandSkillReferencesInPrompt(
       prompt,
@@ -229,7 +406,35 @@ export class LocalSkills implements LocalSkillCatalog {
   }
 
   catalogInstruction(): string | undefined {
-    return formatSkillsCatalogInstruction(this.list());
+    const base = formatSkillsCatalogInstruction(this.list());
+    if (!base) return undefined;
+    const scripts = this.list().flatMap((skill) =>
+      scriptSummary(skill.scripts).map((line) => `- ${skill.name}\n${line}`),
+    );
+    return scripts.length
+      ? `${base}\n\nRunnable skill entrypoints (call skill_run after skill_read):\n${scripts.join("\n")}`
+      : base;
+  }
+
+  run(input: {
+    name: string;
+    entrypoint: string;
+    args: unknown;
+    workspaceDir: string;
+    environment?: Record<string, string>;
+    signal?: AbortSignal;
+  }) {
+    const skill = this.findByName(input.name);
+    if (!skill) throw new Error("Skill not found");
+    return runSkillScript({
+      skillName: skill.name,
+      scripts: skill.scripts,
+      entrypoint: input.entrypoint,
+      args: input.args,
+      workspaceDir: input.workspaceDir,
+      environment: input.environment,
+      signal: input.signal,
+    });
   }
 }
 
@@ -244,12 +449,12 @@ export class LocalSkillToolProvider implements LocalToolProvider {
     private readonly skills: LocalSkills,
   ) {}
 
-  definitionsFor(bot: Bot): LocalAgentTool[] {
+  async definitionsFor(bot: Bot): Promise<LocalAgentTool[]> {
     const disabled = new Set(bot.disabledBuiltinTools);
     return [
-      ...this.tools
-        .definitionsFor(bot)
-        .filter((tool) => !skillTools.some((candidate) => candidate.name === tool.name)),
+      ...(await this.tools.definitionsFor(bot)).filter(
+        (tool) => !skillTools.some((candidate) => candidate.name === tool.name),
+      ),
       ...skillTools.filter((tool) => !disabled.has(tool.name)),
     ];
   }
@@ -265,6 +470,7 @@ export class LocalSkillToolProvider implements LocalToolProvider {
             source: skill.source,
             readOnly: skill.readOnly,
             content: skill.content,
+            scripts: skill.scripts.map(({ content: _content, ...script }) => script),
           }
         : { error: "Skill not found." };
     }
@@ -276,6 +482,9 @@ export class LocalSkillToolProvider implements LocalToolProvider {
           : {}),
         ...(typeof request.args.body === "string" ? { body: request.args.body } : {}),
         ...(typeof request.args.content === "string" ? { content: request.args.content } : {}),
+        ...(Array.isArray(request.args.scripts)
+          ? { scripts: request.args.scripts as LocalSkillScriptInput[] }
+          : {}),
       });
     }
     if (request.name === "skill_update") {
@@ -287,6 +496,9 @@ export class LocalSkillToolProvider implements LocalToolProvider {
           : {}),
         ...(typeof request.args.body === "string" ? { body: request.args.body } : {}),
         ...(typeof request.args.content === "string" ? { content: request.args.content } : {}),
+        ...(Array.isArray(request.args.scripts)
+          ? { scripts: request.args.scripts as LocalSkillScriptInput[] }
+          : {}),
       });
     }
     if (request.name === "skill_delete") {

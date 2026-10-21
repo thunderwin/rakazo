@@ -3,14 +3,22 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { ClientManifestContentSchema } from "@rakazo/contracts";
 import { afterEach, describe, expect, it } from "vitest";
-import type { LocalAgentEngine, LocalAgentRunRequest } from "./agent.js";
+import type {
+  LocalAgentEngine,
+  LocalAgentEvent,
+  LocalAgentRunRequest,
+} from "./agent.js";
 import { LocalRuntimeService } from "./service.js";
 import { type LocalTool, LocalToolRegistry } from "./tools.js";
 
 const directories: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true })));
+  await Promise.all(
+    directories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true })),
+  );
 });
 
 const engine: LocalAgentEngine = {
@@ -38,16 +46,32 @@ async function tempDbPath(): Promise<string> {
 describe("local runtime service", () => {
   it("owns a database, creates bots, and survives reopen", async () => {
     const databasePath = await tempDbPath();
-    const first = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    const first = new LocalRuntimeService({
+      databasePath,
+      engine,
+      tools,
+      resolveModel,
+    });
     const bot = first.createBot({ name: "Chief" });
     const result = await first.sendMessage(bot.id, "Hello");
     expect(result.text).toBe("ok");
-    expect(first.listMessages(bot.id).map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(first.listMessages(bot.id).map((message) => message.role)).toEqual([
+      "user",
+      "bot",
+    ]);
     first.close();
 
-    const second = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    const second = new LocalRuntimeService({
+      databasePath,
+      engine,
+      tools,
+      resolveModel,
+    });
     expect(second.listBots().map((item) => item.id)).toEqual([bot.id]);
-    expect(second.listMessages(bot.id).map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(second.listMessages(bot.id).map((message) => message.role)).toEqual([
+      "user",
+      "bot",
+    ]);
     second.close();
   });
 
@@ -64,7 +88,12 @@ describe("local runtime service", () => {
 
   it("persists client settings in the account database", async () => {
     const databasePath = await tempDbPath();
-    const first = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    const first = new LocalRuntimeService({
+      databasePath,
+      engine,
+      tools,
+      resolveModel,
+    });
     expect(first.getUserSettings()).toEqual({
       theme: "system",
       sendWithEnter: true,
@@ -77,13 +106,100 @@ describe("local runtime service", () => {
     });
     first.close();
 
-    const second = new LocalRuntimeService({ databasePath, engine, tools, resolveModel });
+    const second = new LocalRuntimeService({
+      databasePath,
+      engine,
+      tools,
+      resolveModel,
+    });
     expect(second.getUserSettings()).toEqual({
       theme: "light",
       sendWithEnter: false,
       defaultModelId: "model-a",
     });
     second.close();
+  });
+
+  it("backs the shared work and artifact screens with local records", () => {
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine,
+      tools,
+      resolveModel,
+    });
+    const owner = service.createBot({ name: "Owner" });
+    const collaborator = service.createBot({ name: "Collaborator" });
+
+    const item = service.createScratchpad(owner.id, {
+      title: "Draft launch plan",
+    });
+    expect(service.listScratchpad(owner.id)).toEqual([item]);
+    expect(
+      service.updateScratchpad(owner.id, item.id, { status: "done" }),
+    ).toMatchObject({
+      status: "done",
+    });
+    expect(service.listScratchpad(owner.id)).toEqual([]);
+    expect(service.listScratchpad(owner.id, true)).toHaveLength(1);
+
+    const ticket = service.createTicket({
+      botId: owner.id,
+      ownerBotId: collaborator.id,
+      title: "Review copy",
+    });
+    expect(service.updateTicket(ticket.id, { status: "doing" })).toMatchObject({
+      status: "doing",
+      ownerBotId: collaborator.id,
+    });
+    const comment = service.commentOnTicket(
+      ticket.id,
+      collaborator.id,
+      "In progress",
+    );
+    expect(service.listTicketComments(ticket.id)).toEqual([comment]);
+
+    const artifact = service.createArtifact({
+      botId: owner.id,
+      name: "brief.txt",
+      mimeType: "text/plain",
+      contentBase64: "aGVsbG8=",
+    });
+    expect(service.listArtifacts({ botId: owner.id })).toEqual({
+      items: [artifact],
+      nextCursor: null,
+    });
+    service.removeArtifact(artifact.id);
+    expect(service.listArtifacts({ botId: owner.id }).items).toEqual([]);
+    service.close();
+  });
+
+  it("records approved instruction updates with an undo version", () => {
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine,
+      tools,
+      resolveModel,
+    });
+    const bot = service.createBot({
+      name: "Writer",
+      instructions: "Use sentence case.",
+    });
+    const result = service.proposeInstructions({
+      botId: bot.id,
+      instructions: "Use sentence case and cite sources.",
+      reason: "The owner asked for citations.",
+      expectedVersion: bot.instructionsVersion,
+    });
+    expect(result).toMatchObject({ ok: true, instructionsVersion: 2 });
+    expect(service.db.bots.get(bot.id)?.instructions).toContain("cite sources");
+    expect(service.db.instructionVersions.list(bot.id)).toEqual([
+      expect.objectContaining({
+        before: "Use sentence case.",
+        after: "Use sentence case and cite sources.",
+        reason: "The owner asked for citations.",
+      }),
+    ]);
+    service.close();
   });
 
   it("runs a persistent peer bot and records the request and reply", async () => {
@@ -105,7 +221,9 @@ describe("local runtime service", () => {
       }),
     ).resolves.toBe("ok");
 
-    expect(service.listMessages(target.id).map((message) => message.role)).toEqual(["user", "bot"]);
+    expect(
+      service.listMessages(target.id).map((message) => message.role),
+    ).toEqual(["user", "bot"]);
     expect(service.db.peerMessages.listForBot(source.id)).toEqual([
       expect.objectContaining({
         fromBotId: source.id,
@@ -202,12 +320,17 @@ describe("local runtime service", () => {
     const first = service.createBot({ name: "Researcher" });
     const second = service.createBot({ name: "Writer" });
     firstBotId = first.id;
-    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+    const group = service.createGroup({
+      name: "Launch",
+      botIds: [first.id, second.id],
+    });
 
     await service.sendGroupMessage(group.id, "Prepare the draft");
     const handoffRun = service
       .listActivity()
-      .find((activity) => activity.botId === first.id && activity.kind === "group");
+      .find(
+        (activity) => activity.botId === first.id && activity.kind === "group",
+      );
 
     expect(handoffRun).toEqual(
       expect.objectContaining({
@@ -255,7 +378,10 @@ describe("local runtime service", () => {
       tools,
       resolveModel,
     });
-    const bot = service.createBot({ name: "Researcher", instructions: "Verify sources." });
+    const bot = service.createBot({
+      name: "Researcher",
+      instructions: "Verify sources.",
+    });
 
     await service.sendMessage(bot.id, "Remember these.");
 
@@ -302,7 +428,10 @@ describe("local runtime service", () => {
     });
     const first = service.createBot({ name: "Researcher" });
     const second = service.createBot({ name: "Writer" });
-    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+    const group = service.createGroup({
+      name: "Launch",
+      botIds: [first.id, second.id],
+    });
 
     await service.sendGroupMessage(group.id, "Prepare the draft");
 
@@ -414,9 +543,9 @@ describe("local runtime service", () => {
       },
     ]);
     const other = service.createBot({ name: "Other" });
-    await expect(service.sendMessage(other.id, "Wrong target", {}, [file.id])).rejects.toThrow(
-      "Attachment not found",
-    );
+    await expect(
+      service.sendMessage(other.id, "Wrong target", {}, [file.id]),
+    ).rejects.toThrow("Attachment not found");
     service.close();
   });
 
@@ -438,7 +567,10 @@ describe("local runtime service", () => {
     });
     const first = service.createBot({ name: "Researcher" });
     const second = service.createBot({ name: "Writer" });
-    const group = service.createGroup({ name: "Launch", botIds: [first.id, second.id] });
+    const group = service.createGroup({
+      name: "Launch",
+      botIds: [first.id, second.id],
+    });
     const image = service.createArtifact({
       groupId: group.id,
       name: "brief.png",
@@ -542,13 +674,25 @@ describe("local runtime service", () => {
           botKeys: ["analyst", "writer"],
         },
       ],
-      knowledge: [{ key: "policy", title: "Release policy", content: "Verify rollback." }],
+      knowledge: [
+        { key: "policy", title: "Release policy", content: "Verify rollback." },
+      ],
       skills: [
         {
           key: "review",
           name: "Company review",
           description: "Review a release",
-          content: "---\nname: Company review\ndescription: Review a release\n---\n\nCheck it.",
+          content:
+            "---\nname: Company review\ndescription: Review a release\n---\n\nCheck it.",
+          scripts: [
+            {
+              path: "scripts/check.js",
+              content: "console.log(process.argv[2]);",
+              runtime: "node",
+              timeoutSeconds: 15,
+              network: false,
+            },
+          ],
         },
       ],
       routines: [
@@ -573,7 +717,11 @@ describe("local runtime service", () => {
 
     expect(state).toMatchObject({ organizationId: "org-1", version: 3 });
     expect(service.listBots().map((bot) => bot.name)).toEqual(
-      expect.arrayContaining(["My assistant", "Company analyst", "Company writer"]),
+      expect.arrayContaining([
+        "My assistant",
+        "Company analyst",
+        "Company writer",
+      ]),
     );
     expect(service.listGroups()[0]).toMatchObject({
       name: "Launch team",
@@ -583,11 +731,22 @@ describe("local runtime service", () => {
     expect(service.listKnowledge()).toEqual([
       expect.objectContaining({ title: "Release policy", source: "managed" }),
     ]);
-    expect(service.listSkills().find((skill) => skill.name === "Company review")).toMatchObject({
+    expect(
+      service.listSkills().find((skill) => skill.name === "Company review"),
+    ).toMatchObject({
       source: "managed",
       readOnly: true,
+      scripts: [
+        {
+          path: "scripts/check.js",
+          runtime: "node",
+          sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        },
+      ],
     });
-    const analyst = service.listBots().find((bot) => bot.name === "Company analyst")!;
+    const analyst = service
+      .listBots()
+      .find((bot) => bot.name === "Company analyst")!;
     expect(service.db.routines.list(analyst.id)).toEqual([
       expect.objectContaining({ name: "Daily brief", source: "managed" }),
     ]);
@@ -603,7 +762,61 @@ describe("local runtime service", () => {
     expect(service.listBots().map((bot) => bot.id)).toEqual([userBot.id]);
     expect(service.listGroups()).toEqual([]);
     expect(service.listKnowledge()).toEqual([]);
-    expect(service.listSkills().map((skill) => skill.source)).toEqual(["builtin"]);
+    expect(service.listSkills().map((skill) => skill.source)).toEqual([
+      "builtin",
+    ]);
+    service.close();
+  });
+
+  it("enforces organization-wide disabled tools from the client manifest", async () => {
+    const observed: string[][] = [];
+    const policyEngine: LocalAgentEngine = {
+      async *run(request): AsyncIterable<LocalAgentEvent> {
+        observed.push(request.tools.map((tool) => tool.name));
+        await expect(
+          request.executeTool("shell", {}, "hidden-1"),
+        ).rejects.toThrow("disabled by policy");
+        yield { type: "text", text: "ok" };
+        yield { type: "done" };
+      },
+      async abort() {},
+    };
+    const service = new LocalRuntimeService({
+      databasePath: ":memory:",
+      engine: policyEngine,
+      tools: new LocalToolRegistry(
+        [
+          {
+            definition: {
+              name: "shell",
+              description: "Probe",
+              inputSchema: { type: "object", properties: {} },
+              readOnly: true,
+            },
+            async execute() {
+              return { ok: true };
+            },
+          },
+        ],
+        () => true,
+      ),
+      resolveModel,
+    });
+    service.applyClientManifest({
+      organization: { id: "org-1", name: "Example" },
+      version: 1,
+      hash: "hash",
+      publishedAt: "2026-10-21T00:00:00.000Z",
+      signature: null,
+      content: ClientManifestContentSchema.parse({
+        name: "Example",
+        featurePolicy: { disabledTools: ["shell"], allowComputerUse: false },
+      }),
+    });
+    const bot = service.createBot({ name: "Agent" });
+    await service.sendMessage(bot.id, "Check policy");
+    expect(observed[0]).not.toContain("shell");
+    expect(service.getManagedDisabledTools()).toEqual(["shell"]);
     service.close();
   });
 

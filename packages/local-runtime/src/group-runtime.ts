@@ -12,6 +12,7 @@ import type {
   GroupMessage,
   GroupThread,
   JsonValue,
+  LocalArtifact,
   LocalDatabase,
   LocalGroupWithMembers,
 } from "@rakazo/local-db";
@@ -24,6 +25,7 @@ import type {
   LocalAgentTool,
 } from "./agent.js";
 import type { LocalAttachment } from "./attachments.js";
+import { LOCAL_FLEET_TOOL_NAMES } from "./fleet-tools.js";
 import { PRIVATE_MEMORY_TOOL_NAMES } from "./memory.js";
 import { ROUTINE_TOOL_NAMES } from "./routines.js";
 import type { LocalToolProvider } from "./tools.js";
@@ -85,6 +87,14 @@ interface QueuedHandoff {
 type GroupBlock =
   | { kind: "text"; text: string }
   | { kind: "error"; message: string }
+  | { kind: "image"; artifactId: string; mimeType: string; name: string }
+  | {
+      kind: "file";
+      artifactId: string;
+      mimeType: string;
+      name: string;
+      size: number;
+    }
   | {
       kind: "handoff";
       fromBotId: string;
@@ -276,6 +286,7 @@ export class LocalGroupRuntime {
   > {
     const bot = group.members.find((member) => member.id === item.botId);
     if (!bot) throw new Error("Group member not found");
+    if (bot.archivedAt) throw new Error("Group member is archived");
     const runId = randomUUID();
     const active = this.active.get(group.id);
     active?.runIds.add(runId);
@@ -283,16 +294,16 @@ export class LocalGroupRuntime {
     let error: Error | null = null;
     let failed = false;
     const toolCalls: GroupBlock[] = [];
+    const generatedArtifacts: LocalArtifact[] = [];
     const handoffs: QueuedHandoff[] = [];
     const history = this.groupHistory(group);
-    const tools = this.options.tools
-      .definitionsFor(bot)
-      .filter(
-        (tool) =>
-          tool.name !== "handoff_to_bot" &&
-          !PRIVATE_MEMORY_TOOL_NAMES.has(tool.name) &&
-          !ROUTINE_TOOL_NAMES.has(tool.name),
-      );
+    const tools = (await this.options.tools.definitionsFor(bot)).filter(
+      (tool) =>
+        !LOCAL_FLEET_TOOL_NAMES.has(tool.name) &&
+        tool.name !== "handoff_to_bot" &&
+        !PRIVATE_MEMORY_TOOL_NAMES.has(tool.name) &&
+        !ROUTINE_TOOL_NAMES.has(tool.name),
+    );
     if (!bot.disabledBuiltinTools.includes("handoff_to_bot")) tools.push(handoffTool);
     let model: LocalAgentModel | null = null;
 
@@ -351,6 +362,9 @@ export class LocalGroupRuntime {
             if (PRIVATE_MEMORY_TOOL_NAMES.has(name) || ROUTINE_TOOL_NAMES.has(name)) {
               throw new Error("Private memory and routine tools are not available in group chats");
             }
+            if (LOCAL_FLEET_TOOL_NAMES.has(name)) {
+              throw new Error("Fleet tools are not available in group chats");
+            }
             if (name === "handoff_to_bot") {
               return this.executeHandoff({
                 group,
@@ -371,6 +385,10 @@ export class LocalGroupRuntime {
               args,
               executionId,
               signal,
+              publishArtifact: (artifact) => generatedArtifacts.push(artifact),
+              publishEvent: (event) => {
+                void Promise.resolve(this.options.onEvent?.(event, runId)).catch(() => undefined);
+              },
             });
           },
         },
@@ -396,6 +414,7 @@ export class LocalGroupRuntime {
     try {
       const blocks: GroupBlock[] = [
         ...(text ? [{ kind: "text" as const, text }] : []),
+        ...generatedArtifacts.map((artifact) => messageBlockForArtifact(artifact)),
         ...toolCalls,
         ...(error ? [{ kind: "error" as const, message: error.message }] : []),
       ];

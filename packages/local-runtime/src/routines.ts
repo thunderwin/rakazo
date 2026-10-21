@@ -5,7 +5,7 @@ import {
   ONCE_ROUTINE_CRON,
 } from "@rakazo/core";
 import type { Bot, LocalDatabase, Routine, RoutineRun, RoutineRunTrigger } from "@rakazo/local-db";
-import type { LocalAgentTool } from "./agent.js";
+import type { LocalAgentRunContext, LocalAgentTool } from "./agent.js";
 import type { LocalToolExecutionRequest, LocalToolProvider } from "./tools.js";
 
 export const ROUTINE_TOOL_NAMES = new Set(["schedule_create", "schedule_list", "schedule_cancel"]);
@@ -72,6 +72,7 @@ export interface LocalRoutineRuntimeOptions {
     sendMessage(
       botId: string,
       text: string,
+      options?: LocalAgentRunContext,
     ): Promise<{
       runId: string;
     }>;
@@ -273,6 +274,7 @@ export class LocalRoutineRuntime {
       const result = await this.options.runtime.sendMessage(
         routine.botId,
         automatedPrompt(routine),
+        { fleetManagementAllowed: false },
       );
       const endedAt = this.now().toISOString();
       this.options.db.routines.finishRun(claim.id, {
@@ -316,10 +318,12 @@ export class LocalRoutineToolProvider implements LocalToolProvider {
     private readonly routines: () => LocalRoutineRuntime,
   ) {}
 
-  definitionsFor(bot: Bot): LocalAgentTool[] {
+  async definitionsFor(bot: Bot): Promise<LocalAgentTool[]> {
     const disabled = new Set(bot.disabledBuiltinTools);
     return [
-      ...this.tools.definitionsFor(bot).filter((tool) => !ROUTINE_TOOL_NAMES.has(tool.name)),
+      ...(await this.tools.definitionsFor(bot)).filter(
+        (tool) => !ROUTINE_TOOL_NAMES.has(tool.name),
+      ),
       ...routineTools.filter((tool) => !disabled.has(tool.name)),
     ];
   }
@@ -327,7 +331,7 @@ export class LocalRoutineToolProvider implements LocalToolProvider {
   async execute(request: LocalToolExecutionRequest): Promise<unknown> {
     if (request.name === "schedule_create") {
       if (!request.botId) throw new Error("schedule_create requires a bot");
-      const schedule = scheduleFromArgs(request.args);
+      const schedule = routineInputFromArgs(request.args);
       return this.routines().create(request.botId, schedule);
     }
     if (request.name === "schedule_list") {
@@ -352,7 +356,7 @@ export class LocalRoutineToolProvider implements LocalToolProvider {
   }
 }
 
-function scheduleFromArgs(args: Record<string, unknown>): LocalRoutineInput {
+export function routineInputFromArgs(args: Record<string, unknown>): LocalRoutineInput {
   const name = typeof args.name === "string" ? args.name.trim() : "";
   const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
   if (!name || !prompt) throw new Error("name and prompt are required");

@@ -164,6 +164,14 @@ export class RoutineRepository {
     return this.db.prepare("DELETE FROM routines WHERE id = ?").run(id).changes > 0;
   }
 
+  disableForBot(botId: string): number {
+    return this.db
+      .prepare(
+        "UPDATE routines SET enabled = 0, next_run_at = NULL, updated_at = ? WHERE bot_id = ? AND enabled = 1",
+      )
+      .run(new Date().toISOString(), botId).changes;
+  }
+
   upsertManaged(input: {
     organizationId: string;
     packageId: string;

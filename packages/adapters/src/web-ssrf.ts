@@ -23,6 +23,10 @@ export interface SafeWebFetchOptions {
   maxBytes?: number;
   userAgent?: string;
   headers?: Record<string, string>;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
+  body?: string;
+  /** Return non-2xx responses instead of throwing, for authenticated API tools. */
+  allowErrorStatus?: boolean;
   signal?: AbortSignal;
   maxRedirects?: number;
   /** Keep the first `maxBytes` of a longer body instead of rejecting it. */
@@ -91,7 +95,12 @@ export function isBlockedHostname(hostname: string): boolean {
   return false;
 }
 
-type SafeWebResponse<Body> = { url: string; body: Body; contentType: string | null };
+type SafeWebResponse<Body> = {
+  url: string;
+  body: Body;
+  contentType: string | null;
+  status: number;
+};
 
 export async function fetchSafeWebText(
   url: string,
@@ -131,10 +140,13 @@ export async function fetchSafeWebBytes(
       maxBytes,
       userAgent: options.userAgent ?? "Rakazo/0.1 (+https://github.com/elie222/rakazo)",
       headers: options.headers,
+      method: options.method ?? "GET",
+      body: options.body,
       signal,
       redirectsRemaining: options.maxRedirects ?? MAX_REDIRECTS,
       truncate: options.truncate ?? false,
       allowedPorts: options.allowedPorts,
+      allowErrorStatus: options.allowErrorStatus ?? false,
     });
   } finally {
     // Race graceful close against the shared deadline. Do not wait unbounded on close().
@@ -161,10 +173,13 @@ async function followRedirects(
     maxBytes: number;
     userAgent: string;
     headers?: Record<string, string>;
+    method: NonNullable<SafeWebFetchOptions["method"]>;
+    body?: string;
     signal: AbortSignal;
     redirectsRemaining: number;
     truncate: boolean;
     allowedPorts?: readonly number[];
+    allowErrorStatus: boolean;
   },
 ): Promise<SafeWebResponse<Uint8Array>> {
   if (state.signal.aborted) {
@@ -174,7 +189,7 @@ async function followRedirects(
   // Race fetch against the deadline — injected fetch may ignore init.signal.
   const response = await withAbort(
     state.baseFetch(validated.href, {
-      method: "GET",
+      method: state.method,
       redirect: "manual",
       signal: state.signal,
       headers: {
@@ -182,6 +197,7 @@ async function followRedirects(
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
         ...state.headers,
       },
+      ...(state.body === undefined ? {} : { body: state.body }),
       dispatcher: state.dispatcher,
     } as RequestInit & { dispatcher: Agent }),
     state.signal,
@@ -208,7 +224,7 @@ async function followRedirects(
     });
   }
 
-  if (!response.ok) {
+  if (!response.ok && !state.allowErrorStatus) {
     await cancelResponseBody(response, state.signal);
     throw new Error(`Request failed: HTTP ${response.status}`);
   }
@@ -223,7 +239,12 @@ async function followRedirects(
     ? await readBodyPrefix(response, state.maxBytes, state.signal)
     : await readBodyCapped(response, state.maxBytes, state.signal);
 
-  return { url: validated.href, body, contentType: response.headers.get("content-type") };
+  return {
+    url: validated.href,
+    body,
+    contentType: response.headers.get("content-type"),
+    status: response.status,
+  };
 }
 
 async function cancelResponseBody(response: Response, signal: AbortSignal): Promise<void> {

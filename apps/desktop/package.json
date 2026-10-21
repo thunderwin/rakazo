@@ -22,6 +22,7 @@
     "release": "pnpm --filter @rakazo/web build && pnpm build && electron-builder --publish never"
   },
   "dependencies": {
+    "@nut-tree-fork/nut-js": "4.2.6",
     "@rakazo/adapter-kit": "workspace:*",
     "@rakazo/adapters": "workspace:*",
     "@rakazo/browser-protocol": "workspace:*",
@@ -30,14 +31,16 @@
     "@rakazo/local-runtime": "workspace:*",
     "better-sqlite3": "13.0.3",
     "electron-updater": "6.8.9",
+    "jsdom": "30.1.3",
     "koffi": "3.3.3",
+    "sharp": "0.35.4",
     "ws": "8.22.0"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
     "@rakazo/ui-tokens": "workspace:*",
-    "@types/ws": "8.18.2",
     "@types/jsdom": "30.0.0",
+    "@types/ws": "8.18.2",
     "electron": "44.9.0",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
@@ -56,7 +59,8 @@
       "package.json"
     ],
     "asarUnpack": [
-      "node_modules/better-sqlite3/**/*"
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/@nut-tree-fork/**/*"
     ],
     "extraResources": [
       {
@@ -84,6 +88,10 @@
         "dmg",
         "zip"
       ],
+      "extendInfo": {
+        "NSScreenCaptureUsageDescription": "ericBot needs screen access when you ask an Agent to inspect or operate a local application.",
+        "NSAppleEventsUsageDescription": "ericBot needs permission to focus local applications for approved Agent actions."
+      },
       "notarize": true
     },
     "win": {

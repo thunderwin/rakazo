@@ -17,6 +17,8 @@ interface GroupRow {
   source: "local" | "managed";
   managed_key: string | null;
   package_version: number | null;
+  section: string | null;
+  pinned: number;
   created_at: string;
   updated_at: string;
 }
@@ -37,6 +39,8 @@ function rowToGroup(row: GroupRow): LocalGroup {
     source: row.source,
     managedKey: row.managed_key,
     packageVersion: row.package_version,
+    section: row.section,
+    pinned: row.pinned === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -60,10 +64,19 @@ export class GroupRepository {
       this.db
         .prepare(
           `INSERT INTO chat_groups
-            (id, name, description, color, source, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'local', ?, ?)`,
+            (id, name, description, color, section, pinned, source, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'local', ?, ?)`,
         )
-        .run(id, name, input.description?.trim() ?? "", input.color ?? "violet", now, now);
+        .run(
+          id,
+          name,
+          input.description?.trim() ?? "",
+          input.color ?? "violet",
+          input.section ?? null,
+          input.pinned ? 1 : 0,
+          now,
+          now,
+        );
       this.replaceMembers(id, botIds, now);
       this.db
         .prepare(
@@ -85,14 +98,21 @@ export class GroupRepository {
 
   list(): LocalGroupWithMembers[] {
     const rows = this.db
-      .prepare("SELECT * FROM chat_groups ORDER BY updated_at DESC, created_at ASC")
+      .prepare("SELECT * FROM chat_groups ORDER BY pinned DESC, updated_at DESC, created_at ASC")
       .all() as GroupRow[];
     return rows.map((row) => ({ ...rowToGroup(row), members: this.listMembers(row.id) }));
   }
 
   update(
     id: string,
-    input: { name?: string; description?: string; color?: string; botIds?: string[] },
+    input: {
+      name?: string;
+      description?: string;
+      color?: string;
+      botIds?: string[];
+      section?: string | null;
+      pinned?: boolean;
+    },
   ): LocalGroupWithMembers | null {
     const current = this.get(id);
     if (!current) return null;
@@ -108,13 +128,15 @@ export class GroupRepository {
       this.db
         .prepare(
           `UPDATE chat_groups
-           SET name = ?, description = ?, color = ?, updated_at = ?
+           SET name = ?, description = ?, color = ?, section = ?, pinned = ?, updated_at = ?
            WHERE id = ?`,
         )
         .run(
           name,
           input.description === undefined ? current.description : input.description.trim(),
           input.color ?? current.color,
+          input.section === undefined ? (current.section ?? null) : input.section,
+          input.pinned === undefined ? (current.pinned ? 1 : 0) : input.pinned ? 1 : 0,
           now,
           id,
         );

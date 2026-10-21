@@ -52,6 +52,8 @@ export interface LocalAgentRunRequest {
 export interface LocalAgentRunContext {
   signal?: AbortSignal;
   userId?: string;
+  /** Routines and peer-triggered runs cannot mutate the fleet. */
+  fleetManagementAllowed?: boolean;
   /** Bot chain for persistent peer messaging; prevents cycles and runaway fan-out. */
   peerChain?: string[];
 }
@@ -60,6 +62,7 @@ export type LocalAgentEvent =
   | { type: "text"; text: string }
   | { type: "progress"; text: string; activity?: true }
   | { type: "tool"; name: string; args: Record<string, unknown>; executionId: string }
+  | { type: "message"; text: string }
   | { type: "ask"; text: string; detail?: string; actions?: Array<{ id: string; label: string }> }
   | { type: "takeover"; reason: string }
   | { type: "usage"; usage: unknown }

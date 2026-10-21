@@ -132,12 +132,12 @@ export class LocalKnowledgeToolProvider implements LocalToolProvider {
     private readonly knowledge: LocalKnowledge,
   ) {}
 
-  definitionsFor(bot: Bot): LocalAgentTool[] {
+  async definitionsFor(bot: Bot): Promise<LocalAgentTool[]> {
     const disabled = new Set(bot.disabledBuiltinTools);
     return [
-      ...this.tools
-        .definitionsFor(bot)
-        .filter((tool) => tool.name !== "knowledge_search" && tool.name !== "knowledge_read"),
+      ...(await this.tools.definitionsFor(bot)).filter(
+        (tool) => tool.name !== "knowledge_search" && tool.name !== "knowledge_read",
+      ),
       ...knowledgeTools.filter((tool) => !disabled.has(tool.name)),
     ];
   }

@@ -19,6 +19,12 @@ export interface Bot {
   modelId: string | null;
   thinkingLevel: string | null;
   disabledBuiltinTools: string[];
+  fleetManagement: boolean;
+  createdByBotId: string | null;
+  instructionsVersion: number;
+  archivedAt?: string | null;
+  section?: string | null;
+  pinned?: boolean;
   templateKey: string | null;
   templateVersion: number | null;
   source?: "local" | "managed";
@@ -38,11 +44,16 @@ export interface CreateBotInput {
   modelId?: string | null;
   thinkingLevel?: string | null;
   disabledBuiltinTools?: string[];
+  fleetManagement?: boolean;
+  createdByBotId?: string | null;
   templateKey?: string | null;
   templateVersion?: number | null;
   source?: "local" | "managed";
   managedKey?: string | null;
   packageVersion?: number | null;
+  archivedAt?: string | null;
+  section?: string | null;
+  pinned?: boolean;
 }
 
 export interface Thread {
@@ -117,6 +128,76 @@ export interface LocalArtifactWithContent extends LocalArtifact {
   content: Uint8Array;
 }
 
+export type LocalMediaJobKind = "image" | "video";
+export type LocalMediaJobStatus = "queued" | "running" | "completed" | "failed";
+
+export interface LocalMediaJob {
+  id: string;
+  botId: string;
+  groupId: string | null;
+  runId: string;
+  executionId: string;
+  kind: LocalMediaJobKind;
+  provider: string;
+  providerJobId: string | null;
+  status: LocalMediaJobStatus;
+  artifactId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalMcpServer {
+  id: string;
+  botId: string;
+  name: string;
+  slug: string;
+  transport: "streamable-http" | "sse" | "stdio";
+  endpoint: string | null;
+  command: string | null;
+  args: string[];
+  secretName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ScratchpadStatus = "open" | "parked" | "done";
+
+export interface ScratchpadItem {
+  id: string;
+  botId: string;
+  title: string;
+  status: ScratchpadStatus;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TicketStatus = "todo" | "doing" | "review" | "blocked" | "done" | "closed";
+export type TicketPriority = "low" | "normal" | "high" | "urgent";
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  botId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  sequence: number;
+  reference: string;
+  botId: string;
+  ownerBotId: string | null;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  comments?: TicketComment[];
+}
+
 export type ManagedContentSource = "local" | "managed";
 
 export interface LocalKnowledgeDocument {
@@ -135,11 +216,23 @@ export interface LocalSkill {
   name: string;
   description: string;
   content: string;
+  scripts: LocalSkillScript[];
   source: "user" | "managed";
   packageId: string | null;
   version: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type LocalSkillRuntime = "node" | "python3" | "sh";
+
+export interface LocalSkillScript {
+  path: string;
+  content: string;
+  runtime: LocalSkillRuntime | null;
+  timeoutSeconds: number;
+  network: boolean;
+  sha256: string;
 }
 
 export interface LocalGroup {
@@ -150,6 +243,8 @@ export interface LocalGroup {
   source?: "local" | "managed";
   managedKey?: string | null;
   packageVersion?: number | null;
+  section?: string | null;
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,6 +265,8 @@ export interface CreateGroupInput {
   description?: string;
   color?: string;
   botIds: string[];
+  section?: string | null;
+  pinned?: boolean;
 }
 
 export interface GroupThread {

@@ -1,14 +1,20 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ATTACHMENT_MAX_BASE64_LENGTH,
+  type DesktopLocalChoiceRequest,
+  type DesktopLocalSecretAuth,
+  type DesktopLocalSecretRequest,
   type DesktopReachability,
   type DesktopSetup,
 } from "@rakazo/contracts";
 import { LOCAL_SETTINGS_PAGE } from "@rakazo/contracts/local-settings";
-import type { LocalRuntimeService } from "@rakazo/local-runtime";
+import type {
+  LocalRuntimeService,
+  LocalSkillScriptInput,
+} from "@rakazo/local-runtime";
 import {
   app,
   BrowserWindow,
@@ -32,13 +38,26 @@ import {
 } from "./auto-update.js";
 import { openBrowserAuth } from "./browser-auth.js";
 import { DesktopBrowserBridge } from "./browser-bridge.js";
-import { fetchClientManifest, verifyClientManifest } from "./client-manifest-sync.js";
-import { DOCKER_INSTALL_LINKS, isDesktopSetupLink, runDocker } from "./docker-cli.js";
+import {
+  fetchClientManifest,
+  verifyClientManifest,
+} from "./client-manifest-sync.js";
+import {
+  DOCKER_INSTALL_LINKS,
+  isDesktopSetupLink,
+  runDocker,
+} from "./docker-cli.js";
 import { prepareHostComputer } from "./host-computer.js";
+import { localAccountKey } from "./local-account-data.js";
 import { LocalAuth } from "./local-auth.js";
 import { createSafeStorageVault } from "./local-auth-vault.js";
+import { launchLocalApplication } from "./local-desktop-actions.js";
 import { createLocalDiagnostics } from "./local-diagnostics.js";
-import { createDesktopLocalRuntime, defaultLocalModel } from "./local-runtime.js";
+import {
+  createDesktopLocalRuntime,
+  defaultLocalModel,
+} from "./local-runtime.js";
+import { createSafeStorageSecretVault } from "./local-secret-vault.js";
 import { requestLocalSettings } from "./local-settings.js";
 import {
   LocalStackController,
@@ -73,7 +92,10 @@ import {
   sessionPartitionForServerUrl,
 } from "./setup-config.js";
 import { clearSetup, readSetup, writeSetup } from "./setup-store.js";
-import { oauthPopupSessionPreferences, shouldOpenInAppPopup } from "./window-open.js";
+import {
+  oauthPopupSessionPreferences,
+  shouldOpenInAppPopup,
+} from "./window-open.js";
 import {
   browserWindowOptions,
   developmentIconFile,
@@ -83,7 +105,8 @@ import {
 
 const PERFORMANCE_USER_DATA = process.env.RAKAZO_PERFORMANCE_USER_DATA;
 /** Test hook: where the app-managed stack answers. Mode `new` still requires loopback. */
-const LOCAL_WEB_URL = process.env.RAKAZO_LOCAL_WEB_URL?.trim() || DEFAULT_LOCAL_WEB_URL;
+const LOCAL_WEB_URL =
+  process.env.RAKAZO_LOCAL_WEB_URL?.trim() || DEFAULT_LOCAL_WEB_URL;
 const PROBE_TIMEOUT_MS = 8_000;
 const APP_DOCUMENT_READY_TIMEOUT_MS = 20_000;
 const DESKTOP_STACK_PROBE_PATH = "/.well-known/rakazo-desktop-stack";
@@ -109,7 +132,9 @@ let warmWindowTimer: NodeJS.Timeout | undefined;
 // destroying the last window fires "window-all-closed" -> app.quit(); a probe
 // that runs before the first real window exists must not count as "all closed".
 let liveProbeWindows = 0;
-const WARM_WINDOW_TTL_MS = warmWindowTtlMs(process.env.RAKAZO_WARM_WINDOW_TTL_MS);
+const WARM_WINDOW_TTL_MS = warmWindowTtlMs(
+  process.env.RAKAZO_WARM_WINDOW_TTL_MS,
+);
 
 const updaterEnvironment = {
   packaged: app.isPackaged,
@@ -120,7 +145,8 @@ const desktopUpdater = new DesktopUpdateController(
   updaterEnvironment,
   async () => {
     const module = await import("electron-updater");
-    return (module.default ?? module).autoUpdater as unknown as ElectronAutoUpdater;
+    return (module.default ?? module)
+      .autoUpdater as unknown as ElectronAutoUpdater;
   },
   undefined,
   () => {
@@ -148,6 +174,22 @@ let localWindow: BrowserWindow | null = null;
 let localIpcInstalled = false;
 let desktopBrowserBridge: DesktopBrowserBridge | undefined;
 const approvedBrowserRuns = new Set<string>();
+const pendingSecretRequests = new Map<
+  string,
+  {
+    resolve: (value: { value: string; username?: string } | null) => void;
+    timer: ReturnType<typeof setTimeout>;
+    cleanup: () => void;
+  }
+>();
+const pendingChoiceRequests = new Map<
+  string,
+  {
+    resolve: (answer: string | null) => void;
+    timer: ReturnType<typeof setTimeout>;
+    cleanup: () => void;
+  }
+>();
 const browserWriteTools = new Set([
   "browser_open",
   "browser_navigate",
@@ -162,15 +204,21 @@ if (PERFORMANCE_USER_DATA) {
   app.setPath("userData", PERFORMANCE_USER_DATA);
   app.setPath("sessionData", path.join(PERFORMANCE_USER_DATA, "session"));
 }
-app.once("will-finish-launching", () => markOnce("rk:main:will-finish-launching"));
+app.once("will-finish-launching", () =>
+  markOnce("rk:main:will-finish-launching"),
+);
 app.once("ready", () => markOnce("rk:main:ready"));
 // Includes fresh partitions and popup-created sessions, before they load remote content.
-app.on("session-created", (value) => installSessionPermissions(value, permissionTarget));
+app.on("session-created", (value) =>
+  installSessionPermissions(value, permissionTarget),
+);
 
 function permissionTarget() {
   if (mainWindow === null || mainWindow.isDestroyed()) return null;
   const url = appWindowTargets.get(mainWindow);
-  return url === undefined ? null : { webContents: mainWindow.webContents, url };
+  return url === undefined
+    ? null
+    : { webContents: mainWindow.webContents, url };
 }
 
 function markOnce(name: string) {
@@ -188,7 +236,11 @@ function fromMainWindow(event: Electron.IpcMainInvokeEvent) {
 /** Dock/taskbar icon for unpackaged launches; packaged builds get theirs from electron-builder. */
 function developmentIcon() {
   if (app.isPackaged) return undefined;
-  const icon = path.join(app.getAppPath(), "assets", developmentIconFile(process.platform));
+  const icon = path.join(
+    app.getAppPath(),
+    "assets",
+    developmentIconFile(process.platform),
+  );
   return existsSync(icon) ? icon : undefined;
 }
 
@@ -219,17 +271,30 @@ async function resolveSessionForTarget(targetUrl: string) {
   const origin = safeOrigin(targetUrl);
   if (origin !== null) {
     try {
-      const defaultCookies = await session.defaultSession.cookies.get({ url: origin });
+      const defaultCookies = await session.defaultSession.cookies.get({
+        url: origin,
+      });
       if (defaultCookies.length > 0) {
-        await writeFile(legacyDefaultSessionFlag(partition), new Date().toISOString(), "utf8");
+        await writeFile(
+          legacyDefaultSessionFlag(partition),
+          new Date().toISOString(),
+          "utf8",
+        );
         return { partition: null, value: session.defaultSession };
       }
     } catch {
       // Continue with a storage probe when the profile looks pre-partition.
     }
-    if (defaultSessionProfileExists() && (await defaultSessionHasOriginData(origin))) {
+    if (
+      defaultSessionProfileExists() &&
+      (await defaultSessionHasOriginData(origin))
+    ) {
       try {
-        await writeFile(legacyDefaultSessionFlag(partition), new Date().toISOString(), "utf8");
+        await writeFile(
+          legacyDefaultSessionFlag(partition),
+          new Date().toISOString(),
+          "utf8",
+        );
       } catch {
         // Flag is best-effort; still stay on the default session this launch.
       }
@@ -325,7 +390,8 @@ function createWindow(url: string, partition: string | null) {
     return { action: "deny" };
   });
   win.webContents.on("will-navigate", (event, navigationUrl) => {
-    if (targetOrigin !== null && safeOrigin(navigationUrl) === targetOrigin) return;
+    if (targetOrigin !== null && safeOrigin(navigationUrl) === targetOrigin)
+      return;
     event.preventDefault();
     const external = safeExternalUrl(navigationUrl);
     if (external !== null) void shell.openExternal(external);
@@ -347,7 +413,8 @@ function createWindow(url: string, partition: string | null) {
       });
       if (!callback) return;
       details.preventDefault();
-      if (!win.isDestroyed()) win.webContents.send("desktop.oauth.callback", callback);
+      if (!win.isDestroyed())
+        win.webContents.send("desktop.oauth.callback", callback);
       if (!popup.isDestroyed()) popup.close();
     };
     popup.webContents.on("will-redirect", (details) => capture(details));
@@ -363,7 +430,8 @@ function createWindow(url: string, partition: string | null) {
       win.hide();
       clearTimeout(warmWindowTimer);
       warmWindowTimer = setTimeout(() => {
-        if (mainWindow === win && !win.isDestroyed() && !win.isVisible()) win.destroy();
+        if (mainWindow === win && !win.isDestroyed() && !win.isVisible())
+          win.destroy();
       }, WARM_WINDOW_TTL_MS);
     }
   });
@@ -376,8 +444,12 @@ function createWindow(url: string, partition: string | null) {
   win.once("show", () => markOnce("rk:main:window-shown"));
   win.once("ready-to-show", () => markOnce("rk:main:ready-to-show"));
   win.webContents.once("dom-ready", () => markOnce("rk:main:dom-ready"));
-  win.webContents.once("did-finish-load", () => markOnce("rk:main:did-finish-load"));
-  win.webContents.once("did-stop-loading", () => markOnce("rk:main:did-stop-loading"));
+  win.webContents.once("did-finish-load", () =>
+    markOnce("rk:main:did-finish-load"),
+  );
+  win.webContents.once("did-stop-loading", () =>
+    markOnce("rk:main:did-stop-loading"),
+  );
   markOnce("rk:main:load-url-start");
   const loaded = loadAppUrl(win, url).then(
     (state) => {
@@ -391,8 +463,14 @@ function createWindow(url: string, partition: string | null) {
   );
   if (!launchUpdateCheckScheduled) {
     launchUpdateCheckScheduled = true;
-    setTimeout(() => void desktopUpdater.check(false), LAUNCH_CHECK_DELAY_MS).unref();
-    setInterval(() => void desktopUpdater.check(false), 60 * 60 * 1_000).unref();
+    setTimeout(
+      () => void desktopUpdater.check(false),
+      LAUNCH_CHECK_DELAY_MS,
+    ).unref();
+    setInterval(
+      () => void desktopUpdater.check(false),
+      60 * 60 * 1_000,
+    ).unref();
   }
   return { loaded, win };
 }
@@ -423,13 +501,19 @@ async function probeDocument(url: string): Promise<string | null> {
  * failures, renderer crashes during load, HTTP 4xx/5xx main-frame responses, and
  * shells that never mount application content.
  */
-function loadAppUrl(win: BrowserWindow, url: string): Promise<AppDocumentState> {
+function loadAppUrl(
+  win: BrowserWindow,
+  url: string,
+): Promise<AppDocumentState> {
   const contents = win.webContents;
   const targetSession = contents.session;
   let mainStatus: number | undefined;
 
   targetSession.webRequest.onCompleted({ urls: ["*://*/*"] }, (details) => {
-    if (details.webContentsId === contents.id && details.resourceType === "mainFrame") {
+    if (
+      details.webContentsId === contents.id &&
+      details.resourceType === "mainFrame"
+    ) {
       mainStatus = details.statusCode;
     }
   });
@@ -464,7 +548,11 @@ function loadAppUrl(win: BrowserWindow, url: string): Promise<AppDocumentState> 
         })
         .catch((inspectError: unknown) => {
           contents.removeListener("render-process-gone", onGone);
-          reject(inspectError instanceof Error ? inspectError : new Error(String(inspectError)));
+          reject(
+            inspectError instanceof Error
+              ? inspectError
+              : new Error(String(inspectError)),
+          );
         });
     };
 
@@ -475,9 +563,13 @@ function loadAppUrl(win: BrowserWindow, url: string): Promise<AppDocumentState> 
       _validatedURL: string,
       isMainFrame: boolean,
     ) => {
-      if (isMainFrame) settle(new Error(errorDescription || "Page failed to load."));
+      if (isMainFrame)
+        settle(new Error(errorDescription || "Page failed to load."));
     };
-    const onGone = (_event: Electron.Event, details: Electron.RenderProcessGoneDetails) => {
+    const onGone = (
+      _event: Electron.Event,
+      details: Electron.RenderProcessGoneDetails,
+    ) => {
       settle(new Error(`Renderer stopped (${details.reason}).`));
     };
 
@@ -505,9 +597,9 @@ async function waitForMountedAppDocument(
   const deadline = Date.now() + APP_DOCUMENT_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
     if (contents.isCrashed()) throw new Error("Renderer stopped after load.");
-    const state = (await contents.executeJavaScript(APP_DOCUMENT_STATE_SCRIPT)) as
-      | AppDocumentState
-      | "pending";
+    const state = (await contents.executeJavaScript(
+      APP_DOCUMENT_STATE_SCRIPT,
+    )) as AppDocumentState | "pending";
     if (state !== "pending") return state;
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -520,50 +612,68 @@ async function installBundledRenderer(
   partition: string | null,
   managedLocalStack: boolean,
 ) {
-  if (!app.isPackaged || process.env.RAKAZO_DISABLE_BUNDLED_RENDERER === "1") return;
+  if (!app.isPackaged || process.env.RAKAZO_DISABLE_BUNDLED_RENDERER === "1")
+    return;
   if (!servesBundledRenderer(targetUrl, managedLocalStack)) return;
   const webUrl = new URL(targetUrl);
   const installationKey = `${partition ?? "default"}:${webUrl.protocol}`;
   if (bundledRendererInstallations.has(installationKey)) return;
   const root = path.join(process.resourcesPath, "web");
 
-  await targetSession.protocol.handle(webUrl.protocol.slice(0, -1), async (request) => {
-    const forward = () => {
-      return targetSession.fetch(request, forwardedRendererRequestInit(request, webUrl.origin));
-    };
-    // Mode can change on the same origin/session; only managed "new" keeps the overlay.
-    if (partition !== "local-server-settings" && currentSetup?.mode !== "new") {
-      return forward();
-    }
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return forward();
-    }
-    const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
-    const candidates = bundledRendererCandidates(root, request.url, webUrl.origin, acceptsHtml);
-    if (!candidates) return forward();
-    for (const file of candidates) {
-      let body: Buffer | null = null;
-      try {
-        if (request.method === "HEAD") {
-          if (!(await stat(file)).isFile()) continue;
-        } else {
-          body = await readFile(file);
-        }
-      } catch (error) {
-        if (isRendererAssetMiss(error)) continue;
-        throw error;
+  await targetSession.protocol.handle(
+    webUrl.protocol.slice(0, -1),
+    async (request) => {
+      const forward = () => {
+        return targetSession.fetch(
+          request,
+          forwardedRendererRequestInit(request, webUrl.origin),
+        );
+      };
+      // Mode can change on the same origin/session; only managed "new" keeps the overlay.
+      if (
+        partition !== "local-server-settings" &&
+        currentSetup?.mode !== "new"
+      ) {
+        return forward();
       }
-      const headers = new Headers({
-        "cache-control": immutableRendererAsset(file)
-          ? "public, max-age=31536000, immutable"
-          : "no-cache",
-        "content-type": contentType(file),
-        "x-content-type-options": "nosniff",
-      });
-      return new Response(body === null ? null : new Uint8Array(body), { headers });
-    }
-    return forward();
-  });
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return forward();
+      }
+      const acceptsHtml =
+        request.headers.get("accept")?.includes("text/html") ?? false;
+      const candidates = bundledRendererCandidates(
+        root,
+        request.url,
+        webUrl.origin,
+        acceptsHtml,
+      );
+      if (!candidates) return forward();
+      for (const file of candidates) {
+        let body: Buffer | null = null;
+        try {
+          if (request.method === "HEAD") {
+            if (!(await stat(file)).isFile()) continue;
+          } else {
+            body = await readFile(file);
+          }
+        } catch (error) {
+          if (isRendererAssetMiss(error)) continue;
+          throw error;
+        }
+        const headers = new Headers({
+          "cache-control": immutableRendererAsset(file)
+            ? "public, max-age=31536000, immutable"
+            : "no-cache",
+          "content-type": contentType(file),
+          "x-content-type-options": "nosniff",
+        });
+        return new Response(body === null ? null : new Uint8Array(body), {
+          headers,
+        });
+      }
+      return forward();
+    },
+  );
   bundledRendererInstallations.add(installationKey);
   markOnce("rk:main:bundled-renderer-ready");
 }
@@ -626,7 +736,12 @@ function showSetupWindow(error: string | null = null) {
 function restoreAppWindowAfterSetup() {
   if (quitting) return;
   if (setupWindow !== null && !setupWindow.isDestroyed()) return;
-  if (mainWindow === null || mainWindow.isDestroyed() || currentTargetUrl === null) return;
+  if (
+    mainWindow === null ||
+    mainWindow.isDestroyed() ||
+    currentTargetUrl === null
+  )
+    return;
   clearTimeout(warmWindowTimer);
   mainWindow.show();
   mainWindow.focus();
@@ -794,13 +909,19 @@ function installApplicationMenu() {
 /** Setup IPC must only answer the setup window, never a connected Rakazo server. */
 function fromSetupWindow(event: Electron.IpcMainInvokeEvent) {
   return (
-    setupWindow !== null && !setupWindow.isDestroyed() && event.sender === setupWindow.webContents
+    setupWindow !== null &&
+    !setupWindow.isDestroyed() &&
+    event.sender === setupWindow.webContents
   );
 }
 
-async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<DesktopReachability> {
+async function probeServer(
+  rawUrl: string,
+  signal?: AbortSignal,
+): Promise<DesktopReachability> {
   const url = normalizeServerUrl(rawUrl);
-  if (url === null) return { ok: false, error: "Enter a valid http:// or https:// address." };
+  if (url === null)
+    return { ok: false, error: "Enter a valid http:// or https:// address." };
   const timeout = AbortSignal.timeout(PROBE_TIMEOUT_MS);
 
   try {
@@ -818,7 +939,8 @@ async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<Deskto
         ok: false,
         status: response.status,
         url,
-        error: "That address redirects elsewhere. Enter the final ericBot server address.",
+        error:
+          "That address redirects elsewhere. Enter the final ericBot server address.",
       };
     }
     if (!response.ok) {
@@ -891,7 +1013,9 @@ function openFailureDetail(error: unknown): string {
 }
 
 async function openAppOnce(targetUrl: string, switching: boolean) {
-  hostComputer?.activate(currentSetup?.mode === "new" && targetUrl === localStack.webUrl());
+  hostComputer?.activate(
+    currentSetup?.mode === "new" && targetUrl === localStack.webUrl(),
+  );
   const target = await resolveSessionForTarget(targetUrl);
   const previous = mainWindow;
   let win: BrowserWindow | null = null;
@@ -917,7 +1041,9 @@ async function openAppOnce(targetUrl: string, switching: boolean) {
     setupError = null;
     // Keep the previous window until the caller commits (after setup.json is written).
     pendingPreviousWindow =
-      previous !== null && !previous.isDestroyed() && previous !== win ? previous : null;
+      previous !== null && !previous.isDestroyed() && previous !== win
+        ? previous
+        : null;
     if (pendingPreviousWindow !== null) pendingPreviousWindow.hide();
     return true;
   } catch (error) {
@@ -965,7 +1091,9 @@ function cleanupLocalRun(runId: string) {
   void desktopBrowserBridge?.closeSession(runId).catch(() => undefined);
 }
 
-async function abortActiveLocalRuns(service = localRuntimeService): Promise<void> {
+async function abortActiveLocalRuns(
+  service = localRuntimeService,
+): Promise<void> {
   const runs = [...activeLocalRuns];
   if (service) {
     await Promise.allSettled(runs.map((runId) => service.abort(runId)));
@@ -983,10 +1111,31 @@ async function startLocalRuntime(accountId: string): Promise<void> {
     userDataDir: context.userDataDir,
     accountId,
     ...(desktopBrowserBridge ? { browserHost: desktopBrowserBridge } : {}),
+    secretVault: createSafeStorageSecretVault(
+      path.join(
+        context.userDataDir,
+        "local",
+        "accounts",
+        localAccountKey(accountId),
+        "credentials-v1.bin",
+      ),
+    ),
+    promptForSecret: requestSecretFromRenderer,
+    promptForUserChoice: requestChoiceFromRenderer,
+    allowPrivateHttpSecretOrigins:
+      process.env.RAKAZO_SECRETS_ALLOW_PRIVATE_HTTP === "1",
+    openFile: (target) => shell.openPath(target),
+    openUrl: (url) => shell.openExternal(url),
+    launchApp: launchLocalApplication,
     approveTool: async ({ name, runId, args }) => {
       const browserWrite = browserWriteTools.has(name);
       const browserBorrow = name === "browser_borrow_tab";
-      if (browserWrite && !browserBorrow && runId !== undefined && approvedBrowserRuns.has(runId)) {
+      if (
+        browserWrite &&
+        !browserBorrow &&
+        runId !== undefined &&
+        approvedBrowserRuns.has(runId)
+      ) {
         return true;
       }
       const detail =
@@ -997,12 +1146,17 @@ async function startLocalRuntime(accountId: string): Promise<void> {
             : JSON.stringify(args).slice(0, 4_000);
       const options = {
         type: "warning" as const,
-        title: browserWrite ? "Allow browser interaction?" : "Allow local tool?",
+        title: browserWrite
+          ? "Allow browser interaction?"
+          : "Allow local tool?",
         message: browserBorrow
           ? "The agent wants to take over one of your existing Chrome tabs."
           : `The agent wants to use ${name}.`,
         detail,
-        buttons: [browserBorrow ? "Take over tab" : "Allow for this task", "Cancel"],
+        buttons: [
+          browserBorrow ? "Take over tab" : "Allow for this task",
+          "Cancel",
+        ],
         defaultId: 1,
         cancelId: 1,
         noLink: true,
@@ -1025,17 +1179,24 @@ async function startLocalRuntime(accountId: string): Promise<void> {
     },
     onEvent: (event, runId) => {
       if (localWindow !== null && !localWindow.isDestroyed()) {
-        localWindow.webContents.send("desktop.local.run.event", { runId, event });
+        localWindow.webContents.send("desktop.local.run.event", {
+          runId,
+          event,
+        });
       }
     },
     onRunEnd: ({ runId }) => {
       cleanupLocalRun(runId);
     },
     resolveModel: async (bot) => {
-      if (!context.gatewayUrl) throw new Error("The local model gateway is not configured.");
-      const token = localAuth ? await localAuth.getToken() : context.developmentToken;
+      if (!context.gatewayUrl)
+        throw new Error("The local model gateway is not configured.");
+      const token = localAuth
+        ? await localAuth.getToken()
+        : context.developmentToken;
       if (!token) throw new Error("Sign in to connect the model gateway.");
-      const defaultModelId = localRuntimeService?.getUserSettings().defaultModelId;
+      const defaultModelId =
+        localRuntimeService?.getUserSettings().defaultModelId;
       return defaultLocalModel({
         baseUrl: `${context.gatewayUrl.replace(/\/+$/, "")}/v1/model/openai`,
         apiKey: token,
@@ -1044,7 +1205,11 @@ async function startLocalRuntime(accountId: string): Promise<void> {
       });
     },
   });
-  if (generation !== localRuntimeGeneration || localWindow === null || localWindow.isDestroyed()) {
+  if (
+    generation !== localRuntimeGeneration ||
+    localWindow === null ||
+    localWindow.isDestroyed()
+  ) {
     service.close();
     throw new Error("Local runtime start was cancelled");
   }
@@ -1069,9 +1234,16 @@ async function refreshClientManifest(
       serverUrl: localModeContext.gatewayUrl,
       token: await localAuth.getToken(),
     });
-    if (generation !== localRuntimeGeneration || localRuntimeService !== service) return;
+    if (
+      generation !== localRuntimeGeneration ||
+      localRuntimeService !== service
+    )
+      return;
     const publicKey = process.env.RAKAZO_CLIENT_MANIFEST_PUBLIC_KEY?.trim();
-    if (manifest && (!publicKey || !verifyClientManifest(manifest, publicKey))) {
+    if (
+      manifest &&
+      (!publicKey || !verifyClientManifest(manifest, publicKey))
+    ) {
       throw new Error("Client manifest signature is missing or invalid");
     }
     const current = service.getManagedManifestState();
@@ -1105,6 +1277,88 @@ function requireLocalWindow(event: IpcMainInvokeEvent): void {
   }
 }
 
+function requestSecretFromRenderer(
+  input: Omit<DesktopLocalSecretRequest, "requestId">,
+  signal?: AbortSignal,
+): Promise<{ value: string; username?: string } | null> {
+  if (localWindow === null || localWindow.isDestroyed()) {
+    return Promise.reject(new Error("Local window is not active"));
+  }
+  const requestId = randomUUID();
+  return new Promise((resolve, reject) => {
+    const finish = (value: { value: string; username?: string } | null) => {
+      const pending = pendingSecretRequests.get(requestId);
+      if (!pending) return;
+      pendingSecretRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.cleanup();
+      resolve(value);
+    };
+    const cancel = () => {
+      const pending = pendingSecretRequests.get(requestId);
+      if (!pending) return;
+      pendingSecretRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.cleanup();
+      reject(new Error("Run stopped."));
+    };
+    const timer = setTimeout(() => {
+      pendingSecretRequests.delete(requestId);
+      signal?.removeEventListener("abort", cancel);
+      reject(new Error("Credential request timed out"));
+    }, 5 * 60_000);
+    const cleanup = () => signal?.removeEventListener("abort", cancel);
+    pendingSecretRequests.set(requestId, { resolve: finish, timer, cleanup });
+    signal?.addEventListener("abort", cancel, { once: true });
+    localWindow!.webContents.send("desktop.local.secrets.request", {
+      requestId,
+      ...input,
+    } satisfies DesktopLocalSecretRequest);
+  });
+}
+
+function requestChoiceFromRenderer(
+  question: string,
+  options: string[],
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (localWindow === null || localWindow.isDestroyed()) {
+    return Promise.reject(new Error("Local window is not active"));
+  }
+  const requestId = randomUUID();
+  return new Promise((resolve, reject) => {
+    const finish = (answer: string | null) => {
+      const pending = pendingChoiceRequests.get(requestId);
+      if (!pending) return;
+      pendingChoiceRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.cleanup();
+      resolve(answer);
+    };
+    const cancel = () => {
+      const pending = pendingChoiceRequests.get(requestId);
+      if (!pending) return;
+      pendingChoiceRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.cleanup();
+      reject(new Error("Run stopped."));
+    };
+    const timer = setTimeout(() => {
+      pendingChoiceRequests.delete(requestId);
+      signal?.removeEventListener("abort", cancel);
+      reject(new Error("User question timed out"));
+    }, 5 * 60_000);
+    const cleanup = () => signal?.removeEventListener("abort", cancel);
+    pendingChoiceRequests.set(requestId, { resolve: finish, timer, cleanup });
+    signal?.addEventListener("abort", cancel, { once: true });
+    localWindow!.webContents.send("desktop.local.choice.request", {
+      requestId,
+      question,
+      options,
+    } satisfies DesktopLocalChoiceRequest);
+  });
+}
+
 function localRecord(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
@@ -1112,8 +1366,30 @@ function localRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function optionalLocalRecord(
+  value: unknown,
+  label: string,
+): Record<string, unknown> {
+  return value === undefined ? {} : localRecord(value, label);
+}
+
+const LOCAL_SCRATCHPAD_STATUSES = ["open", "parked", "done"] as const;
+const LOCAL_TICKET_STATUSES = [
+  "todo",
+  "doing",
+  "review",
+  "blocked",
+  "done",
+  "closed",
+] as const;
+const LOCAL_TICKET_PRIORITIES = ["low", "normal", "high", "urgent"] as const;
+
 function localString(value: unknown, label: string, maxLength: number): string {
-  if (typeof value !== "string" || value.trim() === "" || value.length > maxLength) {
+  if (
+    typeof value !== "string" ||
+    value.trim() === "" ||
+    value.length > maxLength
+  ) {
     throw new Error(`${label} is invalid`);
   }
   return value;
@@ -1126,12 +1402,44 @@ function localMessageText(value: unknown): string {
   return value;
 }
 
-function optionalLocalString(value: unknown, label: string, maxLength: number): string | undefined {
+function optionalLocalString(
+  value: unknown,
+  label: string,
+  maxLength: number,
+): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "string" || value.length > maxLength) {
     throw new Error(`${label} is invalid`);
   }
   return value;
+}
+
+function nullableLocalString(
+  value: unknown,
+  label: string,
+  maxLength: number,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const normalized = optionalLocalString(value, label, maxLength);
+  return normalized?.trim() || null;
+}
+
+function localBoolean(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") throw new Error(`${label} is invalid`);
+  return value;
+}
+
+function localEnum<T extends string>(
+  value: unknown,
+  label: string,
+  allowed: readonly T[],
+): T | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !allowed.includes(value as T)) {
+    throw new Error(`${label} is invalid`);
+  }
+  return value as T;
 }
 
 function localStringArray(
@@ -1146,9 +1454,77 @@ function localStringArray(
     value.length > maxLength ||
     value.some((entry) => typeof entry !== "string" || entry.trim() === "")
   ) {
-    throw new Error(`${label} must contain ${minLength} to ${maxLength} entries`);
+    throw new Error(
+      `${label} must contain ${minLength} to ${maxLength} entries`,
+    );
   }
   return [...new Set(value.map((entry) => (entry as string).trim()))];
+}
+
+function optionalLocalSkillScripts(
+  value: unknown,
+): LocalSkillScriptInput[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 20)
+    throw new Error("Skill scripts are invalid");
+  return value.map((entry) => {
+    const script = localRecord(entry, "Skill script");
+    const runtime = script.runtime;
+    if (
+      runtime !== undefined &&
+      runtime !== null &&
+      runtime !== "node" &&
+      runtime !== "python3" &&
+      runtime !== "sh"
+    ) {
+      throw new Error("Skill script runtime is invalid");
+    }
+    const rawTimeout = script.timeoutSeconds;
+    const timeoutSeconds =
+      typeof rawTimeout === "number" && Number.isInteger(rawTimeout)
+        ? rawTimeout
+        : undefined;
+    if (
+      rawTimeout !== undefined &&
+      (timeoutSeconds === undefined ||
+        timeoutSeconds < 1 ||
+        timeoutSeconds > 120)
+    ) {
+      throw new Error("Skill script timeout is invalid");
+    }
+    if (script.network !== undefined && typeof script.network !== "boolean") {
+      throw new Error("Skill script network setting is invalid");
+    }
+    return {
+      path: localString(script.path, "Skill script path", 200).trim(),
+      content:
+        optionalLocalString(script.content, "Skill script content", 200_000) ??
+        "",
+      ...(runtime === undefined ? {} : { runtime }),
+      ...(timeoutSeconds === undefined ? {} : { timeoutSeconds }),
+      ...(script.network === undefined ? {} : { network: script.network }),
+    };
+  });
+}
+
+function localSecretAuth(value: unknown): DesktopLocalSecretAuth {
+  const auth = localRecord(value, "Credential authentication");
+  if (auth.type === "bearer") return { type: "bearer" };
+  if (auth.type === "login") return { type: "login" };
+  if (auth.type === "command") return { type: "command" };
+  if (auth.type === "header") {
+    return {
+      type: "header",
+      name: localString(auth.name, "Credential header", 120).trim(),
+    };
+  }
+  if (auth.type === "basic") {
+    return {
+      type: "basic",
+      username: localString(auth.username, "Credential username", 200),
+    };
+  }
+  throw new Error("Credential authentication type is invalid");
 }
 
 function localRoutineInput(
@@ -1196,7 +1572,9 @@ function localRoutineInput(value: unknown, required: boolean) {
     ...(cron === undefined ? {} : { cron }),
     ...(input.timezone === undefined
       ? {}
-      : { timezone: localString(input.timezone, "Routine timezone", 100).trim() }),
+      : {
+          timezone: localString(input.timezone, "Routine timezone", 100).trim(),
+        }),
     ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
     ...(input.runAt === undefined
       ? {}
@@ -1220,21 +1598,24 @@ function installLocalIpc() {
           name: null,
         };
   });
-  ipcMain.handle("desktop.local.auth.login", async (event, email: unknown, password: unknown) => {
-    requireLocalWindow(event);
-    const session = await requireLocalAuth().signIn(
-      localString(email, "Email", 320),
-      localString(password, "Password", 1000),
-    );
-    try {
-      await startLocalRuntime(session.userId);
-    } catch (error) {
-      await requireLocalAuth()
-        .signOut()
-        .catch(() => undefined);
-      throw error;
-    }
-  });
+  ipcMain.handle(
+    "desktop.local.auth.login",
+    async (event, email: unknown, password: unknown) => {
+      requireLocalWindow(event);
+      const session = await requireLocalAuth().signIn(
+        localString(email, "Email", 320),
+        localString(password, "Password", 1000),
+      );
+      try {
+        await startLocalRuntime(session.userId);
+      } catch (error) {
+        await requireLocalAuth()
+          .signOut()
+          .catch(() => undefined);
+        throw error;
+      }
+    },
+  );
   ipcMain.handle(
     "desktop.local.auth.signUp",
     async (event, name: unknown, email: unknown, password: unknown) => {
@@ -1263,57 +1644,127 @@ function installLocalIpc() {
     requireLocalWindow(event);
     return requireLocalRuntime().listBots();
   });
+  ipcMain.handle("desktop.local.bots.archived", (event) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listArchivedBots();
+  });
+  ipcMain.handle("desktop.local.bots.restore", (event, botId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().restoreBot(localString(botId, "Bot id", 200));
+  });
+  ipcMain.handle(
+    "desktop.local.bots.deleteArchived",
+    (event, botId: unknown) => {
+      requireLocalWindow(event);
+      if (
+        !requireLocalRuntime().deleteArchivedBot(
+          localString(botId, "Bot id", 200),
+        )
+      ) {
+        throw new Error("Archived bot not found");
+      }
+    },
+  );
   ipcMain.handle("desktop.local.bots.create", (event, input: unknown) => {
     requireLocalWindow(event);
     const value = localRecord(input, "Bot input");
     return requireLocalRuntime().createBot({
       name: localString(value.name, "Bot name", 120),
       title: optionalLocalString(value.title, "Bot title", 200),
-      description: optionalLocalString(value.description, "Bot description", 2000),
-      instructions: optionalLocalString(value.instructions, "Bot instructions", 40_000),
+      description: optionalLocalString(
+        value.description,
+        "Bot description",
+        2000,
+      ),
+      instructions: optionalLocalString(
+        value.instructions,
+        "Bot instructions",
+        40_000,
+      ),
       color: optionalLocalString(value.color, "Bot color", 40),
-      modelProvider: optionalLocalString(value.modelProvider, "Model provider", 200) ?? null,
-      modelId: optionalLocalString(value.modelId, "Model id", 300) ?? null,
-      thinkingLevel: optionalLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
+      modelProvider:
+        nullableLocalString(value.modelProvider, "Model provider", 200) ?? null,
+      modelId: nullableLocalString(value.modelId, "Model id", 300) ?? null,
+      thinkingLevel:
+        nullableLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
+      fleetManagement:
+        value.fleetManagement === undefined
+          ? false
+          : localBoolean(value.fleetManagement, "Fleet management"),
     });
   });
-  ipcMain.handle("desktop.local.bots.update", (event, botId: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    const id = localString(botId, "Bot id", 200);
-    if (requireLocalRuntime().db.bots.get(id)?.source === "managed") {
-      throw new Error("This bot is managed by your organization");
-    }
-    const value = localRecord(input, "Bot input");
-    const updated = requireLocalRuntime().db.bots.update(id, {
-      ...(value.name === undefined ? {} : { name: localString(value.name, "Bot name", 120) }),
-      ...(value.title === undefined
-        ? {}
-        : { title: optionalLocalString(value.title, "Bot title", 200) ?? "" }),
-      ...(value.description === undefined
-        ? {}
-        : {
-            description: optionalLocalString(value.description, "Bot description", 2000) ?? "",
-          }),
-      ...(value.instructions === undefined
-        ? {}
-        : {
-            instructions: optionalLocalString(value.instructions, "Bot instructions", 40_000) ?? "",
-          }),
-      ...(value.modelId === undefined
-        ? {}
-        : { modelId: optionalLocalString(value.modelId, "Model id", 300) ?? null }),
-      ...(value.thinkingLevel === undefined
-        ? {}
-        : {
-            thinkingLevel: optionalLocalString(value.thinkingLevel, "Thinking level", 40) ?? null,
-          }),
-    });
-    if (!updated) throw new Error("Bot not found");
-    return updated;
-  });
+  ipcMain.handle(
+    "desktop.local.bots.update",
+    (event, botId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const id = localString(botId, "Bot id", 200);
+      if (requireLocalRuntime().db.bots.get(id)?.source === "managed") {
+        throw new Error("This bot is managed by your organization");
+      }
+      const value = localRecord(input, "Bot input");
+      const updated = requireLocalRuntime().db.bots.update(id, {
+        ...(value.name === undefined
+          ? {}
+          : { name: localString(value.name, "Bot name", 120) }),
+        ...(value.title === undefined
+          ? {}
+          : {
+              title: optionalLocalString(value.title, "Bot title", 200) ?? "",
+            }),
+        ...(value.description === undefined
+          ? {}
+          : {
+              description:
+                optionalLocalString(
+                  value.description,
+                  "Bot description",
+                  2000,
+                ) ?? "",
+            }),
+        ...(value.instructions === undefined
+          ? {}
+          : {
+              instructions:
+                optionalLocalString(
+                  value.instructions,
+                  "Bot instructions",
+                  40_000,
+                ) ?? "",
+            }),
+        ...(value.modelId === undefined
+          ? {}
+          : {
+              modelId:
+                nullableLocalString(value.modelId, "Model id", 300) ?? null,
+            }),
+        ...(value.thinkingLevel === undefined
+          ? {}
+          : {
+              thinkingLevel:
+                nullableLocalString(
+                  value.thinkingLevel,
+                  "Thinking level",
+                  40,
+                ) ?? null,
+            }),
+        ...(value.fleetManagement === undefined
+          ? {}
+          : {
+              fleetManagement: localBoolean(
+                value.fleetManagement,
+                "Fleet management",
+              ),
+            }),
+      });
+      if (!updated) throw new Error("Bot not found");
+      return updated;
+    },
+  );
   ipcMain.handle("desktop.local.messages.list", (event, botId: unknown) => {
     requireLocalWindow(event);
-    return requireLocalRuntime().listMessages(localString(botId, "Bot id", 200));
+    return requireLocalRuntime().listMessages(
+      localString(botId, "Bot id", 200),
+    );
   });
   ipcMain.handle(
     "desktop.local.messages.send",
@@ -1323,7 +1774,9 @@ function installLocalIpc() {
         localString(botId, "Bot id", 200),
         localMessageText(text),
         {},
-        artifactIds === undefined ? [] : localStringArray(artifactIds, "Attachments", 0, 4),
+        artifactIds === undefined
+          ? []
+          : localStringArray(artifactIds, "Attachments", 0, 4),
       );
     },
   );
@@ -1338,42 +1791,66 @@ function installLocalIpc() {
     if (botIds.length < 2) throw new Error("A group needs 2 to 10 bots");
     return requireLocalRuntime().createGroup({
       name: localString(value.name, "Group name", 120),
-      description: optionalLocalString(value.description, "Group description", 2_000),
+      description: optionalLocalString(
+        value.description,
+        "Group description",
+        2_000,
+      ),
       color: optionalLocalString(value.color, "Group color", 40),
       botIds,
     });
   });
-  ipcMain.handle("desktop.local.groups.update", (event, groupId: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    const id = localString(groupId, "Group id", 200);
-    const value = localRecord(input, "Group input");
-    const updated = requireLocalRuntime().updateGroup(id, {
-      ...(value.name === undefined ? {} : { name: localString(value.name, "Group name", 120) }),
-      ...(value.description === undefined
-        ? {}
-        : {
-            description: optionalLocalString(value.description, "Group description", 2_000) ?? "",
-          }),
-      ...(value.color === undefined
-        ? {}
-        : { color: optionalLocalString(value.color, "Group color", 40) ?? "violet" }),
-      ...(value.botIds === undefined
-        ? {}
-        : { botIds: localStringArray(value.botIds, "Group members", 2, 10) }),
-    });
-    if (!updated) throw new Error("Group not found");
-    return updated;
-  });
+  ipcMain.handle(
+    "desktop.local.groups.update",
+    (event, groupId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const id = localString(groupId, "Group id", 200);
+      const value = localRecord(input, "Group input");
+      const updated = requireLocalRuntime().updateGroup(id, {
+        ...(value.name === undefined
+          ? {}
+          : { name: localString(value.name, "Group name", 120) }),
+        ...(value.description === undefined
+          ? {}
+          : {
+              description:
+                optionalLocalString(
+                  value.description,
+                  "Group description",
+                  2_000,
+                ) ?? "",
+            }),
+        ...(value.color === undefined
+          ? {}
+          : {
+              color:
+                optionalLocalString(value.color, "Group color", 40) ?? "violet",
+            }),
+        ...(value.botIds === undefined
+          ? {}
+          : { botIds: localStringArray(value.botIds, "Group members", 2, 10) }),
+      });
+      if (!updated) throw new Error("Group not found");
+      return updated;
+    },
+  );
   ipcMain.handle("desktop.local.groups.remove", (event, groupId: unknown) => {
     requireLocalWindow(event);
-    if (!requireLocalRuntime().removeGroup(localString(groupId, "Group id", 200))) {
+    if (
+      !requireLocalRuntime().removeGroup(localString(groupId, "Group id", 200))
+    ) {
       throw new Error("Group not found");
     }
   });
-  ipcMain.handle("desktop.local.groups.messages.list", (event, groupId: unknown) => {
-    requireLocalWindow(event);
-    return requireLocalRuntime().listGroupMessages(localString(groupId, "Group id", 200));
-  });
+  ipcMain.handle(
+    "desktop.local.groups.messages.list",
+    (event, groupId: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().listGroupMessages(
+        localString(groupId, "Group id", 200),
+      );
+    },
+  );
   ipcMain.handle(
     "desktop.local.groups.messages.send",
     async (event, groupId: unknown, text: unknown, artifactIds: unknown) => {
@@ -1382,14 +1859,21 @@ function installLocalIpc() {
         localString(groupId, "Group id", 200),
         localMessageText(text),
         {},
-        artifactIds === undefined ? [] : localStringArray(artifactIds, "Attachments", 0, 4),
+        artifactIds === undefined
+          ? []
+          : localStringArray(artifactIds, "Attachments", 0, 4),
       );
     },
   );
-  ipcMain.handle("desktop.local.groups.cancel", async (event, groupId: unknown) => {
-    requireLocalWindow(event);
-    await requireLocalRuntime().cancelGroup(localString(groupId, "Group id", 200));
-  });
+  ipcMain.handle(
+    "desktop.local.groups.cancel",
+    async (event, groupId: unknown) => {
+      requireLocalWindow(event);
+      await requireLocalRuntime().cancelGroup(
+        localString(groupId, "Group id", 200),
+      );
+    },
+  );
   ipcMain.handle("desktop.local.runs.cancel", async (event, runId: unknown) => {
     requireLocalWindow(event);
     await requireLocalRuntime().abort(localString(runId, "Run id", 200));
@@ -1409,17 +1893,23 @@ function installLocalIpc() {
     ) {
       throw new Error("Theme is invalid");
     }
-    if (value.sendWithEnter !== undefined && typeof value.sendWithEnter !== "boolean") {
+    if (
+      value.sendWithEnter !== undefined &&
+      typeof value.sendWithEnter !== "boolean"
+    ) {
       throw new Error("Send preference is invalid");
     }
     return requireLocalRuntime().updateUserSettings({
       ...(value.theme === undefined ? {} : { theme: value.theme }),
-      ...(value.sendWithEnter === undefined ? {} : { sendWithEnter: value.sendWithEnter }),
+      ...(value.sendWithEnter === undefined
+        ? {}
+        : { sendWithEnter: value.sendWithEnter }),
       ...(value.defaultModelId === undefined
         ? {}
         : {
             defaultModelId:
-              optionalLocalString(value.defaultModelId, "Default model", 300)?.trim() || null,
+              nullableLocalString(value.defaultModelId, "Default model", 300) ??
+              null,
           }),
     });
   });
@@ -1438,12 +1928,14 @@ function installLocalIpc() {
   });
   ipcMain.handle("desktop.local.browser.startPairing", (event) => {
     requireLocalWindow(event);
-    if (!desktopBrowserBridge) throw new Error("Browser bridge is not initialized");
+    if (!desktopBrowserBridge)
+      throw new Error("Browser bridge is not initialized");
     return desktopBrowserBridge.startPairing();
   });
   ipcMain.handle("desktop.local.browser.revoke", async (event) => {
     requireLocalWindow(event);
-    if (!desktopBrowserBridge) throw new Error("Browser bridge is not initialized");
+    if (!desktopBrowserBridge)
+      throw new Error("Browser bridge is not initialized");
     await desktopBrowserBridge.revoke();
     return desktopBrowserBridge.status();
   });
@@ -1480,33 +1972,50 @@ function installLocalIpc() {
     requireLocalWindow(event);
     if (
       limit !== undefined &&
-      (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 200)
+      (!Number.isInteger(limit) ||
+        (limit as number) < 1 ||
+        (limit as number) > 200)
     ) {
       throw new Error("Activity limit must be between 1 and 200");
     }
-    return requireLocalRuntime().listActivity((limit as number | undefined) ?? 50);
+    return requireLocalRuntime().listActivity(
+      (limit as number | undefined) ?? 50,
+    );
   });
   ipcMain.handle("desktop.local.memory.list", (event, input: unknown) => {
     requireLocalWindow(event);
-    const value = input === undefined ? {} : localRecord(input, "Memory filter");
-    if (value.scope !== undefined && value.scope !== "bot" && value.scope !== "user") {
+    const value =
+      input === undefined ? {} : localRecord(input, "Memory filter");
+    if (
+      value.scope !== undefined &&
+      value.scope !== "bot" &&
+      value.scope !== "user"
+    ) {
       throw new Error("Memory scope is invalid");
     }
     return requireLocalRuntime().listMemory({
       ...(value.scope === undefined ? {} : { scope: value.scope }),
-      ...(value.botId === undefined ? {} : { botId: localString(value.botId, "Bot id", 200) }),
+      ...(value.botId === undefined
+        ? {}
+        : { botId: localString(value.botId, "Bot id", 200) }),
     });
   });
   ipcMain.handle(
     "desktop.local.memory.update",
-    (event, documentId: unknown, content: unknown, expectedRevision: unknown) => {
+    (
+      event,
+      documentId: unknown,
+      content: unknown,
+      expectedRevision: unknown,
+    ) => {
       requireLocalWindow(event);
       if (typeof content !== "string" || content.length > 100_000) {
         throw new Error("Memory content is invalid");
       }
       if (
         expectedRevision !== undefined &&
-        (!Number.isInteger(expectedRevision) || (expectedRevision as number) < 1)
+        (!Number.isInteger(expectedRevision) ||
+          (expectedRevision as number) < 1)
       ) {
         throw new Error("Memory revision is invalid");
       }
@@ -1517,53 +2026,85 @@ function installLocalIpc() {
       );
     },
   );
-  ipcMain.handle("desktop.local.memory.remove", (event, documentId: unknown) => {
-    requireLocalWindow(event);
-    if (!requireLocalRuntime().removeMemory(localString(documentId, "Memory id", 200))) {
-      throw new Error("Memory document not found");
-    }
-  });
+  ipcMain.handle(
+    "desktop.local.memory.remove",
+    (event, documentId: unknown) => {
+      requireLocalWindow(event);
+      if (
+        !requireLocalRuntime().removeMemory(
+          localString(documentId, "Memory id", 200),
+        )
+      ) {
+        throw new Error("Memory document not found");
+      }
+    },
+  );
   ipcMain.handle("desktop.local.routines.list", (event, botId: unknown) => {
     requireLocalWindow(event);
-    return requireLocalRuntime().listRoutines(localString(botId, "Bot id", 200));
-  });
-  ipcMain.handle("desktop.local.routines.create", (event, botId: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    return requireLocalRuntime().createRoutine(
+    return requireLocalRuntime().listRoutines(
       localString(botId, "Bot id", 200),
-      localRoutineInput(input, true),
     );
   });
-  ipcMain.handle("desktop.local.routines.update", (event, routineId: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    return requireLocalRuntime().updateRoutine(
-      localString(routineId, "Routine id", 200),
-      localRoutineInput(input, false),
-    );
-  });
-  ipcMain.handle("desktop.local.routines.remove", (event, routineId: unknown) => {
-    requireLocalWindow(event);
-    if (!requireLocalRuntime().removeRoutine(localString(routineId, "Routine id", 200))) {
-      throw new Error("Routine not found");
-    }
-  });
-  ipcMain.handle("desktop.local.routines.runNow", (event, routineId: unknown) => {
-    requireLocalWindow(event);
-    return requireLocalRuntime().runRoutineNow(localString(routineId, "Routine id", 200));
-  });
-  ipcMain.handle("desktop.local.routines.history", (event, routineId: unknown, limit: unknown) => {
-    requireLocalWindow(event);
-    if (
-      limit !== undefined &&
-      (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
-    ) {
-      throw new Error("Routine history limit must be between 1 and 100");
-    }
-    return requireLocalRuntime().listRoutineRuns(
-      localString(routineId, "Routine id", 200),
-      limit as number | undefined,
-    );
-  });
+  ipcMain.handle(
+    "desktop.local.routines.create",
+    (event, botId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().createRoutine(
+        localString(botId, "Bot id", 200),
+        localRoutineInput(input, true),
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.routines.update",
+    (event, routineId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().updateRoutine(
+        localString(routineId, "Routine id", 200),
+        localRoutineInput(input, false),
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.routines.remove",
+    (event, routineId: unknown) => {
+      requireLocalWindow(event);
+      if (
+        !requireLocalRuntime().removeRoutine(
+          localString(routineId, "Routine id", 200),
+        )
+      ) {
+        throw new Error("Routine not found");
+      }
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.routines.runNow",
+    (event, routineId: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().runRoutineNow(
+        localString(routineId, "Routine id", 200),
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.routines.history",
+    (event, routineId: unknown, limit: unknown) => {
+      requireLocalWindow(event);
+      if (
+        limit !== undefined &&
+        (!Number.isInteger(limit) ||
+          (limit as number) < 1 ||
+          (limit as number) > 100)
+      ) {
+        throw new Error("Routine history limit must be between 1 and 100");
+      }
+      return requireLocalRuntime().listRoutineRuns(
+        localString(routineId, "Routine id", 200),
+        limit as number | undefined,
+      );
+    },
+  );
   ipcMain.handle("desktop.local.artifacts.create", (event, input: unknown) => {
     requireLocalWindow(event);
     const value = localRecord(input, "Attachment");
@@ -1574,9 +2115,14 @@ function installLocalIpc() {
     ) {
       throw new Error("Attachment content is invalid");
     }
-    const botId = value.botId === undefined ? undefined : localString(value.botId, "Bot id", 200);
+    const botId =
+      value.botId === undefined
+        ? undefined
+        : localString(value.botId, "Bot id", 200);
     const groupId =
-      value.groupId === undefined ? undefined : localString(value.groupId, "Group id", 200);
+      value.groupId === undefined
+        ? undefined
+        : localString(value.groupId, "Group id", 200);
     if ((botId ? 1 : 0) + (groupId ? 1 : 0) !== 1) {
       throw new Error("Attachment must belong to one bot or one group");
     }
@@ -1588,10 +2134,255 @@ function installLocalIpc() {
       contentBase64: value.contentBase64,
     });
   });
-  ipcMain.handle("desktop.local.artifacts.read", (event, artifactId: unknown) => {
+  ipcMain.handle(
+    "desktop.local.artifacts.read",
+    (event, artifactId: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().readArtifact(
+        localString(artifactId, "Attachment id", 200),
+      );
+    },
+  );
+  ipcMain.handle("desktop.local.artifacts.list", (event, input: unknown) => {
     requireLocalWindow(event);
-    return requireLocalRuntime().readArtifact(localString(artifactId, "Attachment id", 200));
+    const value = optionalLocalRecord(input, "Artifact filters");
+    const botId =
+      value.botId === undefined
+        ? undefined
+        : localString(value.botId, "Bot id", 200);
+    const groupId =
+      value.groupId === undefined
+        ? undefined
+        : localString(value.groupId, "Group id", 200);
+    if (botId && groupId)
+      throw new Error("Filter artifacts by one bot or one group");
+    if (
+      value.limit !== undefined &&
+      (!Number.isInteger(value.limit) ||
+        (value.limit as number) < 1 ||
+        (value.limit as number) > 200)
+    ) {
+      throw new Error("Artifact limit must be between 1 and 200");
+    }
+    return requireLocalRuntime().listArtifacts({
+      ...(botId ? { botId } : {}),
+      ...(groupId ? { groupId } : {}),
+      ...(value.limit === undefined ? {} : { limit: value.limit as number }),
+      ...(value.cursor === undefined
+        ? {}
+        : { cursor: localString(value.cursor, "Artifact cursor", 200) }),
+    });
   });
+  ipcMain.handle(
+    "desktop.local.artifacts.remove",
+    (event, artifactId: unknown) => {
+      requireLocalWindow(event);
+      requireLocalRuntime().removeArtifact(
+        localString(artifactId, "Attachment id", 200),
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.scratchpad.list",
+    (event, botId: unknown, includeDone: unknown) => {
+      requireLocalWindow(event);
+      if (includeDone !== undefined && typeof includeDone !== "boolean") {
+        throw new Error("Scratchpad includeDone is invalid");
+      }
+      return requireLocalRuntime().listScratchpad(
+        localString(botId, "Bot id", 200),
+        includeDone === true,
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.scratchpad.create",
+    (event, botId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Scratchpad item");
+      return requireLocalRuntime().createScratchpad(
+        localString(botId, "Bot id", 200),
+        {
+          title: localString(value.title, "Scratchpad title", 500).trim(),
+          ...(localEnum(
+            value.status,
+            "Scratchpad status",
+            LOCAL_SCRATCHPAD_STATUSES,
+          ) === undefined
+            ? {}
+            : {
+                status: localEnum(
+                  value.status,
+                  "Scratchpad status",
+                  LOCAL_SCRATCHPAD_STATUSES,
+                )!,
+              }),
+          ...(value.notes === undefined
+            ? {}
+            : {
+                notes:
+                  optionalLocalString(
+                    value.notes,
+                    "Scratchpad notes",
+                    20_000,
+                  ) ?? "",
+              }),
+        },
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.scratchpad.update",
+    (event, botId: unknown, itemId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Scratchpad item");
+      const title = optionalLocalString(value.title, "Scratchpad title", 500);
+      const status = localEnum(
+        value.status,
+        "Scratchpad status",
+        LOCAL_SCRATCHPAD_STATUSES,
+      );
+      const notes = optionalLocalString(
+        value.notes,
+        "Scratchpad notes",
+        20_000,
+      );
+      return requireLocalRuntime().updateScratchpad(
+        localString(botId, "Bot id", 200),
+        localString(itemId, "Scratchpad item id", 200),
+        {
+          ...(title === undefined ? {} : { title: title.trim() }),
+          ...(status === undefined ? {} : { status }),
+          ...(notes === undefined ? {} : { notes }),
+        },
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.scratchpad.remove",
+    (event, botId: unknown, itemId: unknown) => {
+      requireLocalWindow(event);
+      requireLocalRuntime().removeScratchpad(
+        localString(botId, "Bot id", 200),
+        localString(itemId, "Scratchpad item id", 200),
+      );
+    },
+  );
+  ipcMain.handle("desktop.local.tickets.list", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = optionalLocalRecord(input, "Ticket filters");
+    if (
+      value.beforeSequence !== undefined &&
+      (!Number.isInteger(value.beforeSequence) ||
+        (value.beforeSequence as number) < 1)
+    ) {
+      throw new Error("Ticket cursor is invalid");
+    }
+    return requireLocalRuntime().listTickets({
+      ...(localEnum(value.status, "Ticket status", LOCAL_TICKET_STATUSES) ===
+      undefined
+        ? {}
+        : {
+            status: localEnum(
+              value.status,
+              "Ticket status",
+              LOCAL_TICKET_STATUSES,
+            )!,
+          }),
+      ...(value.ownerBotId === undefined
+        ? {}
+        : { ownerBotId: localString(value.ownerBotId, "Owner bot id", 200) }),
+      ...(value.beforeSequence === undefined
+        ? {}
+        : { beforeSequence: value.beforeSequence as number }),
+    });
+  });
+  ipcMain.handle(
+    "desktop.local.tickets.comments",
+    (event, ticketId: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().listTicketComments(
+        localString(ticketId, "Ticket id", 200),
+      );
+    },
+  );
+  ipcMain.handle("desktop.local.tickets.create", (event, input: unknown) => {
+    requireLocalWindow(event);
+    const value = localRecord(input, "Ticket");
+    const ownerBotId =
+      value.ownerBotId === undefined
+        ? undefined
+        : localString(value.ownerBotId, "Owner bot id", 200);
+    const priority = localEnum(
+      value.priority,
+      "Ticket priority",
+      LOCAL_TICKET_PRIORITIES,
+    );
+    return requireLocalRuntime().createTicket({
+      botId: localString(value.botId, "Bot id", 200),
+      ...(ownerBotId ? { ownerBotId } : {}),
+      title: localString(value.title, "Ticket title", 200).trim(),
+      ...(value.description === undefined
+        ? {}
+        : {
+            description:
+              optionalLocalString(
+                value.description,
+                "Ticket description",
+                20_000,
+              ) ?? "",
+          }),
+      ...(priority ? { priority } : {}),
+    });
+  });
+  ipcMain.handle(
+    "desktop.local.tickets.update",
+    (event, ticketId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Ticket");
+      const title = optionalLocalString(value.title, "Ticket title", 200);
+      const description = optionalLocalString(
+        value.description,
+        "Ticket description",
+        20_000,
+      );
+      const priority = localEnum(
+        value.priority,
+        "Ticket priority",
+        LOCAL_TICKET_PRIORITIES,
+      );
+      const status = localEnum(
+        value.status,
+        "Ticket status",
+        LOCAL_TICKET_STATUSES,
+      );
+      const ownerBotId =
+        value.ownerBotId === undefined
+          ? undefined
+          : localString(value.ownerBotId, "Owner bot id", 200);
+      return requireLocalRuntime().updateTicket(
+        localString(ticketId, "Ticket id", 200),
+        {
+          ...(title === undefined ? {} : { title: title.trim() }),
+          ...(description === undefined ? {} : { description }),
+          ...(priority === undefined ? {} : { priority }),
+          ...(status === undefined ? {} : { status }),
+          ...(ownerBotId === undefined ? {} : { ownerBotId }),
+        },
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.tickets.comment",
+    (event, ticketId: unknown, botId: unknown, body: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime().commentOnTicket(
+        localString(ticketId, "Ticket id", 200),
+        localString(botId, "Bot id", 200),
+        localString(body, "Ticket comment", 20_000).trim(),
+      );
+    },
+  );
   ipcMain.handle("desktop.local.knowledge.list", (event) => {
     requireLocalWindow(event);
     return requireLocalRuntime().listKnowledge();
@@ -1604,28 +2395,45 @@ function installLocalIpc() {
       content: localString(value.content, "Knowledge content", 500_000),
     });
   });
-  ipcMain.handle("desktop.local.knowledge.update", (event, documentId: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    const value = localRecord(input, "Knowledge document");
-    return requireLocalRuntime().updateKnowledge(localString(documentId, "Knowledge id", 200), {
-      ...(value.title === undefined
-        ? {}
-        : {
-            title: localString(value.title, "Knowledge title", 200).trim(),
-          }),
-      ...(value.content === undefined
-        ? {}
-        : {
-            content: localString(value.content, "Knowledge content", 500_000),
-          }),
-    });
-  });
-  ipcMain.handle("desktop.local.knowledge.remove", (event, documentId: unknown) => {
-    requireLocalWindow(event);
-    if (!requireLocalRuntime().removeKnowledge(localString(documentId, "Knowledge id", 200))) {
-      throw new Error("Knowledge document not found or read-only");
-    }
-  });
+  ipcMain.handle(
+    "desktop.local.knowledge.update",
+    (event, documentId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Knowledge document");
+      return requireLocalRuntime().updateKnowledge(
+        localString(documentId, "Knowledge id", 200),
+        {
+          ...(value.title === undefined
+            ? {}
+            : {
+                title: localString(value.title, "Knowledge title", 200).trim(),
+              }),
+          ...(value.content === undefined
+            ? {}
+            : {
+                content: localString(
+                  value.content,
+                  "Knowledge content",
+                  500_000,
+                ),
+              }),
+        },
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.knowledge.remove",
+    (event, documentId: unknown) => {
+      requireLocalWindow(event);
+      if (
+        !requireLocalRuntime().removeKnowledge(
+          localString(documentId, "Knowledge id", 200),
+        )
+      ) {
+        throw new Error("Knowledge document not found or read-only");
+      }
+    },
+  );
   ipcMain.handle("desktop.local.skills.list", (event) => {
     requireLocalWindow(event);
     return requireLocalRuntime().listSkills();
@@ -1635,33 +2443,132 @@ function installLocalIpc() {
     const value = localRecord(input, "Skill");
     return requireLocalRuntime().createSkill({
       name: localString(value.name, "Skill name", 80).trim(),
-      description: localString(value.description, "Skill description", 2_000).trim(),
+      description: localString(
+        value.description,
+        "Skill description",
+        2_000,
+      ).trim(),
       body: optionalLocalString(value.body, "Skill body", 100_000) ?? "",
+      scripts: optionalLocalSkillScripts(value.scripts) ?? [],
     });
   });
-  ipcMain.handle("desktop.local.skills.update", (event, name: unknown, input: unknown) => {
-    requireLocalWindow(event);
-    const value = localRecord(input, "Skill");
-    return requireLocalRuntime().updateSkill(localString(name, "Skill name", 80).trim(), {
-      ...(value.newName === undefined
-        ? {}
-        : { newName: localString(value.newName, "Skill name", 80).trim() }),
-      ...(value.description === undefined
-        ? {}
-        : {
-            description: localString(value.description, "Skill description", 2_000).trim(),
-          }),
-      ...(value.body === undefined
-        ? {}
-        : { body: optionalLocalString(value.body, "Skill body", 100_000) ?? "" }),
-    });
-  });
+  ipcMain.handle(
+    "desktop.local.skills.update",
+    (event, name: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Skill");
+      return requireLocalRuntime().updateSkill(
+        localString(name, "Skill name", 80).trim(),
+        {
+          ...(value.newName === undefined
+            ? {}
+            : { newName: localString(value.newName, "Skill name", 80).trim() }),
+          ...(value.description === undefined
+            ? {}
+            : {
+                description: localString(
+                  value.description,
+                  "Skill description",
+                  2_000,
+                ).trim(),
+              }),
+          ...(value.body === undefined
+            ? {}
+            : {
+                body:
+                  optionalLocalString(value.body, "Skill body", 100_000) ?? "",
+              }),
+          ...(value.scripts === undefined
+            ? {}
+            : { scripts: optionalLocalSkillScripts(value.scripts) }),
+        },
+      );
+    },
+  );
   ipcMain.handle("desktop.local.skills.remove", (event, name: unknown) => {
     requireLocalWindow(event);
-    if (!requireLocalRuntime().removeSkill(localString(name, "Skill name", 80).trim())) {
+    if (
+      !requireLocalRuntime().removeSkill(
+        localString(name, "Skill name", 80).trim(),
+      )
+    ) {
       throw new Error("Skill not found");
     }
   });
+  ipcMain.handle("desktop.local.secrets.list", (event, botId: unknown) => {
+    requireLocalWindow(event);
+    return requireLocalRuntime().listSecrets(localString(botId, "Bot id", 200));
+  });
+  ipcMain.handle(
+    "desktop.local.secrets.put",
+    (event, botId: unknown, input: unknown) => {
+      requireLocalWindow(event);
+      const value = localRecord(input, "Credential");
+      return requireLocalRuntime().putSecret(
+        localString(botId, "Bot id", 200),
+        {
+          name: localString(value.name, "Credential name", 64).trim(),
+          origin:
+            optionalLocalString(value.origin, "Credential origin", 2_048) ?? "",
+          auth: localSecretAuth(value.auth),
+          value: localString(value.value, "Credential value", 16_384),
+        },
+      );
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.secrets.remove",
+    (event, botId: unknown, name: unknown) => {
+      requireLocalWindow(event);
+      return requireLocalRuntime()
+        .removeSecret(
+          localString(botId, "Bot id", 200),
+          localString(name, "Credential name", 64).trim(),
+        )
+        .then((removed) => {
+          if (!removed) throw new Error("Credential not found");
+        });
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.secrets.respond",
+    (event, requestId: unknown, response: unknown) => {
+      requireLocalWindow(event);
+      const id = localString(requestId, "Credential request", 200);
+      const pending = pendingSecretRequests.get(id);
+      if (!pending) throw new Error("Credential request is no longer active");
+      if (response === null) {
+        pending.resolve(null);
+        return;
+      }
+      const answer = localRecord(response, "Credential response");
+      pending.resolve({
+        value: localString(answer.value, "Credential value", 16_384),
+        ...(answer.username === undefined
+          ? {}
+          : {
+              username:
+                optionalLocalString(
+                  answer.username,
+                  "Credential username",
+                  512,
+                ) ?? "",
+            }),
+      });
+    },
+  );
+  ipcMain.handle(
+    "desktop.local.choice.respond",
+    (event, requestId: unknown, answer: unknown) => {
+      requireLocalWindow(event);
+      const id = localString(requestId, "Choice request", 200);
+      const pending = pendingChoiceRequests.get(id);
+      if (!pending) throw new Error("Choice request is no longer active");
+      pending.resolve(
+        answer === null ? null : localString(answer, "Choice answer", 80),
+      );
+    },
+  );
   ipcMain.handle("desktop.local.manifest.state", (event) => {
     requireLocalWindow(event);
     return requireLocalRuntime().getManagedManifestState();
@@ -1718,7 +2625,8 @@ async function openLocalMode(userDataDir: string) {
 
   if (auth) {
     const status = await auth.status();
-    if (status.signedIn && status.userId) await startLocalRuntime(status.userId);
+    if (status.signedIn && status.userId)
+      await startLocalRuntime(status.userId);
   } else {
     await startLocalRuntime("development");
   }
@@ -1730,7 +2638,8 @@ function commitPendingAppSwitch() {
   syncHostComputerAccess();
   const previous = pendingPreviousWindow;
   pendingPreviousWindow = null;
-  if (previous !== null && !previous.isDestroyed() && previous !== mainWindow) previous.destroy();
+  if (previous !== null && !previous.isDestroyed() && previous !== mainWindow)
+    previous.destroy();
 }
 
 /**
@@ -1745,7 +2654,8 @@ function abandonPendingAppSwitch(
   pendingPreviousWindow = null;
   if (previous !== null && !previous.isDestroyed()) {
     const failed = mainWindow;
-    if (failed !== null && !failed.isDestroyed() && failed !== previous) failed.destroy();
+    if (failed !== null && !failed.isDestroyed() && failed !== previous)
+      failed.destroy();
     mainWindow = previous;
     currentSetup = previousSetup;
     currentTargetUrl = previousUrl;
@@ -1770,9 +2680,11 @@ function watchRendererUntilCommitted(win: BrowserWindow) {
   };
   win.webContents.once("render-process-gone", onGone);
   return {
-    crashed: () => crashed || (!win.isDestroyed() && win.webContents.isCrashed()),
+    crashed: () =>
+      crashed || (!win.isDestroyed() && win.webContents.isCrashed()),
     dispose: () => {
-      if (!win.isDestroyed()) win.webContents.removeListener("render-process-gone", onGone);
+      if (!win.isDestroyed())
+        win.webContents.removeListener("render-process-gone", onGone);
     },
   };
 }
@@ -1784,7 +2696,10 @@ function destroySetupWindow() {
 }
 
 /** Best-effort restore of setup.json after a failed save that already wrote disk. */
-async function rollbackSetupFile(userDataDir: string, previousSetup: DesktopSetup | null) {
+async function rollbackSetupFile(
+  userDataDir: string,
+  previousSetup: DesktopSetup | null,
+) {
   try {
     if (previousSetup !== null) await writeSetup(userDataDir, previousSetup);
     else await clearSetup(userDataDir);
@@ -1878,7 +2793,10 @@ app.whenReady().then(async () => {
       cacheSessions.add((await resolveSessionForTarget(target.url)).value);
     }
     await Promise.all(
-      [...cacheSessions].flatMap((value) => [value.clearCache(), value.clearCodeCaches({})]),
+      [...cacheSessions].flatMap((value) => [
+        value.clearCache(),
+        value.clearCodeCaches({}),
+      ]),
     );
     markOnce("rk:main:caches-cleared");
   }
@@ -1902,7 +2820,9 @@ app.whenReady().then(async () => {
     )
       throw new Error("Invalid sign-in request.");
     if (browserAuthAttempts.has(url) || browserAuthAttempts.size >= 8) {
-      throw new Error("A sign-in attempt is already active. Cancel it and retry.");
+      throw new Error(
+        "A sign-in attempt is already active. Cancel it and retry.",
+      );
     }
     const controller = new AbortController();
     browserAuthAttempts.set(url, controller);
@@ -1917,7 +2837,8 @@ app.whenReady().then(async () => {
         clearTimeout(expiry);
         event.sender.removeListener("destroyed", stop);
         event.sender.removeListener("did-navigate", stop);
-        if (browserAuthAttempts.get(url) === controller) browserAuthAttempts.delete(url);
+        if (browserAuthAttempts.get(url) === controller)
+          browserAuthAttempts.delete(url);
       },
       { once: true },
     );
@@ -1927,12 +2848,15 @@ app.whenReady().then(async () => {
         onClose: stop,
         openExternal: (target) => shell.openExternal(target),
         onCallback: (callback) => {
-          if (!event.sender.isDestroyed()) event.sender.send("desktop.oauth.callback", callback);
+          if (!event.sender.isDestroyed())
+            event.sender.send("desktop.oauth.callback", callback);
         },
       });
     } catch {
       controller.abort();
-      throw new Error("Could not open browser sign-in. Close other sign-in attempts and retry.");
+      throw new Error(
+        "Could not open browser sign-in. Close other sign-in attempts and retry.",
+      );
     }
   });
   ipcMain.handle("desktop.oauth.cancel", (event, url: unknown) => {
@@ -1953,15 +2877,20 @@ app.whenReady().then(async () => {
         windowFrom(event) !== settingsWindow ||
         event.senderFrame !== event.sender.mainFrame ||
         !settingsTarget ||
-        event.senderFrame.url !== `${settingsTarget.origin}${LOCAL_SETTINGS_PAGE}`
+        event.senderFrame.url !==
+          `${settingsTarget.origin}${LOCAL_SETTINGS_PAGE}`
       ) {
         throw new Error("Local settings are not active");
       }
-      return requestLocalSettings(settingsTarget, pathname, body, (input, init) =>
-        net.fetch(input instanceof URL ? input.href : input, {
-          ...init,
-          bypassCustomProtocolHandlers: true,
-        }),
+      return requestLocalSettings(
+        settingsTarget,
+        pathname,
+        body,
+        (input, init) =>
+          net.fetch(input instanceof URL ? input.href : input, {
+            ...init,
+            bypassCustomProtocolHandlers: true,
+          }),
       );
     },
   );
@@ -1973,11 +2902,16 @@ app.whenReady().then(async () => {
     safeOrigin(event.senderFrame.url) === safeOrigin(localStack.webUrl());
   ipcMain.handle("desktop.computer.requestAccess", async (event) => {
     if (!isManagedComputerRequest(event) || !hostComputer)
-      throw new Error("Local computer access requires an app-managed local instance.");
+      throw new Error(
+        "Local computer access requires an app-managed local instance.",
+      );
     if (requestingComputerAccess) return false;
     requestingComputerAccess = true;
     try {
-      if (!(await localStack.matchesDesiredStack()) || !isManagedComputerRequest(event))
+      if (
+        !(await localStack.matchesDesiredStack()) ||
+        !isManagedComputerRequest(event)
+      )
         return false;
       if (hostComputer.isEnabled()) return true;
       const result = await dialog.showMessageBox(mainWindow!, {
@@ -1991,7 +2925,8 @@ app.whenReady().then(async () => {
         cancelId: 0,
         noLink: true,
       });
-      if (result.response !== 1 || !isManagedComputerRequest(event)) return false;
+      if (result.response !== 1 || !isManagedComputerRequest(event))
+        return false;
       hostComputer.activate(true);
       await hostComputer.grant();
       installApplicationMenu();
@@ -2059,13 +2994,16 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("desktop.setup.test", async (event, url: unknown) => {
-    if (!fromSetupWindow(event)) return { ok: false, error: "Setup is not active." };
-    if (typeof url !== "string") return { ok: false, error: "Enter a server address." };
+    if (!fromSetupWindow(event))
+      return { ok: false, error: "Setup is not active." };
+    if (typeof url !== "string")
+      return { ok: false, error: "Enter a server address." };
     return probeServer(url);
   });
 
   ipcMain.handle("desktop.setup.save", async (event, payload: unknown) => {
-    if (!fromSetupWindow(event)) return { ok: false, error: "Setup is not active." };
+    if (!fromSetupWindow(event))
+      return { ok: false, error: "Setup is not active." };
     // A launch still loading counts too: the switch must open and check its own server.
     if (setupSaveInProgress || appOpener.busy())
       return { ok: false, error: "A connection attempt is already running." };
@@ -2085,11 +3023,15 @@ app.whenReady().then(async () => {
       // Only open the exact origin selected and authenticated by the managed stack.
       let openSetup = setup;
       if (setup.mode === "new") {
-        const managedUrl = managedLocalOpenUrl(setup.serverUrl, localStack.webUrl());
+        const managedUrl = managedLocalOpenUrl(
+          setup.serverUrl,
+          localStack.webUrl(),
+        );
         if (managedUrl === null || !(await localStack.matchesDesiredStack())) {
           return {
             ok: false,
-            error: "The app-managed ericBot services are not ready. Retry setup.",
+            error:
+              "The app-managed ericBot services are not ready. Retry setup.",
           };
         }
         openSetup = { mode: "new", serverUrl: managedUrl };
@@ -2100,13 +3042,16 @@ app.whenReady().then(async () => {
 
       // Open before persisting so a failed renderer load keeps the last working setup.
       currentSetup = openSetup;
-      const opened = await appOpener.open(openSetup.serverUrl, { switching: true });
+      const opened = await appOpener.open(openSetup.serverUrl, {
+        switching: true,
+      });
       if (!opened) {
         currentSetup = previousSetup;
         syncHostComputerAccess();
         return {
           ok: false,
-          error: "Could not open that server. The previous instance was left unchanged.",
+          error:
+            "Could not open that server. The previous instance was left unchanged.",
         };
       }
 
@@ -2118,19 +3063,31 @@ app.whenReady().then(async () => {
       try {
         await writeSetup(userDataDir, openSetup);
         if (rendererWatch?.crashed()) {
-          const message = await recoverFromCrashedSave(userDataDir, previousSetup, previousUrl);
+          const message = await recoverFromCrashedSave(
+            userDataDir,
+            previousSetup,
+            previousUrl,
+          );
           return { ok: false, error: message };
         }
         // Commit while the crash listener is still armed.
         commitPendingAppSwitch();
         if (rendererWatch?.crashed()) {
-          const message = await recoverFromCrashedSave(userDataDir, previousSetup, previousUrl);
+          const message = await recoverFromCrashedSave(
+            userDataDir,
+            previousSetup,
+            previousUrl,
+          );
           return { ok: false, error: message };
         }
         destroySetupWindow();
         // Final check after setup closes — a crash in this gap still rolls back.
         if (rendererWatch?.crashed()) {
-          const message = await recoverFromCrashedSave(userDataDir, previousSetup, previousUrl);
+          const message = await recoverFromCrashedSave(
+            userDataDir,
+            previousSetup,
+            previousUrl,
+          );
           return { ok: false, error: message };
         }
         return { ok: true };
@@ -2215,7 +3172,9 @@ app.whenReady().then(async () => {
           destroySetupWindow();
         }
       } else {
-        showSetupWindow(`Could not reconnect to the saved server. ${reachability.error}`);
+        showSetupWindow(
+          `Could not reconnect to the saved server. ${reachability.error}`,
+        );
       }
     }
   } else {

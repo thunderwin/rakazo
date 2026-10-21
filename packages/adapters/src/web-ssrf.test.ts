@@ -12,6 +12,30 @@ import {
 const publicResolver = async () => [{ address: "203.0.113.10", family: 4 as const }];
 
 describe("web SSRF policy", () => {
+  it("supports authenticated request methods and non-2xx bodies", async () => {
+    let receivedMethod = "";
+    let receivedBody = "";
+    const result = await fetchSafeWebText("https://example.test/api", {
+      fetch: async (_input, init) => {
+        receivedMethod = init?.method ?? "";
+        receivedBody = String(init?.body ?? "");
+        return new Response('{"error":"unauthorized"}', {
+          status: 401,
+          headers: { "content-type": "application/json" },
+        });
+      },
+      resolveHostname: publicResolver,
+      method: "POST",
+      body: '{"name":"test"}',
+      headers: { authorization: "Bearer secret" },
+      allowErrorStatus: true,
+      maxRedirects: 0,
+    });
+    expect(result).toMatchObject({ status: 401, body: '{"error":"unauthorized"}' });
+    expect(receivedMethod).toBe("POST");
+    expect(receivedBody).toBe('{"name":"test"}');
+  });
+
   it.each([
     "http://localhost/x",
     "https://127.0.0.1/x",
