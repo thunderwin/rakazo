@@ -28,4 +28,12 @@ describe("local error text", () => {
       "The model request is too large. Remove attachments or shorten the message.",
     );
   });
+
+  it("recognizes the Pi quota wording", () => {
+    expect(
+      localErrorText(
+        "Error invoking remote method 'desktop.local.messages.send': Error: Your model quota is exhausted. Check your plan or balance.",
+      ),
+    ).toBe("Model quota exhausted. Check your plan or balance.");
+  });
 });

@@ -118,6 +118,7 @@ export function localErrorText(message: string): string {
     normalized.includes("insufficient_quota") ||
     normalized.includes("insufficient quota") ||
     normalized.includes("quota exhausted") ||
+    normalized.includes("quota is exhausted") ||
     /\b402\b/.test(normalized)
   ) {
     return i18n._(msg`Model quota exhausted. Check your plan or balance.`);
