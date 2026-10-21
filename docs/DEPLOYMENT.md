@@ -11,7 +11,7 @@
 
 | 层           | 首发选择                                           | 原因                                                                  |
 | ------------ | -------------------------------------------------- | --------------------------------------------------------------------- |
-| Edge         | Cloudflare                                         | DNS、TLS、WAF、限流、Access、R2 和下载分发                            |
+| Edge         | Cloudflare                                         | DNS、TLS、WAF、限流、R2 和下载分发                                    |
 | 服务器执行面 | DigitalOcean Droplet                               | 现有 API 是长运行 Node/Postgres/Worker 服务，直接迁移到 Worker 风险高 |
 | 数据库       | DigitalOcean Managed PostgreSQL                    | 控制面数据和凭据密文不应只依赖单机容器卷                              |
 | New API      | 使用运营方已有部署                                 | 已由产品所有者确认可用，Rakazo 只通过服务器端配置接入                 |
@@ -105,7 +105,7 @@ New API 两段链路。原始样本保存在私有运维记录中。
 
 ```text
                          Cloudflare
-       DNS / TLS / WAF / Rate Limit / Access / R2
+       DNS / TLS / WAF / Rate Limit / R2
                             |
           +-----------------+---------------------+
           |                 |                     |
@@ -181,7 +181,9 @@ New API 已存在，其服务器和数据库费用不计入本方案新增成本
 - `/v1/model/openai/*` 必须验证 SSE 流式转发，不允许边缘或 Caddy 缓冲完整响应。
 - API-only 入口由 [Caddyfile.api.prod](../infra/compose/Caddyfile.api.prod) 提供，
   `/v1/*` 使用立即 flush，非 API/Admin 路径返回 404。
-- `/admin*` 和 `/v1/admin/*` 使用 Cloudflare Access，只允许所有者或指定平台管理员。
+- Admin 使用 ericBot 自身的 Better Auth 邮箱密码登录和管理员权限校验。不要在
+  `/admin*` 与 `/v1/admin/*` 上拆分设置两个 Cloudflare Access 应用；这会让页面加载后的
+  XHR 再次跳转到 Access 登录域，并被浏览器 CORS 拦截。
 - Origin 防火墙只接受 Cloudflare 地址，避免攻击者绕过 WAF 直连。
 - 登录、注册和模型接口分别设置限流。
 
@@ -213,8 +215,7 @@ Server 不启动 Docker sandbox、E2B、桌面截图或 Agent 执行。V1 的 Ag
 ### 6.2 Admin
 
 - 首发地址为 `https://api.example.com/admin`。
-- Cloudflare Access 负责额外身份门禁；Admin 自身登录继续保留。
-- 管理员必须使用独立账号，并开启账号供应商支持的 MFA。
+- Admin 使用 ericBot 自身登录；管理接口继续校验 Better Auth session 和平台管理员角色。
 - 每次 manifest 发布记录版本、hash、签名和审计事件。
 - Admin 页面不提供员工对话正文、shell 输出或浏览器内容。
 - 发布操作必须在 staging 先验证 manifest 可在客户端同步和回退。
@@ -460,7 +461,7 @@ dl.example.com/desktop/stable/SHA256SUMS
 - New API 完整 key、session token 和数据库密码不出现在日志。
 - shell 和写文件仍要求审批。
 - 浏览器扩展需配对，Stop 后关闭 Agent Window 并清理会话。
-- Admin 在不经过 Cloudflare Access 和平台登录时不可写。
+- Admin 在没有有效管理员 session 时不可读或不可写。
 - Client Manifest 签名失败时客户端拒绝应用并保留旧版本。
 - Server migration 失败时旧服务仍可启动并已保留备份。
 - 备份能从空环境恢复。
@@ -493,9 +494,9 @@ Rakazo 放在 SFO3 会增加一次跨洲传输；FRA1 可能缩短完整流式�
 
 ## 13. 当前 SFO3 预发布部署
 
-截至 2026-10-21，存在一个受 Cloudflare Access 保护的单机预发布环境。健康检查、鉴权和
-管理员入口已做只读验证；真实域名、区域、机器规格、资源名称、备份时间和网络测量只保存在
-私有运维记录中。
+截至 2026-10-21，存在一个单机预发布环境。Admin 直接使用 ericBot 邮箱密码登录；健康检查、
+应用鉴权和管理员入口已做只读验证；真实域名、区域、机器规格、资源名称、备份时间和网络测量
+只保存在私有运维记录中。
 
 当前未完成：
 
