@@ -35,7 +35,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @rakazo/browser-extension check
       - run: pnpm --filter @rakazo/browser-extension test
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @rakazo/browser-extension exec playwright install --with-deps chromium
       - run: pnpm --filter @rakazo/browser-extension test:e2e
       - run: pnpm --filter @rakazo/browser-extension run build:store
 
