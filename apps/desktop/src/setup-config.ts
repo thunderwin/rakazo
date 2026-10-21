@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
-import type { DesktopSetup, DesktopStackProbeResponse } from "@rakazo/contracts";
+import type {
+  DesktopSetup,
+  DesktopStackProbeResponse,
+} from "@rakazo/contracts";
 
 /** Managed desktop origin; development keeps its usual web/API ports. */
 export const DEFAULT_LOCAL_WEB_URL = "http://127.0.0.1:45173";
@@ -9,8 +12,7 @@ export const PROBE_RESPONSE_LIMIT_BYTES = 64 * 1024;
 export const SETUP_FILE_NAME = "setup.json";
 
 export type StartupTarget =
-  | { kind: "app"; url: string; source: "env" | "saved" }
-  | { kind: "setup" };
+  { kind: "app"; url: string; source: "env" | "saved" } | { kind: "setup" };
 
 const SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
 
@@ -29,7 +31,9 @@ export function normalizeServerUrl(input: string): string | null {
       url = new URL(trimmed);
     } else {
       const candidate = new URL(`http://${trimmed}`);
-      url = isLocalNetworkHost(candidate.hostname) ? candidate : new URL(`https://${trimmed}`);
+      url = isLocalNetworkHost(candidate.hostname)
+        ? candidate
+        : new URL(`https://${trimmed}`);
     }
   } catch {
     return null;
@@ -40,7 +44,8 @@ export function normalizeServerUrl(input: string): string | null {
   // Embedded credentials would be written to disk in cleartext.
   if (url.username !== "" || url.password !== "") return null;
   // Public login cookies and API traffic must never cross a cleartext connection.
-  if (url.protocol === "http:" && !isLocalNetworkHost(url.hostname)) return null;
+  if (url.protocol === "http:" && !isLocalNetworkHost(url.hostname))
+    return null;
 
   // Rakazo serves its renderer, RPC, and auth routes from one origin. Keeping a
   // user-supplied path would make the setup probe and the loaded app disagree.
@@ -51,10 +56,14 @@ export function normalizeServerUrl(input: string): string | null {
  * Managed ("new") setups may only open the configured local stack origin.
  * A saved or IPC URL that normalizes to a different loopback host/port is rejected.
  */
-export function managedLocalOpenUrl(requestedUrl: string, localWebUrl: string): string | null {
+export function managedLocalOpenUrl(
+  requestedUrl: string,
+  localWebUrl: string,
+): string | null {
   const managed = normalizeServerUrl(localWebUrl);
   const requested = normalizeServerUrl(requestedUrl);
-  if (managed === null || requested === null || requested !== managed) return null;
+  if (managed === null || requested === null || requested !== managed)
+    return null;
   return managed;
 }
 
@@ -84,7 +93,8 @@ export function parseSetupInput(value: unknown): DesktopSetup | null {
 
   const normalized = normalizeServerUrl(serverUrl);
   if (normalized === null) return null;
-  if (mode === "new" && !isLoopbackHost(new URL(normalized).hostname)) return null;
+  if (mode === "new" && !isLoopbackHost(new URL(normalized).hostname))
+    return null;
   return { mode, serverUrl: normalized };
 }
 
@@ -113,13 +123,38 @@ export function resolveStartupTarget(input: {
   if (input.forceSetup === true) return { kind: "setup" };
 
   const envUrl = input.envUrl?.trim();
-  if (envUrl !== undefined && envUrl !== "") return { kind: "app", url: envUrl, source: "env" };
+  if (envUrl !== undefined && envUrl !== "")
+    return { kind: "app", url: envUrl, source: "env" };
 
   if (input.saved != null) {
     const saved = parseSetupInput(input.saved);
-    if (saved !== null) return { kind: "app", url: saved.serverUrl, source: "saved" };
+    if (saved !== null)
+      return { kind: "app", url: saved.serverUrl, source: "saved" };
   }
   return { kind: "setup" };
+}
+
+/**
+ * Local-first is the default first-run experience. The legacy server chooser is
+ * only for explicitly selected existing-instance deployments.
+ */
+export function usesLocalUiOnStartup(input: {
+  envUrl?: string;
+  localUi?: string;
+  legacySetup?: string;
+  forceSetup?: boolean;
+  saved?: DesktopSetup | null;
+}): boolean {
+  if (input.localUi === "1") return true;
+  if (
+    input.localUi === "0" ||
+    input.legacySetup === "1" ||
+    input.forceSetup === true
+  ) {
+    return false;
+  }
+  if (input.envUrl?.trim()) return false;
+  return input.saved == null;
 }
 
 /** Turns a network failure into something a person can act on. */
@@ -130,7 +165,10 @@ export function probeFailureMessage(error: unknown): string {
   }
 
   const detail = error instanceof Error ? error.message : String(error);
-  if (detail.includes("CONNECTION_REFUSED") || detail.includes("ECONNREFUSED")) {
+  if (
+    detail.includes("CONNECTION_REFUSED") ||
+    detail.includes("ECONNREFUSED")
+  ) {
     return "Nothing is listening at that address yet.";
   }
   if (detail.includes("NAME_NOT_RESOLVED") || detail.includes("ENOTFOUND")) {
@@ -143,7 +181,10 @@ export function probeFailureMessage(error: unknown): string {
 }
 
 /** Packaged shell overlays its web bundle only on the managed loopback stack. */
-export function servesBundledRenderer(targetUrl: string, managedLocalStack: boolean): boolean {
+export function servesBundledRenderer(
+  targetUrl: string,
+  managedLocalStack: boolean,
+): boolean {
   try {
     if (!managedLocalStack) return false;
     const url = new URL(targetUrl);
@@ -159,7 +200,10 @@ export function sessionPartitionForServerUrl(targetUrl: string): string | null {
   try {
     const url = new URL(targetUrl);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    const digest = createHash("sha256").update(url.origin).digest("hex").slice(0, 24);
+    const digest = createHash("sha256")
+      .update(url.origin)
+      .digest("hex")
+      .slice(0, 24);
     return `persist:rakazo-${digest}`;
   } catch {
     return null;
@@ -191,7 +235,9 @@ export function isRakazoHealth(value: unknown): boolean {
 export function desktopStackImageTag(value: unknown): string | null {
   if (typeof value !== "object" || value === null) return null;
   const { ok, imageTag } = value as Partial<DesktopStackProbeResponse>;
-  return ok === true && typeof imageTag === "string" && imageTag !== "" ? imageTag : null;
+  return ok === true && typeof imageTag === "string" && imageTag !== ""
+    ? imageTag
+    : null;
 }
 
 /** Reads a small probe response without letting an untrusted stream stall on cleanup. */

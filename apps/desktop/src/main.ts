@@ -90,6 +90,7 @@ import {
   safeExternalUrl,
   servesBundledRenderer,
   sessionPartitionForServerUrl,
+  usesLocalUiOnStartup,
 } from "./setup-config.js";
 import { clearSetup, readSetup, writeSetup } from "./setup-store.js";
 import {
@@ -2576,7 +2577,9 @@ function installLocalIpc() {
 }
 
 async function openLocalMode(userDataDir: string) {
-  const serverUrl = process.env.RAKAZO_SERVER_URL?.trim();
+  const serverUrl =
+    process.env.RAKAZO_SERVER_URL?.trim() ||
+    (app.isPackaged ? undefined : "http://127.0.0.1:3100");
   const auth = serverUrl
     ? new LocalAuth({
         serverUrl,
@@ -2744,7 +2747,16 @@ function safeOrigin(targetUrl: string) {
 app.whenReady().then(async () => {
   installSessionPermissions(session.defaultSession, permissionTarget);
   const userDataDir = app.getPath("userData");
-  if (process.env.RAKAZO_LOCAL_UI === "1") {
+  const savedSetup = await readSetup(userDataDir);
+  if (
+    usesLocalUiOnStartup({
+      envUrl: process.env.RAKAZO_WEB_URL,
+      localUi: process.env.RAKAZO_LOCAL_UI,
+      legacySetup: process.env.RAKAZO_LEGACY_SETUP,
+      forceSetup: process.env.RAKAZO_FORCE_SETUP === "1",
+      saved: savedSetup,
+    })
+  ) {
     await openLocalMode(userDataDir);
     return;
   }
@@ -2781,7 +2793,7 @@ app.whenReady().then(async () => {
       }
     },
   });
-  currentSetup = await readSetup(userDataDir);
+  currentSetup = savedSetup;
   const target = resolveStartupTarget({
     envUrl: process.env.RAKAZO_WEB_URL,
     saved: currentSetup,

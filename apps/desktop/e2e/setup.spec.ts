@@ -66,7 +66,11 @@ test.afterEach(async () => {
 });
 
 function launch(extraEnv: Record<string, string> = {}) {
-  const env = { ...process.env, RAKAZO_PERFORMANCE_USER_DATA: userData };
+  const env = {
+    ...process.env,
+    RAKAZO_LEGACY_SETUP: "1",
+    RAKAZO_PERFORMANCE_USER_DATA: userData,
+  };
   // A stale RAKAZO_WEB_URL from the developer's shell would bypass setup entirely.
   delete env.RAKAZO_WEB_URL;
   const executablePath = process.env.RAKAZO_E2E_EXECUTABLE;

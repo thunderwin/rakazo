@@ -16,26 +16,37 @@ import {
   serializeSetup,
   servesBundledRenderer,
   sessionPartitionForServerUrl,
+  usesLocalUiOnStartup,
 } from "./setup-config.js";
 
 describe("server address normalization", () => {
   it("assumes http locally and https for a bare public host", () => {
     expect(normalizeServerUrl("127.0.0.1:5173")).toBe("http://127.0.0.1:5173");
     expect(normalizeServerUrl("localhost:5173")).toBe("http://localhost:5173");
-    expect(normalizeServerUrl("192.168.1.20:3100")).toBe("http://192.168.1.20:3100");
-    expect(normalizeServerUrl("rakazo.example.com")).toBe("https://rakazo.example.com");
+    expect(normalizeServerUrl("192.168.1.20:3100")).toBe(
+      "http://192.168.1.20:3100",
+    );
+    expect(normalizeServerUrl("rakazo.example.com")).toBe(
+      "https://rakazo.example.com",
+    );
   });
 
   it("keeps an explicit secure scheme and port but stores only the origin", () => {
-    expect(normalizeServerUrl("https://rakazo.example.com")).toBe("https://rakazo.example.com");
+    expect(normalizeServerUrl("https://rakazo.example.com")).toBe(
+      "https://rakazo.example.com",
+    );
     expect(normalizeServerUrl("https://rakazo.example.com:8443/team")).toBe(
       "https://rakazo.example.com:8443",
     );
   });
 
   it("trims surrounding space, trailing slashes, queries, and fragments", () => {
-    expect(normalizeServerUrl("  http://127.0.0.1:5173/  ")).toBe("http://127.0.0.1:5173");
-    expect(normalizeServerUrl("http://127.0.0.1:5173///")).toBe("http://127.0.0.1:5173");
+    expect(normalizeServerUrl("  http://127.0.0.1:5173/  ")).toBe(
+      "http://127.0.0.1:5173",
+    );
+    expect(normalizeServerUrl("http://127.0.0.1:5173///")).toBe(
+      "http://127.0.0.1:5173",
+    );
     expect(normalizeServerUrl("http://127.0.0.1:5173/?next=/bots#top")).toBe(
       "http://127.0.0.1:5173",
     );
@@ -43,8 +54,12 @@ describe("server address normalization", () => {
 
   it("rejects cleartext public servers but permits private-network development", () => {
     expect(normalizeServerUrl("http://rakazo.example.com")).toBeNull();
-    expect(normalizeServerUrl("http://10.0.0.8:3100")).toBe("http://10.0.0.8:3100");
-    expect(normalizeServerUrl("http://[fd00::1]:3100")).toBe("http://[fd00::1]:3100");
+    expect(normalizeServerUrl("http://10.0.0.8:3100")).toBe(
+      "http://10.0.0.8:3100",
+    );
+    expect(normalizeServerUrl("http://[fd00::1]:3100")).toBe(
+      "http://[fd00::1]:3100",
+    );
   });
 
   it("rejects cleartext link-local addresses used by cloud metadata endpoints", () => {
@@ -52,35 +67,52 @@ describe("server address normalization", () => {
     expect(normalizeServerUrl("http://169.254.1.1:80")).toBeNull();
     expect(normalizeServerUrl("http://[fe80::1]:3100")).toBeNull();
     // HTTPS to link-local still normalizes; the health probe must match Rakazo.
-    expect(normalizeServerUrl("https://169.254.169.254")).toBe("https://169.254.169.254");
+    expect(normalizeServerUrl("https://169.254.169.254")).toBe(
+      "https://169.254.169.254",
+    );
   });
 
-  it.each(["", "   ", "not a url", "ftp://example.com", "file:///etc/passwd", "http://"])(
-    "rejects an address that cannot reach a Rakazo server (%s)",
-    (value) => {
-      expect(normalizeServerUrl(value)).toBeNull();
-    },
-  );
+  it.each([
+    "",
+    "   ",
+    "not a url",
+    "ftp://example.com",
+    "file:///etc/passwd",
+    "http://",
+  ])("rejects an address that cannot reach a Rakazo server (%s)", (value) => {
+    expect(normalizeServerUrl(value)).toBeNull();
+  });
 
   it("rejects embedded credentials rather than writing them to disk", () => {
-    expect(normalizeServerUrl("https://user:secret@rakazo.example.com")).toBeNull();
+    expect(
+      normalizeServerUrl("https://user:secret@rakazo.example.com"),
+    ).toBeNull();
   });
 });
 
 describe("managed local open URL", () => {
   it("returns the authenticated managed origin when the request matches", () => {
-    expect(managedLocalOpenUrl(`${DEFAULT_LOCAL_WEB_URL}/`, DEFAULT_LOCAL_WEB_URL)).toBe(
-      DEFAULT_LOCAL_WEB_URL,
-    );
-    expect(managedLocalOpenUrl("http://127.0.0.1:5199", "http://127.0.0.1:5199/path?x=1")).toBe(
-      "http://127.0.0.1:5199",
-    );
+    expect(
+      managedLocalOpenUrl(`${DEFAULT_LOCAL_WEB_URL}/`, DEFAULT_LOCAL_WEB_URL),
+    ).toBe(DEFAULT_LOCAL_WEB_URL);
+    expect(
+      managedLocalOpenUrl(
+        "http://127.0.0.1:5199",
+        "http://127.0.0.1:5199/path?x=1",
+      ),
+    ).toBe("http://127.0.0.1:5199");
   });
 
   it("rejects a different loopback origin even when both are local", () => {
-    expect(managedLocalOpenUrl("http://127.0.0.1:5199", DEFAULT_LOCAL_WEB_URL)).toBeNull();
-    expect(managedLocalOpenUrl("http://localhost:5173", DEFAULT_LOCAL_WEB_URL)).toBeNull();
-    expect(managedLocalOpenUrl("https://rakazo.example.com", DEFAULT_LOCAL_WEB_URL)).toBeNull();
+    expect(
+      managedLocalOpenUrl("http://127.0.0.1:5199", DEFAULT_LOCAL_WEB_URL),
+    ).toBeNull();
+    expect(
+      managedLocalOpenUrl("http://localhost:5173", DEFAULT_LOCAL_WEB_URL),
+    ).toBeNull();
+    expect(
+      managedLocalOpenUrl("https://rakazo.example.com", DEFAULT_LOCAL_WEB_URL),
+    ).toBeNull();
   });
 });
 
@@ -96,12 +128,17 @@ describe("desktop stack token transport", () => {
 
 describe("saved setup", () => {
   it("round-trips through the on-disk format", () => {
-    const setup = { mode: "existing", serverUrl: "https://rakazo.example.com" } as const;
+    const setup = {
+      mode: "existing",
+      serverUrl: "https://rakazo.example.com",
+    } as const;
     expect(parseStoredSetup(serializeSetup(setup))).toEqual(setup);
   });
 
   it("normalizes the address it reads back", () => {
-    expect(parseStoredSetup('{"mode":"new","serverUrl":"127.0.0.1:5173/"}')).toEqual({
+    expect(
+      parseStoredSetup('{"mode":"new","serverUrl":"127.0.0.1:5173/"}'),
+    ).toEqual({
       mode: "new",
       serverUrl: "http://127.0.0.1:5173",
     });
@@ -123,8 +160,15 @@ describe("saved setup", () => {
   });
 
   it("keeps the new-instance choice on this computer", () => {
-    expect(parseSetupInput({ mode: "new", serverUrl: "http://192.168.1.20:3100" })).toBeNull();
-    expect(parseSetupInput({ mode: "existing", serverUrl: "http://192.168.1.20:3100" })).toEqual({
+    expect(
+      parseSetupInput({ mode: "new", serverUrl: "http://192.168.1.20:3100" }),
+    ).toBeNull();
+    expect(
+      parseSetupInput({
+        mode: "existing",
+        serverUrl: "http://192.168.1.20:3100",
+      }),
+    ).toEqual({
       mode: "existing",
       serverUrl: "http://192.168.1.20:3100",
     });
@@ -132,7 +176,10 @@ describe("saved setup", () => {
 });
 
 describe("startup target", () => {
-  const saved = { mode: "existing", serverUrl: "https://rakazo.example.com" } as const;
+  const saved = {
+    mode: "existing",
+    serverUrl: "https://rakazo.example.com",
+  } as const;
 
   it("runs setup on a first launch", () => {
     expect(resolveStartupTarget({})).toEqual({ kind: "setup" });
@@ -147,7 +194,9 @@ describe("startup target", () => {
   });
 
   it("lets RAKAZO_WEB_URL point the shell anywhere without touching saved setup", () => {
-    expect(resolveStartupTarget({ envUrl: "http://127.0.0.1:4321", saved })).toEqual({
+    expect(
+      resolveStartupTarget({ envUrl: "http://127.0.0.1:4321", saved }),
+    ).toEqual({
       kind: "app",
       url: "http://127.0.0.1:4321",
       source: "env",
@@ -156,15 +205,21 @@ describe("startup target", () => {
 
   it("ignores an empty RAKAZO_WEB_URL", () => {
     expect(resolveStartupTarget({ envUrl: "   ", saved }).kind).toBe("app");
-    expect(resolveStartupTarget({ envUrl: "   ", saved })).toMatchObject({ source: "saved" });
+    expect(resolveStartupTarget({ envUrl: "   ", saved })).toMatchObject({
+      source: "saved",
+    });
   });
 
   it("re-runs setup when forced, even with saved configuration", () => {
-    expect(resolveStartupTarget({ saved, forceSetup: true })).toEqual({ kind: "setup" });
+    expect(resolveStartupTarget({ saved, forceSetup: true })).toEqual({
+      kind: "setup",
+    });
   });
 
   it("re-runs setup when the saved address is unusable", () => {
-    expect(resolveStartupTarget({ saved: { mode: "new", serverUrl: "nope://x" } })).toEqual({
+    expect(
+      resolveStartupTarget({ saved: { mode: "new", serverUrl: "nope://x" } }),
+    ).toEqual({
       kind: "setup",
     });
     expect(
@@ -175,6 +230,31 @@ describe("startup target", () => {
   });
 });
 
+describe("local-first startup", () => {
+  const saved = {
+    mode: "existing",
+    serverUrl: "https://rakazo.example.com",
+  } as const;
+
+  it("opens the local UI by default on a fresh install", () => {
+    expect(usesLocalUiOnStartup({})).toBe(true);
+  });
+
+  it("keeps saved or explicitly forced server configuration", () => {
+    expect(usesLocalUiOnStartup({ saved })).toBe(false);
+    expect(usesLocalUiOnStartup({ forceSetup: true })).toBe(false);
+    expect(usesLocalUiOnStartup({ envUrl: "http://127.0.0.1:4321" })).toBe(
+      false,
+    );
+    expect(usesLocalUiOnStartup({ legacySetup: "1" })).toBe(false);
+    expect(usesLocalUiOnStartup({ localUi: "0" })).toBe(false);
+  });
+
+  it("allows explicit local UI mode even when legacy setup exists", () => {
+    expect(usesLocalUiOnStartup({ localUi: "1", saved })).toBe(true);
+  });
+});
+
 describe("bundled renderer eligibility", () => {
   it("overlays the bundle only for the managed loopback stack", () => {
     expect(servesBundledRenderer(DEFAULT_LOCAL_WEB_URL, true)).toBe(true);
@@ -182,15 +262,23 @@ describe("bundled renderer eligibility", () => {
     expect(servesBundledRenderer("http://127.0.0.1:5173/app", true)).toBe(true);
     expect(servesBundledRenderer("http://[::1]:45173", true)).toBe(true);
     expect(servesBundledRenderer("https://127.0.0.1:45173", true)).toBe(true);
-    expect(servesBundledRenderer("http://rakazo.localhost:5173", true)).toBe(true);
+    expect(servesBundledRenderer("http://rakazo.localhost:5173", true)).toBe(
+      true,
+    );
     expect(servesBundledRenderer(DEFAULT_LOCAL_WEB_URL, false)).toBe(false);
     expect(servesBundledRenderer("http://127.0.0.1:3100", false)).toBe(false);
-    expect(servesBundledRenderer("https://rakazo.example.com", true)).toBe(false);
-    expect(servesBundledRenderer("https://rakazo.example.com:8443", true)).toBe(false);
+    expect(servesBundledRenderer("https://rakazo.example.com", true)).toBe(
+      false,
+    );
+    expect(servesBundledRenderer("https://rakazo.example.com:8443", true)).toBe(
+      false,
+    );
     expect(servesBundledRenderer("http://192.168.1.20:3100", true)).toBe(false);
     expect(servesBundledRenderer("http://10.0.0.8:3100", true)).toBe(false);
     expect(servesBundledRenderer("http://rakazo.local:3100", true)).toBe(false);
-    expect(servesBundledRenderer("data:text/html,<p>fixture</p>", true)).toBe(false);
+    expect(servesBundledRenderer("data:text/html,<p>fixture</p>", true)).toBe(
+      false,
+    );
     expect(servesBundledRenderer("nonsense", true)).toBe(false);
   });
 });
@@ -198,16 +286,24 @@ describe("bundled renderer eligibility", () => {
 describe("remote-content isolation", () => {
   it("uses a stable, opaque session partition per server origin", () => {
     const first = sessionPartitionForServerUrl("https://one.example.com/path");
-    expect(first).toBe(sessionPartitionForServerUrl("https://one.example.com/other"));
-    expect(first).not.toBe(sessionPartitionForServerUrl("https://one.example.com:8443"));
+    expect(first).toBe(
+      sessionPartitionForServerUrl("https://one.example.com/other"),
+    );
+    expect(first).not.toBe(
+      sessionPartitionForServerUrl("https://one.example.com:8443"),
+    );
     expect(first).toMatch(/^persist:rakazo-[a-f0-9]{24}$/);
     expect(first).not.toContain("one.example.com");
     expect(sessionPartitionForServerUrl("data:text/html,fixture")).toBeNull();
   });
 
   it("opens only web URLs outside Electron", () => {
-    expect(safeExternalUrl("https://example.com/docs")).toBe("https://example.com/docs");
-    expect(safeExternalUrl("http://192.168.1.20:3100/docs")).toBe("http://192.168.1.20:3100/docs");
+    expect(safeExternalUrl("https://example.com/docs")).toBe(
+      "https://example.com/docs",
+    );
+    expect(safeExternalUrl("http://192.168.1.20:3100/docs")).toBe(
+      "http://192.168.1.20:3100/docs",
+    );
     expect(safeExternalUrl("mailto:person@example.com")).toBeNull();
     expect(safeExternalUrl("file:///etc/passwd")).toBeNull();
   });
@@ -223,14 +319,20 @@ describe("Rakazo health response", () => {
 
 describe("managed stack response", () => {
   it("returns only a non-empty authenticated image tag", () => {
-    expect(desktopStackImageTag({ ok: true, imageTag: "v0.2.0" })).toBe("v0.2.0");
+    expect(desktopStackImageTag({ ok: true, imageTag: "v0.2.0" })).toBe(
+      "v0.2.0",
+    );
     expect(desktopStackImageTag({ ok: true, imageTag: "" })).toBeNull();
     expect(desktopStackImageTag({ ok: false, imageTag: "v0.2.0" })).toBeNull();
-    expect(desktopStackImageTag({ json: { ok: true, imageTag: "v0.2.0" } })).toBeNull();
+    expect(
+      desktopStackImageTag({ json: { ok: true, imageTag: "v0.2.0" } }),
+    ).toBeNull();
   });
 
   it("parses a bounded JSON probe response", async () => {
-    await expect(readProbeJson(Response.json({ ok: true }))).resolves.toEqual({ ok: true });
+    await expect(readProbeJson(Response.json({ ok: true }))).resolves.toEqual({
+      ok: true,
+    });
   });
 
   it("rejects a declared oversized response without waiting for cancellation", async () => {
@@ -270,9 +372,15 @@ describe("probe failures", () => {
   });
 
   it.each([
-    ["net::ERR_CONNECTION_REFUSED", "Nothing is listening at that address yet."],
+    [
+      "net::ERR_CONNECTION_REFUSED",
+      "Nothing is listening at that address yet.",
+    ],
     ["net::ERR_NAME_NOT_RESOLVED", "That host could not be found."],
-    ["net::ERR_CERT_AUTHORITY_INVALID", "The server's HTTPS certificate was rejected."],
+    [
+      "net::ERR_CERT_AUTHORITY_INVALID",
+      "The server's HTTPS certificate was rejected.",
+    ],
     ["something else entirely", "Could not reach that address."],
   ])("explains %s", (message, expected) => {
     expect(probeFailureMessage(new Error(message))).toBe(expected);
