@@ -116,16 +116,31 @@ type UiError = {
 
 function presentError(message: string): Pick<UiError, "title" | "message"> {
   const normalized = message.toLocaleLowerCase();
-  if (normalized.includes("session") || normalized.includes("sign in")) {
+  if (
+    normalized.includes("session") ||
+    normalized.includes("sign in") ||
+    normalized.includes("登录") ||
+    normalized.includes("会话")
+  ) {
     return { title: i18n._(msg`Session expired`), message };
   }
-  if (normalized.includes("quota")) {
+  if (normalized.includes("quota") || normalized.includes("额度")) {
     return { title: i18n._(msg`Model quota exhausted`), message };
   }
-  if (normalized.includes("busy") || normalized.includes("rate limit")) {
+  if (
+    normalized.includes("busy") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("繁忙")
+  ) {
     return { title: i18n._(msg`Model service is busy`), message };
   }
-  if (normalized.includes("reach") || normalized.includes("connection")) {
+  if (
+    normalized.includes("reach") ||
+    normalized.includes("connection") ||
+    normalized.includes("model gateway") ||
+    normalized.includes("模型网关") ||
+    normalized.includes("连接")
+  ) {
     return { title: i18n._(msg`Connection problem`), message };
   }
   return { title: i18n._(msg`Could not complete the request`), message };

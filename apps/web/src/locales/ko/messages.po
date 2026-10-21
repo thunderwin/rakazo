@@ -768,6 +768,8 @@ msgstr "보관되었습니다. 대화, 기억, 파일은 유지됩니다."
 msgid "Arguments"
 msgstr "인자"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/Shell.tsx
 msgid "Artifacts"
@@ -900,6 +902,7 @@ msgid "Avatars"
 msgstr "아바타"
 
 #: src/components/computer/FilesApp.tsx
+#: src/pages/Artifacts.tsx
 #: src/pages/Board.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -951,6 +954,7 @@ msgstr ""
 msgid "Blocked"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/Board.tsx
 #: src/pages/Shell.tsx
 msgid "Board"
@@ -1932,6 +1936,10 @@ msgstr "샘플 음성을 재생하지 못했습니다."
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "모델 서버에 연결하지 못했습니다."
+
+#: src/local/types.ts
+msgid "Could not reach the model service. Check your connection and try again."
+msgstr ""
 
 #: src/lib/computer-sandbox.ts
 #: src/lib/user-error.ts
@@ -3572,6 +3580,10 @@ msgstr "모델 선택지"
 
 #: src/local/LocalApp.tsx
 msgid "Model quota exhausted"
+msgstr ""
+
+#: src/local/types.ts
+msgid "Model quota exhausted. Check your plan or balance."
 msgstr ""
 
 #: src/local/LocalApp.tsx
@@ -5406,10 +5418,34 @@ msgstr ""
 msgid "The local desktop bridge is unavailable."
 msgstr ""
 
+#: src/local/types.ts
+msgid "The model gateway denied this request."
+msgstr ""
+
+#: src/local/types.ts
+msgid "The model gateway is not configured. Ask an administrator to connect a model service."
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "The model provider returned an error."
 msgstr "모델 제공업체에서 오류를 반환했습니다."
+
+#: src/local/types.ts
+msgid "The model request failed. Try again."
+msgstr ""
+
+#: src/local/types.ts
+msgid "The model request is too large. Remove attachments or shorten the message."
+msgstr ""
+
+#: src/local/types.ts
+msgid "The model request timed out. Try again."
+msgstr ""
+
+#: src/local/types.ts
+msgid "The model service is busy. Try again shortly."
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "The provider is rate-limiting requests."
@@ -5422,6 +5458,10 @@ msgstr ""
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "선택한 기억 서비스는 현재 빌드에서 사용할 수 없습니다."
+
+#: src/local/types.ts
+msgid "The selected model is unavailable or invalid. Choose another model."
+msgstr ""
 
 #: src/pages/shell/bot-credentials.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
@@ -6060,6 +6100,10 @@ msgstr "사용 중인 OpenAI"
 #: src/lib/run-error.ts
 msgid "Your OpenRouter"
 msgstr "사용 중인 OpenRouter"
+
+#: src/local/types.ts
+msgid "Your session has expired. Sign out and sign in again."
+msgstr ""
 
 #: src/pages/Welcome.tsx
 msgid "Your team of always-on agents<0/>that you can give real work to."

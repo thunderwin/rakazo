@@ -22,7 +22,10 @@ const request: LocalAgentRunRequest = {
     {
       name: "shell",
       description: "Run a command.",
-      inputSchema: { type: "object", properties: { command: { type: "string" } } },
+      inputSchema: {
+        type: "object",
+        properties: { command: { type: "string" } },
+      },
     },
   ],
   model: {
@@ -39,9 +42,9 @@ const request: LocalAgentRunRequest = {
 
 describe("Pi local agent engine", () => {
   it("maps gateway failures to actionable local messages", () => {
-    expect(localAgentErrorMessage(new Error("HTTP 402 insufficient_quota"))).toBe(
-      "Your model quota is exhausted. Check your plan or balance.",
-    );
+    expect(
+      localAgentErrorMessage(new Error("HTTP 402 insufficient_quota")),
+    ).toBe("Your model quota is exhausted. Check your plan or balance.");
     expect(localAgentErrorMessage(new Error("401 Unauthorized"))).toBe(
       "Your session is no longer valid. Sign out and sign in again.",
     );
@@ -50,6 +53,20 @@ describe("Pi local agent engine", () => {
     );
     expect(localAgentErrorMessage(new Error("fetch failed"))).toBe(
       "Could not reach the model service. Check your connection and try again.",
+    );
+    expect(
+      localAgentErrorMessage(
+        new Error("HTTP 503 Model gateway is not configured"),
+      ),
+    ).toBe("The model gateway is not configured.");
+    expect(
+      localAgentErrorMessage(new Error("HTTP 400 invalid model request")),
+    ).toBe("The selected model is unavailable or invalid.");
+    expect(localAgentErrorMessage(new Error("HTTP 403 access denied"))).toBe(
+      "The model gateway denied this request.",
+    );
+    expect(localAgentErrorMessage(new Error("request timed out"))).toBe(
+      "The model request timed out. Try again.",
     );
     expect(localAgentErrorMessage(new Error("provider exploded"))).toBe(
       "The model request failed. Try again.",
@@ -92,9 +109,11 @@ describe("Pi local agent engine", () => {
     const engine = new PiLocalAgentEngine(runtime);
     const events = [];
 
-    for await (const event of engine.run(request, { userId: "user-1" })) events.push(event);
+    for await (const event of engine.run(request, { userId: "user-1" }))
+      events.push(event);
 
-    const { resolveModel: _resolveModel, ...expectedRequest } = toPiRequest(request);
+    const { resolveModel: _resolveModel, ...expectedRequest } =
+      toPiRequest(request);
     expect(seen).toMatchObject(expectedRequest);
     expect(seen?.resolveModel).toBeTypeOf("function");
     expect(events).toEqual([
@@ -149,7 +168,10 @@ describe("Pi local agent engine", () => {
       authorizations.push(request.headers.authorization);
       const chunks: Buffer[] = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
-      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
+        string,
+        unknown
+      >;
       bodies.push(body);
       response.writeHead(200, {
         "content-type": "text/event-stream",
@@ -219,9 +241,15 @@ describe("Pi local agent engine", () => {
       });
       response.end("data: [DONE]\n\n");
     });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
     const port = (server.address() as AddressInfo).port;
-    const executeTool = vi.fn(async () => ({ stdout: "hello", stderr: "", code: 0 }));
+    const executeTool = vi.fn(async () => ({
+      stdout: "hello",
+      stderr: "",
+      code: 0,
+    }));
     const engine = new PiLocalAgentEngine(new PiAgentRuntime());
 
     try {
@@ -245,7 +273,10 @@ describe("Pi local agent engine", () => {
         "/v1/model/openai/chat/completions",
         "/v1/model/openai/chat/completions",
       ]);
-      expect(authorizations).toEqual(["Bearer test-token", "Bearer test-token"]);
+      expect(authorizations).toEqual([
+        "Bearer test-token",
+        "Bearer test-token",
+      ]);
       expect(bodies[0]?.stream_options).toEqual({ include_usage: true });
       expect(bodies[0]?.tools).toEqual([
         expect.objectContaining({
@@ -287,7 +318,10 @@ describe("Pi local agent engine", () => {
     const server = createServer(async (request, response) => {
       const chunks: Buffer[] = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
-      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
+        string,
+        unknown
+      >;
       bodies.push(body);
       response.writeHead(200, { "content-type": "text/event-stream" });
       const chunk = (payload: unknown) => {
@@ -339,7 +373,10 @@ describe("Pi local agent engine", () => {
               index: 0,
               delta: {
                 role: "assistant",
-                content: isNested && !isContinuation ? "SUBAGENT_OK" : "Helper said SUBAGENT_OK",
+                content:
+                  isNested && !isContinuation
+                    ? "SUBAGENT_OK"
+                    : "Helper said SUBAGENT_OK",
               },
               finish_reason: null,
             },
@@ -361,7 +398,9 @@ describe("Pi local agent engine", () => {
       });
       response.end("data: [DONE]\n\n");
     });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
     const port = (server.address() as AddressInfo).port;
     const executeTool = vi.fn(async () => ({ ok: true }));
     const engine = new PiLocalAgentEngine(new PiAgentRuntime());
@@ -378,7 +417,10 @@ describe("Pi local agent engine", () => {
             description: "Run a helper.",
             inputSchema: {
               type: "object",
-              properties: { name: { type: "string" }, task: { type: "string" } },
+              properties: {
+                name: { type: "string" },
+                task: { type: "string" },
+              },
               required: ["name", "task"],
             },
           },

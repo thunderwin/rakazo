@@ -44,10 +44,15 @@ export type LocalMessageBlock =
     }
   | { kind: string; [key: string]: unknown };
 
-export function messageBlocks(message: { blocks: unknown[] }): LocalMessageBlock[] {
+export function messageBlocks(message: {
+  blocks: unknown[];
+}): LocalMessageBlock[] {
   return message.blocks.filter(
     (block): block is LocalMessageBlock =>
-      typeof block === "object" && block !== null && !Array.isArray(block) && "kind" in block,
+      typeof block === "object" &&
+      block !== null &&
+      !Array.isArray(block) &&
+      "kind" in block,
   );
 }
 
@@ -62,7 +67,101 @@ export function messageText(message: { blocks: unknown[] }): string {
 }
 
 export function localErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim()
-    ? error.message
-    : i18n._(msg`The request could not be completed.`);
+  return error instanceof Error
+    ? localErrorText(error.message)
+    : localErrorText("");
+}
+
+export function localErrorText(message: string): string {
+  const text = message.trim();
+  const normalized = text.toLocaleLowerCase();
+  if (
+    normalized.includes("model gateway is not configured") ||
+    normalized.includes("local model gateway is not configured") ||
+    normalized.includes("new api is not configured")
+  ) {
+    return i18n._(
+      msg`The model gateway is not configured. Ask an administrator to connect a model service.`,
+    );
+  }
+  if (
+    normalized.includes("selected model is unavailable") ||
+    normalized.includes("invalid model request") ||
+    normalized.includes("invalid model") ||
+    normalized.includes("model not found") ||
+    normalized.includes("model id is invalid") ||
+    /\b400\b/.test(normalized) ||
+    /\b404\b/.test(normalized)
+  ) {
+    return i18n._(
+      msg`The selected model is unavailable or invalid. Choose another model.`,
+    );
+  }
+  if (
+    normalized.includes("model gateway denied") ||
+    normalized.includes("access denied") ||
+    normalized.includes("forbidden") ||
+    /\b403\b/.test(normalized)
+  ) {
+    return i18n._(msg`The model gateway denied this request.`);
+  }
+  if (
+    normalized.includes("model request is too large") ||
+    normalized.includes("request too large") ||
+    /\b413\b/.test(normalized)
+  ) {
+    return i18n._(
+      msg`The model request is too large. Remove attachments or shorten the message.`,
+    );
+  }
+  if (
+    normalized.includes("insufficient_quota") ||
+    normalized.includes("insufficient quota") ||
+    normalized.includes("quota exhausted") ||
+    /\b402\b/.test(normalized)
+  ) {
+    return i18n._(msg`Model quota exhausted. Check your plan or balance.`);
+  }
+  if (
+    normalized.includes("session is no longer valid") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("session expired") ||
+    normalized.includes("invalid token") ||
+    /\b401\b/.test(normalized)
+  ) {
+    return i18n._(msg`Your session has expired. Sign out and sign in again.`);
+  }
+  if (
+    normalized.includes("model service is busy") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("too many requests") ||
+    /\b429\b/.test(normalized)
+  ) {
+    return i18n._(msg`The model service is busy. Try again shortly.`);
+  }
+  if (
+    normalized.includes("could not reach the model service") ||
+    normalized.includes("fetch failed") ||
+    normalized.includes("econnrefused") ||
+    normalized.includes("enotfound") ||
+    normalized.includes("network error")
+  ) {
+    return i18n._(
+      msg`Could not reach the model service. Check your connection and try again.`,
+    );
+  }
+  if (
+    normalized.includes("model request timed out") ||
+    normalized.includes("timed out") ||
+    normalized.includes("timeout")
+  ) {
+    return i18n._(msg`The model request timed out. Try again.`);
+  }
+  if (
+    normalized.includes("model request failed") ||
+    normalized.includes("model gateway unavailable")
+  ) {
+    return i18n._(msg`The model request failed. Try again.`);
+  }
+  return text || i18n._(msg`The request could not be completed.`);
 }

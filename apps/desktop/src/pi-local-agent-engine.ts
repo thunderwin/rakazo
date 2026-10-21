@@ -57,6 +57,34 @@ export function localAgentErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
   if (
+    normalized.includes("model gateway is not configured") ||
+    normalized.includes("gateway unavailable") ||
+    normalized.includes("new api is not configured") ||
+    /\b503\b/.test(normalized)
+  ) {
+    return "The model gateway is not configured.";
+  }
+  if (
+    normalized.includes("invalid model request") ||
+    normalized.includes("invalid model") ||
+    normalized.includes("model not found") ||
+    normalized.includes("model id is invalid") ||
+    /\b400\b/.test(normalized) ||
+    /\b404\b/.test(normalized)
+  ) {
+    return "The selected model is unavailable or invalid.";
+  }
+  if (
+    normalized.includes("access denied") ||
+    normalized.includes("forbidden") ||
+    /\b403\b/.test(normalized)
+  ) {
+    return "The model gateway denied this request.";
+  }
+  if (normalized.includes("request too large") || /\b413\b/.test(normalized)) {
+    return "The model request is too large.";
+  }
+  if (
     normalized.includes("insufficient_quota") ||
     normalized.includes("insufficient quota") ||
     normalized.includes("quota exhausted") ||
@@ -87,6 +115,13 @@ export function localAgentErrorMessage(error: unknown): string {
   ) {
     return "Could not reach the model service. Check your connection and try again.";
   }
+  if (
+    normalized.includes("timed out") ||
+    normalized.includes("timeout") ||
+    normalized.includes("aborterror")
+  ) {
+    return "The model request timed out. Try again.";
+  }
   return "The model request failed. Try again.";
 }
 
@@ -107,7 +142,9 @@ export class PiLocalAgentEngine implements LocalAgentEngine {
       runId: request.runId,
       signal: context.signal ?? new AbortController().signal,
     };
-    return toLocalEvents(this.runtime.run(toPiRequest(request), adapterContext));
+    return toLocalEvents(
+      this.runtime.run(toPiRequest(request), adapterContext),
+    );
   }
 
   abort(runId: string): Promise<void> {

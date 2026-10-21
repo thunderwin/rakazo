@@ -1,7 +1,13 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { BotAvatar } from "@rakazo/ui-web";
-import { AlertTriangle, ArrowRight, Check, LoaderCircle, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  LoaderCircle,
+  Wrench,
+} from "lucide-react";
 import { i18n } from "../lib/i18n";
 import { LocalAttachmentView } from "./LocalAttachmentView";
 import { MentionText } from "./MentionText";
@@ -11,6 +17,7 @@ import {
   type LocalGroupMessage,
   type LocalMessage,
   type LocalMessageBlock,
+  localErrorText,
   messageBlocks,
   messageText,
 } from "./types";
@@ -55,13 +62,26 @@ export function LocalMessageView({
       typeof block.hop === "number",
   );
   const attachments = blocks.filter(
-    (block): block is Extract<LocalMessageBlock, { kind: "image" | "file" }> => {
+    (
+      block,
+    ): block is Extract<LocalMessageBlock, { kind: "image" | "file" }> => {
       if (block.kind !== "image" && block.kind !== "file") return false;
-      if (!("artifactId" in block) || !("name" in block) || !("mimeType" in block)) return false;
-      if (typeof block.artifactId !== "string" || typeof block.name !== "string") return false;
+      if (
+        !("artifactId" in block) ||
+        !("name" in block) ||
+        !("mimeType" in block)
+      )
+        return false;
+      if (
+        typeof block.artifactId !== "string" ||
+        typeof block.name !== "string"
+      )
+        return false;
       if (block.kind === "image") return typeof block.mimeType === "string";
       if (block.kind === "file") {
-        return typeof block.mimeType === "string" && typeof block.size === "number";
+        return (
+          typeof block.mimeType === "string" && typeof block.size === "number"
+        );
       }
       return false;
     },
@@ -73,8 +93,12 @@ export function LocalMessageView({
       className={`group flex w-full gap-3 ${user ? "justify-end" : "justify-start"}`}
       data-message-role={message.role}
     >
-      {!user && bot ? <BotAvatar color={bot.color} identity={bot.id} size={30} /> : null}
-      <div className={`min-w-0 ${user ? "max-w-[78%]" : "max-w-[min(760px,84%)]"}`}>
+      {!user && bot ? (
+        <BotAvatar color={bot.color} identity={bot.id} size={30} />
+      ) : null}
+      <div
+        className={`min-w-0 ${user ? "max-w-[78%]" : "max-w-[min(760px,84%)]"}`}
+      >
         <div
           className={`mb-1.5 flex items-center gap-2 text-[12px] ${
             user ? "justify-end" : "justify-start"
@@ -139,7 +163,9 @@ export function LocalMessageView({
         ) : null}
 
         {handoffs.map((handoff, index) => {
-          const from = bots.find((candidate) => candidate.id === handoff.fromBotId);
+          const from = bots.find(
+            (candidate) => candidate.id === handoff.fromBotId,
+          );
           const to = bots.find((candidate) => candidate.id === handoff.toBotId);
           return (
             <div
@@ -148,7 +174,11 @@ export function LocalMessageView({
             >
               <div className="flex items-center gap-2 text-[12.5px] font-medium">
                 <span>{from?.name ?? t`Bot`}</span>
-                <ArrowRight size={13} className="text-muted-foreground" aria-hidden="true" />
+                <ArrowRight
+                  size={13}
+                  className="text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <span>{to?.name ?? t`Bot`}</span>
                 <span className="ml-auto text-[10.5px] font-normal text-muted-foreground">
                   <Trans>hop {handoff.hop}</Trans>
@@ -175,14 +205,20 @@ export function LocalMessageView({
               <div className="flex items-start gap-2">
                 <AlertTriangle
                   size={15}
-                  className={stopped ? "mt-0.5 text-muted-foreground" : "mt-0.5 text-destructive"}
+                  className={
+                    stopped
+                      ? "mt-0.5 text-muted-foreground"
+                      : "mt-0.5 text-destructive"
+                  }
                   aria-hidden="true"
                 />
                 <div className="min-w-0">
                   <p className="m-0 text-[13px] font-medium">
                     {stopped ? t`Run stopped` : t`This run did not finish`}
                   </p>
-                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">{error.message}</p>
+                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                    {stopped ? t`Run stopped` : localErrorText(error.message)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -204,20 +240,40 @@ export function LocalLiveMessage({
 }) {
   const { t } = useLingui();
   return (
-    <article className="flex w-full justify-start gap-3" data-message-role="live">
-      {bot ? <BotAvatar color={bot.color} identity={bot.id} size={30} status="running" /> : null}
+    <article
+      className="flex w-full justify-start gap-3"
+      data-message-role="live"
+    >
+      {bot ? (
+        <BotAvatar
+          color={bot.color}
+          identity={bot.id}
+          size={30}
+          status="running"
+        />
+      ) : null}
       <div className="min-w-0 max-w-[min(760px,84%)]">
         <div className="mb-1.5 flex items-center gap-2 text-[12px]">
-          <span className="font-medium text-foreground/80">{bot?.name ?? t`Bot`}</span>
+          <span className="font-medium text-foreground/80">
+            {bot?.name ?? t`Bot`}
+          </span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
+            <LoaderCircle
+              size={12}
+              className="animate-spin"
+              aria-hidden="true"
+            />
             {status || t`Working`}
           </span>
         </div>
         <div className="px-1 py-0.5 text-[15px] leading-6 text-foreground">
           {text ? <ChatMarkdown streaming>{text}</ChatMarkdown> : null}
           {!text ? (
-            <div className="flex items-center gap-1 py-1" role="status" aria-label={t`Thinking`}>
+            <div
+              className="flex items-center gap-1 py-1"
+              role="status"
+              aria-label={t`Thinking`}
+            >
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:120ms]" />
               <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:240ms]" />

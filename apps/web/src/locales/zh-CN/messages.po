@@ -768,6 +768,8 @@ msgstr "已归档。对话、记忆和文件保留。"
 msgid "Arguments"
 msgstr "参数"
 
+#: src/local/LocalApp.tsx
+#: src/local/LocalAppSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/Shell.tsx
 msgid "Artifacts"
@@ -900,6 +902,7 @@ msgid "Avatars"
 msgstr "头像"
 
 #: src/components/computer/FilesApp.tsx
+#: src/pages/Artifacts.tsx
 #: src/pages/Board.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -951,6 +954,7 @@ msgstr ""
 msgid "Blocked"
 msgstr ""
 
+#: src/local/LocalApp.tsx
 #: src/pages/Board.tsx
 #: src/pages/Shell.tsx
 msgid "Board"
@@ -1932,6 +1936,10 @@ msgstr "无法播放测试片段"
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "无法连接到模型服务器。"
+
+#: src/local/types.ts
+msgid "Could not reach the model service. Check your connection and try again."
+msgstr "无法连接模型服务。请检查网络后重试。"
 
 #: src/lib/computer-sandbox.ts
 #: src/lib/user-error.ts
@@ -3573,6 +3581,10 @@ msgstr "模型选项"
 #: src/local/LocalApp.tsx
 msgid "Model quota exhausted"
 msgstr "模型额度已用完"
+
+#: src/local/types.ts
+msgid "Model quota exhausted. Check your plan or balance."
+msgstr "模型额度已用完，请检查套餐或余额。"
 
 #: src/local/LocalApp.tsx
 msgid "Model service is busy"
@@ -5406,10 +5418,34 @@ msgstr "桌面桥接不可用。"
 msgid "The local desktop bridge is unavailable."
 msgstr "本地桌面桥接不可用。"
 
+#: src/local/types.ts
+msgid "The model gateway denied this request."
+msgstr "模型网关拒绝了这个请求。"
+
+#: src/local/types.ts
+msgid "The model gateway is not configured. Ask an administrator to connect a model service."
+msgstr "模型网关尚未配置，请联系管理员连接模型服务。"
+
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "The model provider returned an error."
 msgstr "模型提供商返回了错误。"
+
+#: src/local/types.ts
+msgid "The model request failed. Try again."
+msgstr "模型请求失败，请重试。"
+
+#: src/local/types.ts
+msgid "The model request is too large. Remove attachments or shorten the message."
+msgstr "请求内容过大，请移除附件或缩短消息。"
+
+#: src/local/types.ts
+msgid "The model request timed out. Try again."
+msgstr "模型响应超时，请重试。"
+
+#: src/local/types.ts
+msgid "The model service is busy. Try again shortly."
+msgstr "模型服务繁忙，请稍后重试。"
 
 #: src/lib/model-connection-preflight.ts
 msgid "The provider is rate-limiting requests."
@@ -5422,6 +5458,10 @@ msgstr "无法完成请求。"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "所选记忆提供方在此构建中不可用。"
+
+#: src/local/types.ts
+msgid "The selected model is unavailable or invalid. Choose another model."
+msgstr "所选模型不可用或无效，请选择其他模型。"
 
 #: src/pages/shell/bot-credentials.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
@@ -6060,6 +6100,10 @@ msgstr "你的 OpenAI"
 #: src/lib/run-error.ts
 msgid "Your OpenRouter"
 msgstr "你的 OpenRouter"
+
+#: src/local/types.ts
+msgid "Your session has expired. Sign out and sign in again."
+msgstr "登录状态已失效，请退出后重新登录。"
 
 #: src/pages/Welcome.tsx
 msgid "Your team of always-on agents<0/>that you can give real work to."
